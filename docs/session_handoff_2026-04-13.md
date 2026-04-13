@@ -122,7 +122,8 @@ What changed:
 - new taxonomy category `fulltext_acquisition_gap` (priority `high`) is emitted when `abstract_inferred_only` is present on an entry
 - `resource_release_specificity` is now suppressed when `abstract_inferred_only` is also present, so the two remaining resource-release residuals with `fetch_error` + abstract-inferred methods/results get reclassified as `fulltext_acquisition_gap` instead of being tagged as parser-labeling risk
 - `identifier_sparse_low_confidence` is also suppressed when `abstract_inferred_only` is present, because lacking resource/trial-registry identifiers in an abstract-inferred bundle is a downstream consequence of the fetch failure rather than a genuine identifier-sparsity signal; the category is preserved for the true case where a paper has full text but still lacks identifiers
-- `compare_shadow_inspection_reports` now emits delta notes when `fulltext_acquisition_gap` grows/shrinks or when `abstract_inferred_only` entries enter a slice
+- new focus tag `fulltext_acquisition_blocked_upstream` and paired taxonomy category (priority `high`) are emitted when a bundle already qualifies as `abstract_inferred_only` **and** at least one of its notes contains an HTTP 4xx error (`HTTP Error 400/401/403/404/410/451`), i.e. the Europe PMC fetch returned a client-side rejection. This distinguishes "retry will help" (DNS, timeouts, 5xx) from "retry is pointless" (the paper is non-OA or not indexed upstream) and points at an alternate-backend or manual-acquisition escalation rather than another retry
+- `compare_shadow_inspection_reports` now emits delta notes when `fulltext_acquisition_gap` or `fulltext_acquisition_blocked_upstream` grows/shrinks or when `abstract_inferred_only` entries enter a slice
 
 The previous change (still current) remains:
 
@@ -185,61 +186,67 @@ If starting fresh, inspect these in order:
 
 ## Best next step
 
-The `fulltext_acquisition_gap` category is implemented, the
-`identifier_sparse_low_confidence` suppression is in place, and both
-are verified end-to-end on the enriched `full180` corpus. The
-`v6 → v7 → v8` chain now shows:
+The inspection taxonomy is now resolved for these three papers as far as
+Europe PMC can take it. The `v6 → v7 → v8 → v9` chain shows:
 
 - `v6 → v7`: `resource_release_specificity -2`, `fulltext_acquisition_gap +3`
-  (the third entry is `DOI:10.1002/jpen.70069`, a descriptive paper whose
-  bundle also suffered a DNS fetch failure)
-- `v7 → v8`: `identifier_sparse_low_confidence -3` (the three identifier-
-  sparse entries in v7 were the same papers as the fulltext-gap entries;
-  none remain once suppression is applied)
+- `v7 → v8`: `identifier_sparse_low_confidence -3` (suppressed when
+  the same entry is already in `fulltext_acquisition_gap`)
+- `v8 → v9`: `fulltext_acquisition_blocked_upstream +3` after re-running
+  evidence enrichment with working network — all three fetches returned
+  HTTP 404 from Europe PMC's `fullTextXML`. Europe PMC's own search API
+  confirms two of the three PMCIDs are `isOpenAccess=N` and the third
+  (`PMC13047292`) is not indexed at all.
 
-Current `v8` slice buckets:
+Current `v9` slice buckets:
 
 - `stable_shadow_controls = 23`
 - `fulltext_acquisition_gap = 3`
+- `fulltext_acquisition_blocked_upstream = 3` (same three entries)
 - `low_confidence_shadow = 3`
 - `hybrid_overlay_complexity = 3`
 - `writing_quality_risk = 2`
 - `figure_table_grounding = 1`
 
-The three papers currently gated by `fulltext_acquisition_gap` are:
+The three papers still gated by the acquisition gap, with their refreshed
+(HTTP 404) fetch records, are:
 
-- `DOI:10.1016/j.jmr.2022.107268` (SpecDB NMR database)
-- `DOI:10.1002/cpz1.1028` (Optimized proteomics workflow)
-- `DOI:10.1002/jpen.70069` (Body composition / 12-month mortality)
+- `DOI:10.1016/j.jmr.2022.107268` → `PMC9922030` (SpecDB NMR database, non-OA)
+- `DOI:10.1002/cpz1.1028` → `PMC11179667` (Optimized proteomics workflow, non-OA)
+- `DOI:10.1002/jpen.70069` → `PMC13047292` (Body composition / 12-month mortality, no EPMC index entry)
 
-All three share the same note pattern:
+Key interpretation: **re-running Europe PMC enrichment for these papers
+will not help**. The gap is a real upstream-acquisition problem, not a
+transient network issue. Continuing to retry the same backend is wasted
+effort — an alternate source or an explicit exclusion is required.
 
-```
-fetch_error:<urlopen error [Errno 8] nodename nor servname provided, or not known>
-methods inferred from abstract for auto-review bundling
-results inferred from abstract for auto-review bundling
-```
+Refreshed bundle artifacts for these three papers live at:
 
-This is **DNS resolution failure** during a prior enrichment run, not
-a publisher refusal. Re-running the enrichment with working network
-should shrink the bucket.
+- `knowledge_base/qualified/collection_v1_2018_present/auto_review/recovery_v7/rerun_outputs/evidence_enrichments.jsonl`
+- `knowledge_base/qualified/collection_v1_2018_present/auto_review/recovery_v7/rerun_outputs/source_bundles.jsonl`
+- `knowledge_base/enriched/collection_v1_2018_present/auto_review/source_bundles_full180_enriched_v14.jsonl` (180-paper merged corpus with the three replacements)
 
-Recommended next target:
+Recommended next target (in priority order):
 
-1. **Re-run evidence enrichment for these three DOIs with network
-   available**, then rebuild source bundles, qualification records, and
-   the inspection slice. Verify `fulltext_acquisition_gap` shrinks.
-   - if a paper has full text and still shows sparse identifiers, the
-     `identifier_sparse_low_confidence` category is the right diagnosis
-     and will re-fire naturally
-   - if a paper remains abstract-only after a successful refetch
-     (publisher paywall or missing PMC copy), the gap category is the
-     honest diagnosis and points at an acquisition-strategy problem
+1. **Decide the acquisition-strategy path** for the three blocked papers:
+   - (a) add an **NCBI PMC efetch** backend as a secondary fetcher in
+     `src/life_science_paperwritingbench/evidence_enrichment.py` — NCBI
+     occasionally serves XML for papers Europe PMC does not redistribute;
+   - (b) accept the gap and **flag these papers for exclusion** from the
+     shadow lane until a manual acquisition path exists;
+   - (c) introduce a publisher-native ingestion lane (larger project).
+
+   Whichever path is chosen, the `fulltext_acquisition_blocked_upstream`
+   category is the right gate — it will shrink automatically when a
+   paper becomes fetchable, and stay populated when it is genuinely out
+   of reach.
+
 2. **Promote confidence calibration `v14` semantics** into a
    reproducible pass (the `34/146 → 5/175` low/medium shift has held
    across recent inspections and is load-bearing for downstream gates).
-3. **Audit the three `low_confidence_shadow` entries** once fulltext
-   acquisition is fixed, since `low_confidence_shadow` should now be a
+
+3. **Audit the three `low_confidence_shadow` entries** once the gap
+   cohort is handled, since `low_confidence_shadow` should then be a
    purer signal uncontaminated by fetch failures.
 
 ## Suggested commands for the next session

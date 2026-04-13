@@ -20,6 +20,14 @@ from .policy import AutoReviewConfidence, PaperWritingQualification, ReleaseTier
 
 _FETCH_ERROR_NOTE_MARKER = "fetch_error"
 _ABSTRACT_INFERRED_NOTE_MARKER = "inferred from abstract"
+_UPSTREAM_BLOCKED_HTTP_MARKERS: Tuple[str, ...] = (
+    "HTTP Error 400",
+    "HTTP Error 401",
+    "HTTP Error 403",
+    "HTTP Error 404",
+    "HTTP Error 410",
+    "HTTP Error 451",
+)
 
 
 def _utc_timestamp() -> str:
@@ -42,6 +50,15 @@ def _has_abstract_inferred_only_signal(bundle: AutoReviewSourceBundle) -> bool:
     if bundle.resource_identifiers or bundle.trial_registry_ids:
         return False
     return True
+
+
+def _has_upstream_blocked_signal(bundle: AutoReviewSourceBundle) -> bool:
+    if not _has_abstract_inferred_only_signal(bundle):
+        return False
+    return any(
+        _has_note_marker(bundle.notes, marker)
+        for marker in _UPSTREAM_BLOCKED_HTTP_MARKERS
+    )
 
 
 def _focus_tags(
@@ -80,6 +97,8 @@ def _focus_tags(
             tags.append("resource_release_grounded")
     if _has_abstract_inferred_only_signal(bundle):
         tags.append("abstract_inferred_only")
+        if _has_upstream_blocked_signal(bundle):
+            tags.append("fulltext_acquisition_blocked_upstream")
     return tuple(tags)
 
 
@@ -359,6 +378,14 @@ _TAXONOMY_SPECS = {
             "Do not treat these cases as parser-labeling mistakes; the extraction substrate itself is missing.",
         ),
     },
+    "fulltext_acquisition_blocked_upstream": {
+        "label": "Full-text acquisition blocked upstream",
+        "priority": "high",
+        "recommended_actions": (
+            "Do not retry via Europe PMC; the fetch returned a 4xx and the paper is likely non-OA or not indexed.",
+            "Escalate to an alternate backend (NCBI PMC efetch) or a publisher-native / manual acquisition path; otherwise flag these papers for exclusion from the shadow lane.",
+        ),
+    },
     "identifier_sparse_low_confidence": {
         "label": "Identifier-sparse low-confidence cases",
         "priority": "high",
@@ -419,6 +446,8 @@ def _taxonomy_categories_for_entry(entry: ShadowInspectionEntry) -> Tuple[str, .
         categories.append("resource_release_specificity")
     if fulltext_gap:
         categories.append("fulltext_acquisition_gap")
+        if "fulltext_acquisition_blocked_upstream" in focus_tags:
+            categories.append("fulltext_acquisition_blocked_upstream")
     if "hybrid_overlay" in focus_tags:
         categories.append("hybrid_overlay_complexity")
     if "trial_registry" in focus_tags and "trial_registry_grounded" not in focus_tags:
@@ -629,6 +658,17 @@ def compare_shadow_inspection_reports(
     if abstract_inferred_delta > 0:
         notes.append(
             f"inspection slice gained {abstract_inferred_delta} entries whose bundles are abstract-inferred only"
+        )
+    blocked_upstream_category_delta = current_categories.get(
+        "fulltext_acquisition_blocked_upstream", 0
+    ) - previous_categories.get("fulltext_acquisition_blocked_upstream", 0)
+    if blocked_upstream_category_delta > 0:
+        notes.append(
+            f"fulltext_acquisition_blocked_upstream gained {blocked_upstream_category_delta} entries — retrying Europe PMC will not help, escalate to an alternate backend"
+        )
+    elif blocked_upstream_category_delta < 0:
+        notes.append(
+            f"fulltext_acquisition_blocked_upstream decreased by {abs(blocked_upstream_category_delta)}"
         )
 
     return ShadowInspectionDeltaReport(

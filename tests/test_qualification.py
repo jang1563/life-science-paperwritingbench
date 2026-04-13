@@ -2338,6 +2338,109 @@ class QualificationTests(unittest.TestCase):
         self.assertEqual(gap_category.priority, "high")
         self.assertEqual(gap_category.entry_count, 1)
 
+    def test_build_shadow_inspection_batch_flags_blocked_upstream_on_http_4xx(self):
+        paper = make_source_paper(
+            paper_id="PMID:FTGAP:BLOCKED:1",
+            title="Non-OA paper with 404 from OA service",
+            claim_mode=ClaimMode.RESOURCE_RELEASE,
+        )
+        auto_record = AutoQualificationRecord(
+            paper_id=paper.paper_id,
+            decision=make_paper_decision(
+                candidate_tier=CandidateTier.SHADOW_CANDIDATE,
+                writing=PaperWritingQualification.W2,
+                public_writing_eligible=False,
+            ),
+            confidence=AutoReviewConfidence.LOW,
+        )
+        source_bundle = AutoReviewSourceBundle(
+            paper_id=paper.paper_id,
+            bundle_completeness=AutoReviewBundleCompleteness.REVIEW_READY,
+            abstract_text="abstract describing a non-OA resource",
+            methods_text="abstract describing a non-OA resource",
+            results_text="abstract describing a non-OA resource",
+            notes=(
+                "fetch_error:HTTP Error 404: Not Found",
+                "methods inferred from abstract for auto-review bundling",
+                "results inferred from abstract for auto-review bundling",
+            ),
+        )
+        task_bundle = make_task_bundle(
+            index=1,
+            paper_id=paper.paper_id,
+            task_family=TaskFamily.METHODS_TO_TEXT,
+            study_class=paper.study_class,
+            claim_mode=paper.claim_mode,
+            release_tier=ReleaseTier.SHADOW_GOLD,
+            holdout_bucket="public",
+        )
+        entries = build_shadow_inspection_batch(
+            task_bundles=[task_bundle],
+            papers={paper.paper_id: paper},
+            auto_qualification_records={paper.paper_id: auto_record},
+            source_bundles={paper.paper_id: source_bundle},
+            target_total=1,
+            include_holdout_buckets=("public",),
+        )
+        self.assertEqual(len(entries), 1)
+        self.assertIn("abstract_inferred_only", entries[0].focus_tags)
+        self.assertIn("fulltext_acquisition_blocked_upstream", entries[0].focus_tags)
+        categories = build_shadow_inspection_taxonomy(entries)
+        category_ids = {category.category_id for category in categories}
+        self.assertIn("fulltext_acquisition_gap", category_ids)
+        self.assertIn("fulltext_acquisition_blocked_upstream", category_ids)
+
+    def test_build_shadow_inspection_batch_does_not_flag_blocked_upstream_on_transient_error(self):
+        paper = make_source_paper(
+            paper_id="PMID:FTGAP:TRANSIENT:1",
+            title="Paper whose enrichment hit a DNS error",
+            claim_mode=ClaimMode.RESOURCE_RELEASE,
+        )
+        auto_record = AutoQualificationRecord(
+            paper_id=paper.paper_id,
+            decision=make_paper_decision(
+                candidate_tier=CandidateTier.SHADOW_CANDIDATE,
+                writing=PaperWritingQualification.W2,
+                public_writing_eligible=False,
+            ),
+            confidence=AutoReviewConfidence.LOW,
+        )
+        source_bundle = AutoReviewSourceBundle(
+            paper_id=paper.paper_id,
+            bundle_completeness=AutoReviewBundleCompleteness.REVIEW_READY,
+            abstract_text="abstract describing a released resource",
+            methods_text="abstract describing a released resource",
+            results_text="abstract describing a released resource",
+            notes=(
+                "fetch_error:<urlopen error [Errno 8] nodename nor servname provided, or not known>",
+                "methods inferred from abstract for auto-review bundling",
+            ),
+        )
+        task_bundle = make_task_bundle(
+            index=1,
+            paper_id=paper.paper_id,
+            task_family=TaskFamily.METHODS_TO_TEXT,
+            study_class=paper.study_class,
+            claim_mode=paper.claim_mode,
+            release_tier=ReleaseTier.SHADOW_GOLD,
+            holdout_bucket="public",
+        )
+        entries = build_shadow_inspection_batch(
+            task_bundles=[task_bundle],
+            papers={paper.paper_id: paper},
+            auto_qualification_records={paper.paper_id: auto_record},
+            source_bundles={paper.paper_id: source_bundle},
+            target_total=1,
+            include_holdout_buckets=("public",),
+        )
+        self.assertEqual(len(entries), 1)
+        self.assertIn("abstract_inferred_only", entries[0].focus_tags)
+        self.assertNotIn("fulltext_acquisition_blocked_upstream", entries[0].focus_tags)
+        categories = build_shadow_inspection_taxonomy(entries)
+        category_ids = {category.category_id for category in categories}
+        self.assertIn("fulltext_acquisition_gap", category_ids)
+        self.assertNotIn("fulltext_acquisition_blocked_upstream", category_ids)
+
     def test_build_shadow_inspection_taxonomy_suppresses_identifier_sparse_when_fulltext_gap(self):
         gap_entry = ShadowInspectionEntry(
             inspection_id="INSPECT:FTGAP:ID:001",
