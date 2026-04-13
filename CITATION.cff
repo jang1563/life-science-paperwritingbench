@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+message: "If you use this software or the PaperWritingBench governance framework, please cite it as below."
+title: "Life-Science PaperWritingBench: Governance Core for a Life-Science Paper-Writing Benchmark"
+authors:
+  - name: "the Life-Science PaperWritingBench Authors"
+type: software
+license: Apache-2.0
+repository-code: "https://github.com/jang1563/life-science-paperwritingbench"
+url: "https://github.com/jang1563/life-science-paperwritingbench"
+version: "0.1.0"
+date-released: "2026-04-13"
+keywords:
+  - benchmark
+  - biomedical
+  - life-science
+  - paper-writing
+  - ai-for-science
+  - governance

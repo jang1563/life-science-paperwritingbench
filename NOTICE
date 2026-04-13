@@ -1,0 +1,28 @@
+Life-Science PaperWritingBench
+Copyright 2026 the Life-Science PaperWritingBench Authors
+
+This product includes software developed by the Life-Science PaperWritingBench
+Authors (https://github.com/jang1563/life-science-paperwritingbench).
+
+----------------------------------------------------------------------
+Upstream data sources
+----------------------------------------------------------------------
+
+The benchmark pipeline in this repository can fetch metadata from several
+public life-science literature services. Users are responsible for complying
+with each service's terms when running the pipeline:
+
+- NCBI PubMed / PubMed Central
+    https://www.ncbi.nlm.nih.gov/home/about/policies/
+- Europe PMC
+    https://europepmc.org/Copyright
+- Crossref
+    https://www.crossref.org/documentation/retrieve-metadata/rest-api/terms/
+- bioRxiv / medRxiv
+    https://www.biorxiv.org/about/FAQ
+
+Content retrieved from these services is subject to its original license
+(for example, CC-BY for many Europe PMC Open Access articles). This
+repository does not redistribute upstream content; release bundles produced
+by the pipeline are published separately under their own data license and
+governed by docs/release_governance_card.md.

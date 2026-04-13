@@ -91,16 +91,16 @@ Current release lane (`auto_review_shadow_v10`):
 
 These artifacts live under:
 
-- [auto_qualification_summary_full180_enriched_v9.json](knowledge_base/qualified/collection_v1_2018_present/auto_review/auto_qualification_summary_full180_enriched_v9.json)
-- [release_summary.json](knowledge_base/released/collection_v1_2018_present/auto_review_shadow_v10/release_summary.json)
-- [shadow_candidate_holdout_consistency_report.json](knowledge_base/released/collection_v1_2018_present/auto_review_shadow_v10/shadow_candidate_holdout_consistency_report.json)
-- [shadow_candidate_public_baseline_comparison_summary.json](knowledge_base/released/collection_v1_2018_present/auto_review_shadow_v10/shadow_candidate_public_baseline_comparison_summary.json)
-- [program_progress.json](knowledge_base/released/collection_v1_2018_present/auto_review_shadow_v10/program_progress.json)
-- [maintenance_log.jsonl](knowledge_base/released/collection_v1_2018_present/auto_review_shadow_v10/maintenance_log.jsonl)
-- [shadow_public_inspection_v1_summary.json](knowledge_base/released/collection_v1_2018_present/auto_review_shadow_v10/shadow_public_inspection_v1_summary.json)
-- [shadow_public_inspection_v1.md](knowledge_base/released/collection_v1_2018_present/auto_review_shadow_v10/shadow_public_inspection_v1.md)
-- [shadow_public_inspection_v1_taxonomy.json](knowledge_base/released/collection_v1_2018_present/auto_review_shadow_v10/shadow_public_inspection_v1_taxonomy.json)
-- [shadow_public_inspection_v1_taxonomy.md](knowledge_base/released/collection_v1_2018_present/auto_review_shadow_v10/shadow_public_inspection_v1_taxonomy.md)
+- `auto_qualification_summary_full180_enriched_v9.json`
+- `release_summary.json`
+- `shadow_candidate_holdout_consistency_report.json`
+- `shadow_candidate_public_baseline_comparison_summary.json`
+- `program_progress.json`
+- `maintenance_log.jsonl`
+- `shadow_public_inspection_v1_summary.json`
+- `shadow_public_inspection_v1.md`
+- `shadow_public_inspection_v1_taxonomy.json`
+- `shadow_public_inspection_v1_taxonomy.md`
 
 Current program-state interpretation:
 
@@ -108,11 +108,15 @@ Current program-state interpretation:
 - `leaderboard_gate_passed = false`
 - the current lane is operationally strong enough for deterministic shadow development, but still intentionally blocked from public-gold and human-validated leaderboard status
 - `shadow_public_inspection_v1` is the current fast spot-check surface: `30` public entries, `17` low-confidence, `2` `W3`, and balanced coverage across all six study classes
-- the paired taxonomy now gives a deterministic refinement queue: after grounding-aware parser refresh, the leading buckets are `low_confidence_shadow (17)`, `identifier_sparse_low_confidence (9)`, and `trial_registry_traceability (8)`
+- the paired taxonomy now gives a deterministic refinement queue: after confidence calibration, the leading buckets are `stable_shadow_controls (20)`, `resource_release_specificity (5)`, and `low_confidence_shadow (3)`
 - the refreshed `shadow_public_inspection_v2` slice keeps the same class balance while improving identifier coverage: `resource_ids` entries rise from `2` to `5`, and `identifier_sparse_low_confidence` drops from `12` to `9`
-- the inspection delta artifact is [shadow_public_inspection_v1_to_v2_delta.json](knowledge_base/released/collection_v1_2018_present/auto_review_shadow_v10/shadow_public_inspection_v1_to_v2_delta.json)
+- the inspection delta artifact is `shadow_public_inspection_v1_to_v2_delta.json`
 - parser/enrichment `v12` adds explicit `figure_reference_snippets` and `table_reference_snippets`, so figure/table grounding can be audited as a first-class signal instead of being inferred from caption presence alone
-- the next delta artifact, [shadow_public_inspection_v2_to_v3_delta.json](knowledge_base/released/collection_v1_2018_present/auto_review_shadow_v10/shadow_public_inspection_v2_to_v3_delta.json), shows `figure_table_grounding -28` after grounded tags were added
+- the next delta artifact, `shadow_public_inspection_v2_to_v3_delta.json`, shows `figure_table_grounding -28` after grounded tags were added
+- parser/enrichment `v13` adds explicit `trial_registry_reference_snippets`, and the full180 enriched pass records `trial_registry_reference_snippet_count = 91`
+- the latest delta artifact, `shadow_public_inspection_v3_to_v4_delta.json`, shows `trial_registry_grounded +4` and `trial_registry_traceability -8`
+- confidence calibration `v14` now treats `limitation_uncertainty_disclosure` as a tolerated insufficiency for confidence scoring, which moves full180 `confidence low/medium` from `34/146` to `5/175`
+- the latest delta artifact, `shadow_public_inspection_v4_to_v5_delta.json`, shows `low_confidence_shadow -14` and `identifier_sparse_low_confidence -6`
 
 Residual non-shadow set:
 
@@ -122,7 +126,7 @@ Residual non-shadow set:
 
 Residual summary:
 
-- [residual_non_shadow_summary_v8.json](knowledge_base/qualified/collection_v1_2018_present/auto_review/residual_non_shadow_summary_v8.json)
+- `residual_non_shadow_summary_v8.json`
 
 Important implementation note:
 

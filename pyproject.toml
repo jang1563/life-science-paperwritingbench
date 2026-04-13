@@ -5,21 +5,26 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "life-science-paperwritingbench"
 version = "0.1.0"
-description = "Qualification scaffolding for a life-science source-paper benchmark."
+description = "Governance core and qualification scaffolding for a life-science paper-writing benchmark."
 readme = "README.md"
 requires-python = ">=3.8"
-license = {text = "MIT"}
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
 authors = [
-  {name = "OpenAI Codex"}
+  {name = "the Life-Science PaperWritingBench Authors"}
 ]
 keywords = ["benchmark", "biomedical", "life-science", "paperwritingbench", "research-quality"]
 classifiers = [
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3 :: Only",
-  "License :: OSI Approved :: MIT License",
   "Intended Audience :: Science/Research",
   "Topic :: Scientific/Engineering :: Bio-Informatics"
 ]
+
+[project.urls]
+Homepage = "https://github.com/jang1563/life-science-paperwritingbench"
+Source = "https://github.com/jang1563/life-science-paperwritingbench"
+Issues = "https://github.com/jang1563/life-science-paperwritingbench/issues"
 
 [project.scripts]
 lspwb = "life_science_paperwritingbench.cli:main"
