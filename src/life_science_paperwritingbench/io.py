@@ -437,6 +437,9 @@ def auto_review_source_bundle_from_dict(data: Dict[str, Any]) -> AutoReviewSourc
         table_reference_snippets=tuple(str(item) for item in data.get("table_reference_snippets", [])),
         resource_identifiers=tuple(str(item) for item in data.get("resource_identifiers", [])),
         trial_registry_ids=tuple(str(item) for item in data.get("trial_registry_ids", [])),
+        trial_registry_reference_snippets=tuple(
+            str(item) for item in data.get("trial_registry_reference_snippets", [])
+        ),
         open_review_snippets=tuple(str(item) for item in data.get("open_review_snippets", [])),
         provenance_fields={str(key): str(value) for key, value in data.get("provenance_fields", {}).items()},
         notes=tuple(str(item) for item in data.get("notes", [])),
@@ -456,6 +459,7 @@ def auto_review_source_bundle_audit_report_from_dict(data: Dict[str, Any]) -> Au
         table_reference_snippet_count=int(data.get("table_reference_snippet_count", 0)),
         resource_identifier_count=int(data.get("resource_identifier_count", 0)),
         trial_registry_count=int(data.get("trial_registry_count", 0)),
+        trial_registry_reference_snippet_count=int(data.get("trial_registry_reference_snippet_count", 0)),
         open_review_snippet_count=int(data.get("open_review_snippet_count", 0)),
         provenance_warning_paper_ids=tuple(str(item) for item in data.get("provenance_warning_paper_ids", [])),
         notes=tuple(str(item) for item in data.get("notes", [])),
@@ -490,6 +494,9 @@ def auto_review_evidence_enrichment_record_from_dict(
         table_reference_snippets=tuple(str(item) for item in data.get("table_reference_snippets", [])),
         resource_identifiers=tuple(str(item) for item in data.get("resource_identifiers", [])),
         trial_registry_ids=tuple(str(item) for item in data.get("trial_registry_ids", [])),
+        trial_registry_reference_snippets=tuple(
+            str(item) for item in data.get("trial_registry_reference_snippets", [])
+        ),
         provenance_fields={str(key): str(value) for key, value in data.get("provenance_fields", {}).items()},
         notes=tuple(str(item) for item in data.get("notes", [])),
     )
@@ -509,6 +516,7 @@ def auto_review_evidence_enrichment_audit_report_from_dict(
         table_reference_snippet_count=int(data.get("table_reference_snippet_count", 0)),
         resource_identifier_count=int(data.get("resource_identifier_count", 0)),
         trial_registry_count=int(data.get("trial_registry_count", 0)),
+        trial_registry_reference_snippet_count=int(data.get("trial_registry_reference_snippet_count", 0)),
         fetch_ok_count=int(data.get("fetch_ok_count", 0)),
         notes=tuple(str(item) for item in data.get("notes", [])),
     )

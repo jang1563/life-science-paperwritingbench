@@ -46,6 +46,12 @@ _DATA_AVAILABILITY_TITLE_PATTERN = re.compile(
     r"\b(?:data availability|availability of data|availability of data and materials|data access|accession|code availability)\b",
     re.IGNORECASE,
 )
+_TRIAL_REGISTRY_TRACEABILITY_PATTERN = re.compile(
+    r"\b(?:clinicaltrials\.gov|trial registration|registered under|registered at|registered in|"
+    r"primary endpoint|secondary endpoint|randomiz|randomis|placebo|intervention arm|control arm|"
+    r"allocation|assigned|study arm|outcome assessment)\b",
+    re.IGNORECASE,
+)
 
 
 def _utc_timestamp() -> str:
@@ -176,6 +182,25 @@ def _xref_snippets(root: ET.Element, ref_type: str, limit: int = 12) -> Tuple[st
     return _dedupe(snippets)
 
 
+def _trial_registry_reference_snippets(root: ET.Element, limit: int = 12) -> Tuple[str, ...]:
+    snippets: List[str] = []
+    for element in root.iter():
+        if _local_name(element.tag) != "p":
+            continue
+        text = _truncate_text(_element_text(element), 600)
+        if not text:
+            continue
+        if not (
+            _TRIAL_REGISTRY_PATTERN.search(text)
+            or _TRIAL_REGISTRY_TRACEABILITY_PATTERN.search(text)
+        ):
+            continue
+        snippets.append(text)
+        if len(snippets) >= limit:
+            break
+    return _dedupe(snippets)
+
+
 def _identifier_hits(*texts: str) -> Tuple[str, ...]:
     hits: List[str] = []
     for text in texts:
@@ -239,6 +264,7 @@ def _parse_fulltext_payload(payload: bytes, raw_payload_path: str, pmcid: Option
     table_snippets = _dedupe(_table_snippets(root))
     figure_reference_snippets = _dedupe(_xref_snippets(root, "fig"))
     table_reference_snippets = _dedupe(_xref_snippets(root, "table"))
+    trial_registry_reference_snippets = _dedupe(_trial_registry_reference_snippets(root))
 
     methods_text = _joined_sections(methods_sections)
     results_text = _joined_sections(results_sections)
@@ -264,6 +290,7 @@ def _parse_fulltext_payload(payload: bytes, raw_payload_path: str, pmcid: Option
         " ".join(table_snippets),
         " ".join(figure_reference_snippets),
         " ".join(table_reference_snippets),
+        " ".join(trial_registry_reference_snippets),
         _joined_sections(data_availability_sections, 6000),
         _element_text(root),
     )
@@ -285,6 +312,8 @@ def _parse_fulltext_payload(payload: bytes, raw_payload_path: str, pmcid: Option
         provenance_fields["resource_identifiers"] = "pmc_fulltext_xml+regex"
     if trials:
         provenance_fields["trial_registry_ids"] = "pmc_fulltext_xml+regex"
+    if trial_registry_reference_snippets:
+        provenance_fields["trial_registry_reference_snippets"] = "pmc_fulltext_xml:p[trial_registry_context]"
     if data_availability_sections:
         provenance_fields["data_availability"] = "pmc_fulltext_xml:sec[data_availability]"
         notes.append("data_availability_section_used_for_identifier_scan")
@@ -301,6 +330,7 @@ def _parse_fulltext_payload(payload: bytes, raw_payload_path: str, pmcid: Option
         table_reference_snippets=table_reference_snippets,
         resource_identifiers=identifiers,
         trial_registry_ids=trials,
+        trial_registry_reference_snippets=trial_registry_reference_snippets,
         provenance_fields=provenance_fields,
         notes=tuple(notes),
     )
@@ -408,6 +438,9 @@ def audit_auto_review_evidence_enrichments(
         table_reference_snippet_count=sum(1 for item in enrichments if item.table_reference_snippets),
         resource_identifier_count=sum(1 for item in enrichments if item.resource_identifiers),
         trial_registry_count=sum(1 for item in enrichments if item.trial_registry_ids),
+        trial_registry_reference_snippet_count=sum(
+            1 for item in enrichments if item.trial_registry_reference_snippets
+        ),
         fetch_ok_count=sum(1 for item in fetch_records if item.fetch_ok),
         notes=(
             "PMCID-backed Europe PMC fullTextXML is replay-first and reuses cached raw XML unless --refresh is supplied.",
@@ -443,6 +476,8 @@ def materialize_enriched_source_papers(
             metadata["resource_identifiers"] = list(enrichment.resource_identifiers)
         if enrichment.trial_registry_ids:
             metadata["trial_registry_ids"] = list(enrichment.trial_registry_ids)
+        if enrichment.trial_registry_reference_snippets:
+            metadata["trial_registry_reference_snippets"] = list(enrichment.trial_registry_reference_snippets)
         if enrichment.provenance_fields:
             metadata["auto_review_provenance_fields"] = dict(enrichment.provenance_fields)
         if enrichment.notes:

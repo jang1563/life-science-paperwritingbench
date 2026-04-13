@@ -365,18 +365,19 @@ Current judge-inspection batch on the public shadow lane:
 
 Current inspection-taxonomy highlights:
 
-- `6` overlapping categories in the current public inspection slice
+- `7` overlapping categories in the current public inspection slice
 - after grounding-aware parser `v12`, the refreshed `shadow_public_inspection_v3` slice now carries `figure_grounded (28)` and `table_grounded (23)` tags
 - parser/enrichment `v13` now adds explicit `trial_registry_reference_snippets`; the full180 enriched pass records `trial_registry_reference_snippet_count = 91`
 - the same `v13` pass also improves writing labels from `W1/W2/W3 = 23/153/4` to `63/113/4`
 - confidence calibration `v14` keeps `180 shadow_candidate` papers but shifts `confidence = low/medium` from `34/146` to `5/175`
-- the current largest taxonomy buckets are `stable_shadow_controls (20)`, `resource_release_specificity (5)`, and `low_confidence_shadow (3)`
+- the current largest taxonomy buckets are `stable_shadow_controls (23)`, `low_confidence_shadow (3)`, and `identifier_sparse_low_confidence (3)`
 - the taxonomy is meant to drive prompt/parser refinement, not replace qualification
 - the refreshed `shadow_public_inspection_v2` slice reduced `identifier_sparse_low_confidence` from `12` to `9` and increased `resource_ids` coverage from `2` to `5`
 - the paired delta report lives at `shadow_public_inspection_v1_to_v2_delta.json`
 - the next delta, `shadow_public_inspection_v2_to_v3_delta.json`, shows `figure_table_grounding -28` with grounded tags added to the slice
 - the latest delta, `shadow_public_inspection_v3_to_v4_delta.json`, shows `trial_registry_grounded +4` and `trial_registry_traceability -8`
 - the newest delta, `shadow_public_inspection_v4_to_v5_delta.json`, shows `low_confidence_shadow -14` and `identifier_sparse_low_confidence -6`
+- the current delta, `shadow_public_inspection_v5_to_v6_delta.json`, shows `resource_release_grounded +3` and `resource_release_specificity -3`, leaving only `2` resource-release specificity entries in the slice
 
 Standardize local metadata exports, then normalize them into repo-native papers:
 

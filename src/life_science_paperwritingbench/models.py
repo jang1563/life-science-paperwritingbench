@@ -276,6 +276,7 @@ class AutoReviewEvidenceEnrichmentRecord:
     table_reference_snippets: Tuple[str, ...] = ()
     resource_identifiers: Tuple[str, ...] = ()
     trial_registry_ids: Tuple[str, ...] = ()
+    trial_registry_reference_snippets: Tuple[str, ...] = ()
     provenance_fields: Mapping[str, str] = field(default_factory=dict)
     notes: Tuple[str, ...] = ()
 
@@ -295,6 +296,7 @@ class AutoReviewEvidenceEnrichmentAuditReport:
     table_reference_snippet_count: int = 0
     resource_identifier_count: int = 0
     trial_registry_count: int = 0
+    trial_registry_reference_snippet_count: int = 0
     fetch_ok_count: int = 0
     notes: Tuple[str, ...] = ()
 
@@ -349,6 +351,7 @@ class AutoReviewSourceBundle:
     table_reference_snippets: Tuple[str, ...] = ()
     resource_identifiers: Tuple[str, ...] = ()
     trial_registry_ids: Tuple[str, ...] = ()
+    trial_registry_reference_snippets: Tuple[str, ...] = ()
     open_review_snippets: Tuple[str, ...] = ()
     provenance_fields: Mapping[str, str] = field(default_factory=dict)
     notes: Tuple[str, ...] = ()
@@ -370,6 +373,7 @@ class AutoReviewSourceBundleAuditReport:
     table_reference_snippet_count: int = 0
     resource_identifier_count: int = 0
     trial_registry_count: int = 0
+    trial_registry_reference_snippet_count: int = 0
     open_review_snippet_count: int = 0
     provenance_warning_paper_ids: Tuple[str, ...] = ()
     notes: Tuple[str, ...] = ()

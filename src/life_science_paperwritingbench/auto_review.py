@@ -413,6 +413,7 @@ def _bundle_completeness(
     table_snippets: Sequence[str],
     resource_identifiers: Sequence[str],
     trial_registry_ids: Sequence[str],
+    trial_registry_reference_snippets: Sequence[str],
     open_review_snippets: Sequence[str],
 ) -> AutoReviewBundleCompleteness:
     if methods_text and results_text and (
@@ -420,6 +421,7 @@ def _bundle_completeness(
         or table_snippets
         or resource_identifiers
         or trial_registry_ids
+        or trial_registry_reference_snippets
         or _QUANTITATIVE_RESULT_PATTERN.search(_join_non_empty((methods_text, results_text)))
     ):
         return AutoReviewBundleCompleteness.REVIEW_READY
@@ -488,6 +490,11 @@ def build_auto_review_source_bundles(
             "decision_letters",
             "review_response_text",
         )
+        trial_registry_reference_snippets = (
+            tuple(_normalize_text(item) for item in enrichment.trial_registry_reference_snippets)
+            if enrichment and enrichment.trial_registry_reference_snippets
+            else _metadata_items(metadata, "trial_registry_reference_snippets", "trial_registry_summary")
+        )
         resource_identifiers = (
             tuple(_normalize_text(item) for item in enrichment.resource_identifiers)
             if enrichment and enrichment.resource_identifiers
@@ -503,6 +510,7 @@ def build_auto_review_source_bundles(
                 " ".join(table_snippets),
                 " ".join(figure_reference_snippets),
                 " ".join(table_reference_snippets),
+                " ".join(trial_registry_reference_snippets),
                 " ".join(open_review_snippets),
             )
         )
@@ -568,6 +576,8 @@ def build_auto_review_source_bundles(
             provenance_fields["resource_identifiers"] = "metadata.resource_identifiers+regex"
         if trial_registry_ids:
             provenance_fields["trial_registry_ids"] = "metadata+regex"
+        if trial_registry_reference_snippets:
+            provenance_fields["trial_registry_reference_snippets"] = "metadata.trial_registry_reference_snippets"
         if open_review_snippets:
             provenance_fields["open_review_snippets"] = "metadata.review_comments/decision_letters"
         if enrichment and enrichment.provenance_fields:
@@ -580,6 +590,7 @@ def build_auto_review_source_bundles(
             table_snippets,
             resource_identifiers,
             trial_registry_ids,
+            trial_registry_reference_snippets,
             open_review_snippets,
         )
         if (
@@ -624,6 +635,7 @@ def build_auto_review_source_bundles(
                 table_reference_snippets=tuple(table_reference_snippets),
                 resource_identifiers=tuple(resource_identifiers),
                 trial_registry_ids=tuple(trial_registry_ids),
+                trial_registry_reference_snippets=tuple(trial_registry_reference_snippets),
                 open_review_snippets=tuple(open_review_snippets),
                 provenance_fields=provenance_fields,
                 notes=tuple(notes),
@@ -644,6 +656,9 @@ def audit_auto_review_source_bundles(
     table_reference_snippet_count = sum(1 for bundle in bundles if bundle.table_reference_snippets)
     resource_identifier_count = sum(1 for bundle in bundles if bundle.resource_identifiers)
     trial_registry_count = sum(1 for bundle in bundles if bundle.trial_registry_ids)
+    trial_registry_reference_snippet_count = sum(
+        1 for bundle in bundles if bundle.trial_registry_reference_snippets
+    )
     open_review_snippet_count = sum(1 for bundle in bundles if bundle.open_review_snippets)
     provenance_warning_paper_ids = tuple(
         bundle.paper_id
@@ -665,6 +680,7 @@ def audit_auto_review_source_bundles(
         table_reference_snippet_count=table_reference_snippet_count,
         resource_identifier_count=resource_identifier_count,
         trial_registry_count=trial_registry_count,
+        trial_registry_reference_snippet_count=trial_registry_reference_snippet_count,
         open_review_snippet_count=open_review_snippet_count,
         provenance_warning_paper_ids=provenance_warning_paper_ids,
         notes=tuple(notes),
@@ -690,6 +706,33 @@ def _has_grounded_figure_table_support(bundle: AutoReviewSourceBundle) -> bool:
     )
 
 
+def _has_grounded_trial_registry_support(bundle: AutoReviewSourceBundle) -> bool:
+    if not bundle.trial_registry_ids or not bundle.trial_registry_reference_snippets:
+        return False
+    corpus = _join_non_empty(bundle.trial_registry_reference_snippets).lower()
+    if any(
+        token in corpus
+        for token in (
+            "clinicaltrials.gov",
+            "trial registration",
+            "registered under",
+            "registered at",
+            "registered in",
+            "primary endpoint",
+            "secondary endpoint",
+            "randomiz",
+            "randomis",
+            "placebo",
+            "intervention arm",
+            "control arm",
+            "outcome",
+            "assigned",
+        )
+    ):
+        return True
+    return bool(bundle.methods_text and bundle.results_text)
+
+
 def _has_methods_results_signal(bundle: AutoReviewSourceBundle) -> bool:
     corpus = _join_non_empty((bundle.methods_text, bundle.results_text, bundle.abstract_text))
     return bool(_METHODS_RESULTS_PATTERN.search(corpus))
@@ -707,6 +750,7 @@ def _traceability_corpus(bundle: AutoReviewSourceBundle) -> str:
             " ".join(bundle.table_reference_snippets),
             " ".join(bundle.resource_identifiers),
             " ".join(bundle.trial_registry_ids),
+            " ".join(bundle.trial_registry_reference_snippets),
         )
     ).lower()
 
@@ -950,6 +994,8 @@ def _domain_has_direct_evidence(domain: str, bundle: AutoReviewSourceBundle) -> 
     if domain == ScientificCriticalDomain.REQUIRED_TRACEABILITY.value:
         if bundle.resource_identifiers or bundle.trial_registry_ids:
             return True
+        if _has_grounded_trial_registry_support(bundle):
+            return True
         if bundle.methods_text and bundle.results_text and _bundle_has_resource_release_signal(bundle):
             return True
         if bundle.methods_text and bundle.results_text and _has_quantitative_result_signal(bundle):
@@ -987,7 +1033,11 @@ def _domain_has_direct_evidence(domain: str, bundle: AutoReviewSourceBundle) -> 
     if domain == WritingSupportingDomain.TITLE_SCOPE_ALIGNMENT.value:
         return bool(bundle.abstract_text)
     if domain == WritingSupportingDomain.CITATION_CONTEXTUALIZATION.value:
-        return bool(bundle.open_review_snippets or bundle.resource_identifiers)
+        return bool(
+            bundle.open_review_snippets
+            or bundle.resource_identifiers
+            or _has_grounded_trial_registry_support(bundle)
+        )
     if domain == ScientificCriticalDomain.INTEGRITY_STATUS.value:
         return True
     return False
@@ -1063,6 +1113,7 @@ def _render_prompt(role: AutoReviewRole, paper: SourcePaper, bundle: AutoReviewS
             f"table_reference_snippets={' | '.join(bundle.table_reference_snippets)}",
             f"resource_identifiers={' | '.join(bundle.resource_identifiers)}",
             f"trial_registry_ids={' | '.join(bundle.trial_registry_ids)}",
+            f"trial_registry_reference_snippets={' | '.join(bundle.trial_registry_reference_snippets)}",
             f"open_review_snippets={' | '.join(bundle.open_review_snippets)}",
         ]
     )
@@ -1103,7 +1154,7 @@ def _base_scientific_votes(
     }
     supporting: Dict[ScientificSupportingDomain, DomainOutcome] = {
         ScientificSupportingDomain.REPRODUCIBILITY_SUPPORT: DomainOutcome.PASS
-        if bundle.resource_identifiers or bundle.trial_registry_ids or (paper.study_class == StudyClass.METHODS_RESOURCE and bundle.methods_text and resource_release)
+        if bundle.resource_identifiers or _has_grounded_trial_registry_support(bundle) or (paper.study_class == StudyClass.METHODS_RESOURCE and bundle.methods_text and resource_release)
         else (DomainOutcome.BORDERLINE if bundle.methods_text else DomainOutcome.FAIL),
         ScientificSupportingDomain.RESOURCE_SPECIFICITY: DomainOutcome.PASS
         if bundle.resource_identifiers or (paper.study_class == StudyClass.METHODS_RESOURCE and bundle.methods_text and resource_release)
@@ -1286,6 +1337,19 @@ def _majority_vote(values: Sequence[DomainOutcome]) -> DomainOutcome:
     return ordered[0][0]
 
 
+_CONFIDENCE_TOLERATED_INSUFFICIENT_FLAGS = {
+    WritingCriticalDomain.LIMITATION_UNCERTAINTY_DISCLOSURE.value,
+}
+
+
+def _disqualifying_confidence_flags(flags: Sequence[str]) -> Tuple[str, ...]:
+    return tuple(
+        flag
+        for flag in sorted(set(flags))
+        if flag not in _CONFIDENCE_TOLERATED_INSUFFICIENT_FLAGS
+    )
+
+
 def _aggregate_domain_votes(
     bundle: AutoReviewSourceBundle,
     votes: Sequence[AutoPanelVote],
@@ -1362,6 +1426,10 @@ def aggregate_auto_paper_reviews(
         skip_writing = bundle.bundle_completeness == AutoReviewBundleCompleteness.METADATA_ONLY or not any(
             vote.writing_domain_votes for vote in votes
         )
+        insufficient_flags = tuple(
+            sorted({flag for vote in votes for flag in vote.insufficient_evidence_flags})
+        )
+        disqualifying_flags = _disqualifying_confidence_flags(insufficient_flags)
         writing_review = WritingReview(
             critical_domains=(
                 {}
@@ -1382,7 +1450,9 @@ def aggregate_auto_paper_reviews(
                     ),
                     WritingSupportingDomain.CITATION_CONTEXTUALIZATION: (
                         DomainOutcome.PASS
-                        if bundle.open_review_snippets or bundle.resource_identifiers
+                        if bundle.open_review_snippets
+                        or bundle.resource_identifiers
+                        or _has_grounded_trial_registry_support(bundle)
                         else DomainOutcome.BORDERLINE
                     ),
                 }
@@ -1393,7 +1463,7 @@ def aggregate_auto_paper_reviews(
             AutoReviewConfidence.MEDIUM
             if bundle.bundle_completeness == AutoReviewBundleCompleteness.REVIEW_READY
             and not skip_writing
-            and not any(vote.insufficient_evidence_flags for vote in votes)
+            and not disqualifying_flags
             else AutoReviewConfidence.LOW
         )
         cap_reason = None
@@ -1410,7 +1480,21 @@ def aggregate_auto_paper_reviews(
                 confidence=confidence,
                 skipped_writing_review=skip_writing,
                 auto_release_cap_reason=cap_reason,
-                notes=tuple(sorted({note for vote in votes for note in vote.notes})),
+                notes=tuple(
+                    sorted(
+                        {note for vote in votes for note in vote.notes}
+                        | (
+                            {f"insufficient_flags={'|'.join(insufficient_flags)}"}
+                            if insufficient_flags
+                            else set()
+                        )
+                        | (
+                            {f"confidence_disqualifying_flags={'|'.join(disqualifying_flags)}"}
+                            if disqualifying_flags
+                            else set()
+                        )
+                    )
+                ),
             )
         )
     return tuple(records)

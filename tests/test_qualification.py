@@ -2128,6 +2128,216 @@ class QualificationTests(unittest.TestCase):
         category_ids = {category.category_id for category in categories}
         self.assertNotIn("figure_table_grounding", category_ids)
 
+    def test_build_shadow_inspection_taxonomy_skips_grounded_trial_registry_entries(self):
+        entries = (
+            ShadowInspectionEntry(
+                inspection_id="INSPECT:TRIAL:001",
+                task_bundle_id="TB:TRIAL:001",
+                benchmark_unit_id="BU:TRIAL:001",
+                paper_id="PMID:TRIAL:001",
+                title="Grounded trial registry entry",
+                publication_year=2024,
+                task_family=TaskFamily.METHODS_TO_TEXT,
+                study_class=StudyClass.HUMAN_INTERVENTIONAL,
+                claim_mode=ClaimMode.CONFIRMATORY,
+                release_tier=ReleaseTier.SHADOW_GOLD,
+                holdout_bucket="public",
+                writing=PaperWritingQualification.W2,
+                confidence=AutoReviewConfidence.MEDIUM,
+                bundle_completeness=AutoReviewBundleCompleteness.REVIEW_READY,
+                focus_tags=("trial_registry", "trial_registry_grounded", "writing_w2"),
+                evidence_snapshot={
+                    "resource_identifiers": 0,
+                    "trial_registry_ids": 1,
+                    "trial_registry_reference_snippets": 1,
+                },
+                qualification_reasons=("paper is shadow-ready under auto-only rules",),
+            ),
+        )
+        categories = build_shadow_inspection_taxonomy(entries)
+        category_ids = {category.category_id for category in categories}
+        self.assertNotIn("trial_registry_traceability", category_ids)
+
+    def test_build_shadow_inspection_taxonomy_skips_grounded_resource_release_entries(self):
+        entries = (
+            ShadowInspectionEntry(
+                inspection_id="INSPECT:RESOURCE:001",
+                task_bundle_id="TB:RESOURCE:001",
+                benchmark_unit_id="BU:RESOURCE:001",
+                paper_id="PMID:RESOURCE:001",
+                title="Grounded resource release entry",
+                publication_year=2024,
+                task_family=TaskFamily.METHODS_TO_TEXT,
+                study_class=StudyClass.METHODS_RESOURCE,
+                claim_mode=ClaimMode.RESOURCE_RELEASE,
+                release_tier=ReleaseTier.SHADOW_GOLD,
+                holdout_bucket="public",
+                writing=PaperWritingQualification.W2,
+                confidence=AutoReviewConfidence.MEDIUM,
+                bundle_completeness=AutoReviewBundleCompleteness.REVIEW_READY,
+                focus_tags=(
+                    "resource_release_claim",
+                    "resource_release_grounded",
+                    "figure_grounded",
+                    "writing_w2",
+                ),
+                evidence_snapshot={
+                    "methods_text": 1,
+                    "results_text": 1,
+                    "figure_captions": 1,
+                    "figure_reference_snippets": 1,
+                    "resource_identifiers": 0,
+                    "trial_registry_ids": 0,
+                },
+                qualification_reasons=("paper is shadow-ready under auto-only rules",),
+            ),
+        )
+        categories = build_shadow_inspection_taxonomy(entries)
+        category_ids = {category.category_id for category in categories}
+        self.assertNotIn("resource_release_specificity", category_ids)
+
+    def test_build_shadow_inspection_batch_flags_abstract_inferred_only(self):
+        paper = make_source_paper(
+            paper_id="PMID:FTGAP:1",
+            title="Fulltext-gap paper",
+            claim_mode=ClaimMode.RESOURCE_RELEASE,
+        )
+        auto_record = AutoQualificationRecord(
+            paper_id=paper.paper_id,
+            decision=make_paper_decision(
+                candidate_tier=CandidateTier.SHADOW_CANDIDATE,
+                writing=PaperWritingQualification.W2,
+                public_writing_eligible=False,
+            ),
+            confidence=AutoReviewConfidence.LOW,
+        )
+        source_bundle = AutoReviewSourceBundle(
+            paper_id=paper.paper_id,
+            bundle_completeness=AutoReviewBundleCompleteness.REVIEW_READY,
+            abstract_text="abstract describing a released resource",
+            methods_text="abstract describing a released resource",
+            results_text="abstract describing a released resource",
+            notes=(
+                "fetch_error:HTTPError 403",
+                "methods inferred from abstract for auto-review bundling",
+                "results inferred from abstract for auto-review bundling",
+            ),
+        )
+        task_bundle = make_task_bundle(
+            index=1,
+            paper_id=paper.paper_id,
+            task_family=TaskFamily.METHODS_TO_TEXT,
+            study_class=paper.study_class,
+            claim_mode=paper.claim_mode,
+            release_tier=ReleaseTier.SHADOW_GOLD,
+            holdout_bucket="public",
+        )
+        entries = build_shadow_inspection_batch(
+            task_bundles=[task_bundle],
+            papers={paper.paper_id: paper},
+            auto_qualification_records={paper.paper_id: auto_record},
+            source_bundles={paper.paper_id: source_bundle},
+            target_total=1,
+            include_holdout_buckets=("public",),
+        )
+        self.assertEqual(len(entries), 1)
+        self.assertIn("abstract_inferred_only", entries[0].focus_tags)
+
+    def test_build_shadow_inspection_batch_does_not_flag_abstract_inferred_only_when_identifiers_present(self):
+        paper = make_source_paper(
+            paper_id="PMID:FTGAP:2",
+            claim_mode=ClaimMode.RESOURCE_RELEASE,
+        )
+        auto_record = AutoQualificationRecord(
+            paper_id=paper.paper_id,
+            decision=make_paper_decision(
+                candidate_tier=CandidateTier.SHADOW_CANDIDATE,
+                writing=PaperWritingQualification.W2,
+                public_writing_eligible=False,
+            ),
+            confidence=AutoReviewConfidence.LOW,
+        )
+        source_bundle = AutoReviewSourceBundle(
+            paper_id=paper.paper_id,
+            bundle_completeness=AutoReviewBundleCompleteness.REVIEW_READY,
+            abstract_text="abstract describing a released resource",
+            methods_text="abstract describing a released resource",
+            results_text="abstract describing a released resource",
+            resource_identifiers=("PXD999999",),
+            notes=(
+                "fetch_error:HTTPError 403",
+                "methods inferred from abstract for auto-review bundling",
+            ),
+        )
+        task_bundle = make_task_bundle(
+            index=1,
+            paper_id=paper.paper_id,
+            task_family=TaskFamily.METHODS_TO_TEXT,
+            study_class=paper.study_class,
+            claim_mode=paper.claim_mode,
+            release_tier=ReleaseTier.SHADOW_GOLD,
+            holdout_bucket="public",
+        )
+        entries = build_shadow_inspection_batch(
+            task_bundles=[task_bundle],
+            papers={paper.paper_id: paper},
+            auto_qualification_records={paper.paper_id: auto_record},
+            source_bundles={paper.paper_id: source_bundle},
+            target_total=1,
+            include_holdout_buckets=("public",),
+        )
+        self.assertEqual(len(entries), 1)
+        self.assertNotIn("abstract_inferred_only", entries[0].focus_tags)
+
+    def test_build_shadow_inspection_taxonomy_emits_fulltext_acquisition_gap(self):
+        entries = (
+            ShadowInspectionEntry(
+                inspection_id="INSPECT:FTGAP:001",
+                task_bundle_id="TB:FTGAP:001",
+                benchmark_unit_id="BU:FTGAP:001",
+                paper_id="PMID:FTGAP:001",
+                title="Full-text gap entry",
+                publication_year=2024,
+                task_family=TaskFamily.METHODS_TO_TEXT,
+                study_class=StudyClass.METHODS_RESOURCE,
+                claim_mode=ClaimMode.RESOURCE_RELEASE,
+                release_tier=ReleaseTier.SHADOW_GOLD,
+                holdout_bucket="public",
+                writing=PaperWritingQualification.W2,
+                confidence=AutoReviewConfidence.LOW,
+                bundle_completeness=AutoReviewBundleCompleteness.REVIEW_READY,
+                focus_tags=(
+                    "low_confidence",
+                    "writing_w2",
+                    "resource_release_claim",
+                    "abstract_inferred_only",
+                ),
+                evidence_snapshot={
+                    "abstract_text": 1,
+                    "methods_text": 1,
+                    "results_text": 1,
+                    "figure_captions": 0,
+                    "table_snippets": 0,
+                    "resource_identifiers": 0,
+                    "trial_registry_ids": 0,
+                },
+                qualification_reasons=("paper is shadow-ready under auto-only rules",),
+                source_bundle_notes=(
+                    "fetch_error:HTTPError 403",
+                    "methods inferred from abstract for auto-review bundling",
+                ),
+            ),
+        )
+        categories = build_shadow_inspection_taxonomy(entries)
+        category_ids = {category.category_id for category in categories}
+        self.assertIn("fulltext_acquisition_gap", category_ids)
+        self.assertNotIn("resource_release_specificity", category_ids)
+        gap_category = next(
+            category for category in categories if category.category_id == "fulltext_acquisition_gap"
+        )
+        self.assertEqual(gap_category.priority, "high")
+        self.assertEqual(gap_category.entry_count, 1)
+
     def test_cli_summarize_shadow_inspection_taxonomy(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             entries_path = os.path.join(tmpdir, "inspection.jsonl")
@@ -6334,6 +6544,9 @@ class PaperQualificationFlowTests(unittest.TestCase):
             self.assertTrue(enrichment.figure_captions)
             self.assertTrue(enrichment.table_snippets)
             self.assertIn("NCT12345678", enrichment.trial_registry_ids)
+            self.assertTrue(
+                any("NCT12345678" in snippet for snippet in enrichment.trial_registry_reference_snippets)
+            )
             self.assertIn("RRID:AB_123456", enrichment.resource_identifiers)
             audit = audit_auto_review_evidence_enrichments(fetch_records, enrichments)
             self.assertEqual(audit.fetch_ok_count, 1)
@@ -6394,9 +6607,13 @@ class PaperQualificationFlowTests(unittest.TestCase):
             self.assertIn("GSM123456", enrichment.resource_identifiers)
             self.assertIn("SRR234567", enrichment.resource_identifiers)
             self.assertIn("ACTRN12624000000000", enrichment.trial_registry_ids)
+            self.assertTrue(
+                any("ACTRN12624000000000" in snippet for snippet in enrichment.trial_registry_reference_snippets)
+            )
             self.assertIn("data_availability", enrichment.provenance_fields)
             self.assertIn("figure_reference_snippets", enrichment.provenance_fields)
             self.assertIn("table_reference_snippets", enrichment.provenance_fields)
+            self.assertIn("trial_registry_reference_snippets", enrichment.provenance_fields)
             self.assertIn("data_availability_section_used_for_identifier_scan", enrichment.notes)
 
     def test_cli_auto_review_evidence_enrichment_from_cached_xml(self):
@@ -6494,6 +6711,7 @@ class PaperQualificationFlowTests(unittest.TestCase):
             table_reference_snippets=("Table 1 summarizes the measured outcomes.",),
             resource_identifiers=("RRID:AB_123456",),
             trial_registry_ids=("NCT00000001",),
+            trial_registry_reference_snippets=("Registered under NCT00000001 with primary endpoint change at week 12.",),
             provenance_fields={"methods_text": "pmc_fulltext_xml:sec[methods]"},
             notes=("cached enrichment",),
         )
@@ -6508,6 +6726,10 @@ class PaperQualificationFlowTests(unittest.TestCase):
         self.assertEqual(metadata["table_reference_snippets"], ["Table 1 summarizes the measured outcomes."])
         self.assertEqual(metadata["resource_identifiers"], ["RRID:AB_123456"])
         self.assertEqual(metadata["trial_registry_ids"], ["NCT00000001"])
+        self.assertEqual(
+            metadata["trial_registry_reference_snippets"],
+            ["Registered under NCT00000001 with primary endpoint change at week 12."],
+        )
 
     def test_auto_review_pipeline_caps_public_release(self):
         review_ready_paper = make_source_paper(
@@ -6621,6 +6843,47 @@ class PaperQualificationFlowTests(unittest.TestCase):
         self.assertIn(
             records[0].decision.scientific,
             {PaperScientificQualification.A, PaperScientificQualification.B},
+        )
+
+    def test_auto_review_limitation_only_insufficiency_does_not_force_low_confidence(self):
+        paper = make_source_paper(
+            paper_id="PMID:auto-confidence-calibrated",
+            study_class=StudyClass.HUMAN_INTERVENTIONAL,
+            claim_mode=ClaimMode.CONFIRMATORY,
+            metadata={
+                "abstract": "Randomized placebo-controlled trial with primary endpoint improvement.",
+                "methods_text": "We randomized participants, registered the study as NCT01234567, and assessed the primary endpoint at week 12.",
+                "results_text": "The intervention arm improved the primary endpoint and Table 1 and Figure 2 summarize the outcomes.",
+                "figure_captions": [{"pointer": "Fig2", "text": "Primary endpoint improved in the intervention arm."}],
+                "table_snippets": [{"pointer": "Table1", "text": "Primary endpoint estimates by study arm."}],
+                "figure_reference_snippets": ["Figure 2 shows the intervention arm improvement over placebo."],
+                "table_reference_snippets": ["Table 1 reports the primary endpoint estimates by study arm."],
+                "trial_registry_ids": ["NCT01234567"],
+                "trial_registry_reference_snippets": ["Registered under NCT01234567 with a primary endpoint at week 12."],
+                "doi": "10.1000/auto-confidence-calibrated",
+                "pmid": "203",
+            },
+        )
+        bundles = build_auto_review_source_bundles((paper,))
+        packaging_reviews = build_packaging_review_priors((paper,))
+        profile = build_cayuga_execution_profile(cayuga_root="/tmp/cayuga", repo_root=ROOT)
+        votes = run_auto_paper_reviews(
+            (paper,),
+            bundles,
+            execution_profile=profile,
+            model_id="mock-panel",
+            packaging_reviews=packaging_reviews,
+        )
+        aggregated = aggregate_auto_paper_reviews((paper,), bundles, votes)
+        self.assertEqual(aggregated[0].confidence, AutoReviewConfidence.MEDIUM)
+        self.assertTrue(
+            any(
+                note == "insufficient_flags=limitation_uncertainty_disclosure"
+                for note in aggregated[0].notes
+            )
+        )
+        self.assertFalse(
+            any(note.startswith("confidence_disqualifying_flags=") for note in aggregated[0].notes)
         )
 
     def test_auto_review_biomarker_observational_structured_evidence_passes_remark(self):

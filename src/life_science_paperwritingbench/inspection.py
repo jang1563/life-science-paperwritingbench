@@ -18,8 +18,30 @@ from .models import (
 from .policy import AutoReviewConfidence, PaperWritingQualification, ReleaseTier
 
 
+_FETCH_ERROR_NOTE_MARKER = "fetch_error"
+_ABSTRACT_INFERRED_NOTE_MARKER = "inferred from abstract"
+
+
 def _utc_timestamp() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def _has_note_marker(notes: Sequence[str], marker: str) -> bool:
+    return any(marker in (note or "") for note in notes)
+
+
+def _has_abstract_inferred_only_signal(bundle: AutoReviewSourceBundle) -> bool:
+    if not _has_note_marker(bundle.notes, _FETCH_ERROR_NOTE_MARKER):
+        return False
+    if not _has_note_marker(bundle.notes, _ABSTRACT_INFERRED_NOTE_MARKER):
+        return False
+    has_grounded_figures = bool(bundle.figure_captions) and bool(bundle.figure_reference_snippets)
+    has_grounded_tables = bool(bundle.table_snippets) and bool(bundle.table_reference_snippets)
+    if has_grounded_figures or has_grounded_tables:
+        return False
+    if bundle.resource_identifiers or bundle.trial_registry_ids:
+        return False
+    return True
 
 
 def _focus_tags(
@@ -50,9 +72,29 @@ def _focus_tags(
         tags.append("resource_ids")
     if bundle.trial_registry_ids:
         tags.append("trial_registry")
+    if bundle.trial_registry_ids and bundle.trial_registry_reference_snippets:
+        tags.append("trial_registry_grounded")
     if paper.claim_mode.value == "resource_release":
         tags.append("resource_release_claim")
+        if _has_resource_release_grounding(bundle):
+            tags.append("resource_release_grounded")
+    if _has_abstract_inferred_only_signal(bundle):
+        tags.append("abstract_inferred_only")
     return tuple(tags)
+
+
+def _has_resource_release_grounding(bundle: AutoReviewSourceBundle) -> bool:
+    if bundle.resource_identifiers:
+        return True
+    has_methods_results = bool(bundle.methods_text.strip()) and bool(bundle.results_text.strip())
+    has_grounded_visual_evidence = (
+        bool(bundle.figure_captions)
+        and bool(bundle.figure_reference_snippets)
+    ) or (
+        bool(bundle.table_snippets)
+        and bool(bundle.table_reference_snippets)
+    )
+    return has_methods_results and has_grounded_visual_evidence
 
 
 def _evidence_snapshot(bundle: AutoReviewSourceBundle) -> Dict[str, int]:
@@ -66,6 +108,7 @@ def _evidence_snapshot(bundle: AutoReviewSourceBundle) -> Dict[str, int]:
         "table_reference_snippets": len(bundle.table_reference_snippets),
         "resource_identifiers": len(bundle.resource_identifiers),
         "trial_registry_ids": len(bundle.trial_registry_ids),
+        "trial_registry_reference_snippets": len(bundle.trial_registry_reference_snippets),
         "open_review_snippets": len(bundle.open_review_snippets),
     }
 
@@ -308,6 +351,14 @@ _TAXONOMY_SPECS = {
             "Prefer explicit identifiers and reproducibility cues over broad release-language matches.",
         ),
     },
+    "fulltext_acquisition_gap": {
+        "label": "Full-text acquisition gap",
+        "priority": "high",
+        "recommended_actions": (
+            "Retry full-text acquisition (publisher-native or Europe PMC) before re-running the shadow lane on these papers.",
+            "Do not treat these cases as parser-labeling mistakes; the extraction substrate itself is missing.",
+        ),
+    },
     "identifier_sparse_low_confidence": {
         "label": "Identifier-sparse low-confidence cases",
         "priority": "high",
@@ -354,16 +405,23 @@ def _taxonomy_categories_for_entry(entry: ShadowInspectionEntry) -> Tuple[str, .
     categories: List[str] = []
     focus_tags = set(entry.focus_tags)
     reason_text = " ".join(reason.lower() for reason in entry.qualification_reasons)
+    fulltext_gap = "abstract_inferred_only" in focus_tags
 
     if entry.confidence == AutoReviewConfidence.LOW:
         categories.append("low_confidence_shadow")
     if entry.writing == PaperWritingQualification.W3 or "writing domain" in reason_text:
         categories.append("writing_quality_risk")
-    if "resource_release_claim" in focus_tags:
+    if (
+        "resource_release_claim" in focus_tags
+        and "resource_release_grounded" not in focus_tags
+        and not fulltext_gap
+    ):
         categories.append("resource_release_specificity")
+    if fulltext_gap:
+        categories.append("fulltext_acquisition_gap")
     if "hybrid_overlay" in focus_tags:
         categories.append("hybrid_overlay_complexity")
-    if "trial_registry" in focus_tags:
+    if "trial_registry" in focus_tags and "trial_registry_grounded" not in focus_tags:
         categories.append("trial_registry_traceability")
     if ("figure_rich" in focus_tags and "figure_grounded" not in focus_tags) or (
         "table_rich" in focus_tags and "table_grounded" not in focus_tags
@@ -533,6 +591,44 @@ def compare_shadow_inspection_reports(
     resource_id_delta = current_report.focus_tag_counts.get("resource_ids", 0) - previous_report.focus_tag_counts.get("resource_ids", 0)
     if resource_id_delta > 0:
         notes.append(f"inspection slice gained {resource_id_delta} entries with resource identifiers")
+    trial_registry_grounded_delta = current_report.focus_tag_counts.get("trial_registry_grounded", 0) - previous_report.focus_tag_counts.get("trial_registry_grounded", 0)
+    if trial_registry_grounded_delta > 0:
+        notes.append(
+            f"inspection slice gained {trial_registry_grounded_delta} entries with grounded trial-registry support"
+        )
+    trial_registry_delta = current_categories.get("trial_registry_traceability", 0) - previous_categories.get(
+        "trial_registry_traceability", 0
+    )
+    if trial_registry_delta < 0:
+        notes.append(f"trial_registry_traceability decreased by {abs(trial_registry_delta)}")
+    resource_release_grounded_delta = current_report.focus_tag_counts.get(
+        "resource_release_grounded", 0
+    ) - previous_report.focus_tag_counts.get("resource_release_grounded", 0)
+    if resource_release_grounded_delta > 0:
+        notes.append(
+            f"inspection slice gained {resource_release_grounded_delta} entries with grounded resource-release support"
+        )
+    resource_release_delta = current_categories.get("resource_release_specificity", 0) - previous_categories.get(
+        "resource_release_specificity", 0
+    )
+    if resource_release_delta < 0:
+        notes.append(f"resource_release_specificity decreased by {abs(resource_release_delta)}")
+    fulltext_gap_delta = current_categories.get("fulltext_acquisition_gap", 0) - previous_categories.get(
+        "fulltext_acquisition_gap", 0
+    )
+    if fulltext_gap_delta > 0:
+        notes.append(
+            f"fulltext_acquisition_gap gained {fulltext_gap_delta} entries — prioritize full-text acquisition before re-running the shadow lane"
+        )
+    elif fulltext_gap_delta < 0:
+        notes.append(f"fulltext_acquisition_gap decreased by {abs(fulltext_gap_delta)}")
+    abstract_inferred_delta = current_report.focus_tag_counts.get(
+        "abstract_inferred_only", 0
+    ) - previous_report.focus_tag_counts.get("abstract_inferred_only", 0)
+    if abstract_inferred_delta > 0:
+        notes.append(
+            f"inspection slice gained {abstract_inferred_delta} entries whose bundles are abstract-inferred only"
+        )
 
     return ShadowInspectionDeltaReport(
         generated_at=generated_at or _utc_timestamp(),

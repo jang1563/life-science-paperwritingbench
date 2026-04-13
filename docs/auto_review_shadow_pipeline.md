@@ -108,7 +108,7 @@ Current program-state interpretation:
 - `leaderboard_gate_passed = false`
 - the current lane is operationally strong enough for deterministic shadow development, but still intentionally blocked from public-gold and human-validated leaderboard status
 - `shadow_public_inspection_v1` is the current fast spot-check surface: `30` public entries, `17` low-confidence, `2` `W3`, and balanced coverage across all six study classes
-- the paired taxonomy now gives a deterministic refinement queue: after confidence calibration, the leading buckets are `stable_shadow_controls (20)`, `resource_release_specificity (5)`, and `low_confidence_shadow (3)`
+- the paired taxonomy now gives a deterministic refinement queue: after resource-release grounding, the leading buckets are `stable_shadow_controls (23)`, `low_confidence_shadow (3)`, `identifier_sparse_low_confidence (3)`, and `resource_release_specificity (2)`
 - the refreshed `shadow_public_inspection_v2` slice keeps the same class balance while improving identifier coverage: `resource_ids` entries rise from `2` to `5`, and `identifier_sparse_low_confidence` drops from `12` to `9`
 - the inspection delta artifact is `shadow_public_inspection_v1_to_v2_delta.json`
 - parser/enrichment `v12` adds explicit `figure_reference_snippets` and `table_reference_snippets`, so figure/table grounding can be audited as a first-class signal instead of being inferred from caption presence alone
@@ -117,6 +117,7 @@ Current program-state interpretation:
 - the latest delta artifact, `shadow_public_inspection_v3_to_v4_delta.json`, shows `trial_registry_grounded +4` and `trial_registry_traceability -8`
 - confidence calibration `v14` now treats `limitation_uncertainty_disclosure` as a tolerated insufficiency for confidence scoring, which moves full180 `confidence low/medium` from `34/146` to `5/175`
 - the latest delta artifact, `shadow_public_inspection_v4_to_v5_delta.json`, shows `low_confidence_shadow -14` and `identifier_sparse_low_confidence -6`
+- the newest delta artifact, `shadow_public_inspection_v5_to_v6_delta.json`, shows `resource_release_grounded +3` and `resource_release_specificity -3`, leaving only `2` resource-release specificity entries in the current slice
 
 Residual non-shadow set:
 
