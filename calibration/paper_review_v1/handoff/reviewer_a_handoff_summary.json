@@ -1,0 +1,57 @@
+{
+  "batch_id": "paper_review_v1",
+  "claim_mode_counts": {
+    "confirmatory": 22,
+    "descriptive": 30,
+    "exploratory": 75,
+    "negative_result": 20,
+    "resource_release": 33
+  },
+  "generated_at": "2026-04-10T20:29:26Z",
+  "metadata_warning_count": 86,
+  "notes": [],
+  "open_review_signal_count": 4,
+  "restricted_artifact_assignment_count": 0,
+  "reviewer_id": "reviewer_a",
+  "study_class_counts": {
+    "animal_preclinical": 30,
+    "human_interventional": 30,
+    "human_observational": 30,
+    "mechanistic_experimental": 30,
+    "methods_resource": 30,
+    "systematic_review_meta_analysis": 30
+  },
+  "top_priority_paper_ids": [
+    "DOI:10.1186/s12889-023-16960-6",
+    "DOI:10.1007/s00431-026-06844-3",
+    "DOI:10.1007/s00520-026-10393-8",
+    "DOI:10.1136/bmj-2025-087259",
+    "DOI:10.1136/bmjgh-2024-016886",
+    "DOI:10.1371/journal.pone.0345106",
+    "DOI:10.1371/journal.pone.0345784",
+    "DOI:10.3390/medicina62030515",
+    "DOI:10.3390/medsci14010129",
+    "DOI:10.1016/j.xcrm.2026.102648",
+    "DOI:10.1080/07853890.2026.2620331",
+    "DOI:10.1080/07853890.2026.2628353",
+    "DOI:10.1093/eschf/xvag074",
+    "DOI:10.1097/md.0000000000047798",
+    "DOI:10.1097/md.0000000000047869",
+    "DOI:10.1097/md.0000000000048074",
+    "DOI:10.1097/md.0000000000048152",
+    "DOI:10.1111/aas.70202",
+    "DOI:10.1111/ene.70562",
+    "DOI:10.1186/s12933-026-03139-7"
+  ],
+  "top_priority_warning_paper_ids": [
+    "DOI:10.1007/s00431-026-06844-3",
+    "DOI:10.1007/s00520-026-10393-8",
+    "DOI:10.1136/bmj-2025-087259",
+    "DOI:10.1136/bmjgh-2024-016886",
+    "DOI:10.1371/journal.pone.0345106",
+    "DOI:10.1371/journal.pone.0345784",
+    "DOI:10.3390/medicina62030515",
+    "DOI:10.3390/medsci14010129"
+  ],
+  "total_assignments": 180
+}

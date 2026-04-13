@@ -1,0 +1,141 @@
+{
+  "batch_id": "collection_v1_2018_present",
+  "enrichment_sources": [
+    "europepmc",
+    "crossref"
+  ],
+  "notes": [
+    "PubMed is seed retrieval only.",
+    "Europe PMC is OA/full-text enrichment only.",
+    "Crossref is DOI/license/Crossmark enrichment only."
+  ],
+  "oa_fulltext_policy": "preferred",
+  "primary_retmax": 120,
+  "query_specs": [
+    {
+      "batch_id": "collection_v1_2018_present",
+      "lane": "primary",
+      "query_text": "(\"randomized controlled trial\"[Publication Type] OR \"clinical trial\"[Publication Type]) AND humans[MeSH Terms] AND (\"2018/01/01\"[Date - Publication] : \"3000\"[Date - Publication])",
+      "retmax": 120,
+      "source": "pubmed",
+      "study_class": "human_interventional",
+      "year_end": 3000,
+      "year_start": 2018
+    },
+    {
+      "batch_id": "collection_v1_2018_present",
+      "lane": "reserve",
+      "query_text": "(trial[Title/Abstract] OR randomiz*[Title/Abstract] OR intervention*[Title/Abstract]) AND humans[MeSH Terms] AND (\"2018/01/01\"[Date - Publication] : \"3000\"[Date - Publication])",
+      "retmax": 80,
+      "source": "pubmed",
+      "study_class": "human_interventional",
+      "year_end": 3000,
+      "year_start": 2018
+    },
+    {
+      "batch_id": "collection_v1_2018_present",
+      "lane": "primary",
+      "query_text": "(\"cohort studies\"[MeSH Terms] OR \"case-control studies\"[MeSH Terms] OR \"observational study\"[Publication Type]) AND humans[MeSH Terms] AND (\"2018/01/01\"[Date - Publication] : \"3000\"[Date - Publication])",
+      "retmax": 120,
+      "source": "pubmed",
+      "study_class": "human_observational",
+      "year_end": 3000,
+      "year_start": 2018
+    },
+    {
+      "batch_id": "collection_v1_2018_present",
+      "lane": "reserve",
+      "query_text": "(cohort[Title/Abstract] OR observational[Title/Abstract] OR registry[Title/Abstract] OR biomarker[Title/Abstract] OR association[Title/Abstract]) AND humans[MeSH Terms] AND (\"2018/01/01\"[Date - Publication] : \"3000\"[Date - Publication])",
+      "retmax": 80,
+      "source": "pubmed",
+      "study_class": "human_observational",
+      "year_end": 3000,
+      "year_start": 2018
+    },
+    {
+      "batch_id": "collection_v1_2018_present",
+      "lane": "primary",
+      "query_text": "(\"systematic review\"[Publication Type] OR \"meta-analysis\"[Publication Type]) AND (\"2018/01/01\"[Date - Publication] : \"3000\"[Date - Publication])",
+      "retmax": 120,
+      "source": "pubmed",
+      "study_class": "systematic_review_meta_analysis",
+      "year_end": 3000,
+      "year_start": 2018
+    },
+    {
+      "batch_id": "collection_v1_2018_present",
+      "lane": "reserve",
+      "query_text": "(\"systematic review\"[Title] OR \"meta-analysis\"[Title] OR \"meta analysis\"[Title]) AND (\"2018/01/01\"[Date - Publication] : \"3000\"[Date - Publication])",
+      "retmax": 80,
+      "source": "pubmed",
+      "study_class": "systematic_review_meta_analysis",
+      "year_end": 3000,
+      "year_start": 2018
+    },
+    {
+      "batch_id": "collection_v1_2018_present",
+      "lane": "primary",
+      "query_text": "(\"animals\"[MeSH Terms] NOT humans[MeSH Terms]) AND (mouse[Title/Abstract] OR mice[Title/Abstract] OR rat[Title/Abstract] OR murine[Title/Abstract] OR \"animal model\"[Title/Abstract]) AND (\"2018/01/01\"[Date - Publication] : \"3000\"[Date - Publication])",
+      "retmax": 120,
+      "source": "pubmed",
+      "study_class": "animal_preclinical",
+      "year_end": 3000,
+      "year_start": 2018
+    },
+    {
+      "batch_id": "collection_v1_2018_present",
+      "lane": "reserve",
+      "query_text": "(preclinical[Title/Abstract] OR \"in vivo\"[Title/Abstract]) AND (\"animals\"[MeSH Terms] NOT humans[MeSH Terms]) AND (\"2018/01/01\"[Date - Publication] : \"3000\"[Date - Publication])",
+      "retmax": 80,
+      "source": "pubmed",
+      "study_class": "animal_preclinical",
+      "year_end": 3000,
+      "year_start": 2018
+    },
+    {
+      "batch_id": "collection_v1_2018_present",
+      "lane": "primary",
+      "query_text": "(cell[Title/Abstract] OR molecular[Title/Abstract] OR signaling[Title/Abstract] OR pathway[Title/Abstract] OR CRISPR[Title/Abstract] OR knockdown[Title/Abstract]) NOT review[Publication Type] AND (\"2018/01/01\"[Date - Publication] : \"3000\"[Date - Publication])",
+      "retmax": 120,
+      "source": "pubmed",
+      "study_class": "mechanistic_experimental",
+      "year_end": 3000,
+      "year_start": 2018
+    },
+    {
+      "batch_id": "collection_v1_2018_present",
+      "lane": "reserve",
+      "query_text": "(mechanism[Title/Abstract] OR mechanistic[Title/Abstract] OR perturbation[Title/Abstract] OR assay[Title/Abstract]) NOT review[Publication Type] AND (\"2018/01/01\"[Date - Publication] : \"3000\"[Date - Publication])",
+      "retmax": 80,
+      "source": "pubmed",
+      "study_class": "mechanistic_experimental",
+      "year_end": 3000,
+      "year_start": 2018
+    },
+    {
+      "batch_id": "collection_v1_2018_present",
+      "lane": "primary",
+      "query_text": "(protocol[Title/Abstract] OR method[Title/Abstract] OR resource[Title/Abstract] OR atlas[Title/Abstract] OR database[Title/Abstract] OR toolkit[Title/Abstract] OR benchmark[Title/Abstract]) AND (\"2018/01/01\"[Date - Publication] : \"3000\"[Date - Publication])",
+      "retmax": 120,
+      "source": "pubmed",
+      "study_class": "methods_resource",
+      "year_end": 3000,
+      "year_start": 2018
+    },
+    {
+      "batch_id": "collection_v1_2018_present",
+      "lane": "reserve",
+      "query_text": "(resource[Title] OR atlas[Title] OR database[Title] OR protocol[Title] OR software[Title] OR toolkit[Title]) AND (\"2018/01/01\"[Date - Publication] : \"3000\"[Date - Publication])",
+      "retmax": 80,
+      "source": "pubmed",
+      "study_class": "methods_resource",
+      "year_end": 3000,
+      "year_start": 2018
+    }
+  ],
+  "reserve_retmax": 80,
+  "seed_source": "pubmed",
+  "target_candidates_per_class": 50,
+  "year_end": 3000,
+  "year_start": 2018
+}

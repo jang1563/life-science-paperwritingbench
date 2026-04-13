@@ -1,0 +1,16 @@
+{
+  "adjudicator": "adjudicator_1",
+  "holdout_buckets": [
+    "public"
+  ],
+  "judge_adjudications": 30,
+  "judge_review_forms": 60,
+  "judge_units": 30,
+  "reviewers": [
+    "reviewer_a",
+    "reviewer_b"
+  ],
+  "selected_task_bundles": 30,
+  "target_total": 30,
+  "task_bundles_loaded": 421
+}

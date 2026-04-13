@@ -1,0 +1,22 @@
+{
+  "backend": "slurm",
+  "environment_exports": {
+    "LSPWB_CAYUGA_ROOT": "<CAYUGA_ROOT>",
+    "LSPWB_KB_ROOT": "knowledge_base",
+    "LSPWB_REPO_ROOT": ".",
+    "LSPWB_WORKDIR": "<CAYUGA_ROOT>/life_science_paperwritingbench_runs"
+  },
+  "launch_prefix": [
+    "sbatch"
+  ],
+  "notes": [
+    "Cayuga profile is scaffold-only; the repository remains the source of truth.",
+    "Use this profile for large replay or blind-eval wrappers, not for direct artifact editing inside the cluster root."
+  ],
+  "profile_id": "EXEC:A15208FD4F9D",
+  "profile_name": "cayuga",
+  "python_bin": "python3",
+  "repo_root": ".",
+  "root_path": "<CAYUGA_ROOT>",
+  "working_directory": "<CAYUGA_ROOT>/life_science_paperwritingbench_runs"
+}

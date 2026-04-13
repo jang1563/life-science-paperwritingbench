@@ -1,0 +1,214 @@
+{
+  "duplicate_task_bundle_ids": [],
+  "duplicate_validation_unit_ids": [],
+  "frozen_units": 0,
+  "generated_at": "2026-04-11T04:34:45Z",
+  "human_adjudicated_units": 0,
+  "issues": [
+    "judge validation slice must contain at least 30 human-adjudicated units",
+    "judge validation slice must contain at least 30 frozen units",
+    "judge validation slice must contain at least 30 ready units with required rubric axes"
+  ],
+  "linked_task_bundles": 30,
+  "missing_rubric_axes": {
+    "JV:TB:BU:EUAUTO:064BCC664A88": [
+      "evidence_fidelity",
+      "traceability",
+      "provenance_completeness",
+      "writing_structure_compliance"
+    ],
+    "JV:TB:BU:EUAUTO:07356A62B928": [
+      "evidence_fidelity",
+      "traceability",
+      "provenance_completeness",
+      "writing_structure_compliance"
+    ],
+    "JV:TB:BU:EUAUTO:09AD468A7222": [
+      "evidence_fidelity",
+      "traceability",
+      "provenance_completeness",
+      "writing_structure_compliance"
+    ],
+    "JV:TB:BU:EUAUTO:0C01FE9E1D22": [
+      "evidence_fidelity",
+      "traceability",
+      "provenance_completeness",
+      "writing_structure_compliance"
+    ],
+    "JV:TB:BU:EUAUTO:0EE9948DFF4E": [
+      "evidence_fidelity",
+      "traceability",
+      "provenance_completeness",
+      "writing_structure_compliance"
+    ],
+    "JV:TB:BU:EUAUTO:0FCB7D4ADF35": [
+      "evidence_fidelity",
+      "traceability",
+      "provenance_completeness",
+      "writing_structure_compliance"
+    ],
+    "JV:TB:BU:EUAUTO:1097B2F3D417": [
+      "evidence_fidelity",
+      "traceability",
+      "provenance_completeness",
+      "writing_structure_compliance"
+    ],
+    "JV:TB:BU:EUAUTO:10DC5D579148": [
+      "evidence_fidelity",
+      "traceability",
+      "provenance_completeness",
+      "writing_structure_compliance"
+    ],
+    "JV:TB:BU:EUAUTO:15D51DA3B7E0": [
+      "evidence_fidelity",
+      "traceability",
+      "provenance_completeness",
+      "writing_structure_compliance"
+    ],
+    "JV:TB:BU:EUAUTO:1ADCDE623EB1": [
+      "evidence_fidelity",
+      "traceability",
+      "provenance_completeness",
+      "writing_structure_compliance"
+    ],
+    "JV:TB:BU:EUAUTO:1B1F4A120334": [
+      "evidence_fidelity",
+      "traceability",
+      "provenance_completeness",
+      "writing_structure_compliance"
+    ],
+    "JV:TB:BU:EUAUTO:1C7AD48F4CBF": [
+      "evidence_fidelity",
+      "traceability",
+      "provenance_completeness",
+      "writing_structure_compliance"
+    ],
+    "JV:TB:BU:EUAUTO:1CA35667BC48": [
+      "evidence_fidelity",
+      "traceability",
+      "provenance_completeness",
+      "writing_structure_compliance"
+    ],
+    "JV:TB:BU:EUAUTO:23D0D93A7C5B": [
+      "evidence_fidelity",
+      "traceability",
+      "provenance_completeness",
+      "writing_structure_compliance"
+    ],
+    "JV:TB:BU:EUAUTO:24BDE7682820": [
+      "evidence_fidelity",
+      "traceability",
+      "provenance_completeness",
+      "writing_structure_compliance"
+    ],
+    "JV:TB:BU:EUAUTO:25E854384F98": [
+      "evidence_fidelity",
+      "traceability",
+      "provenance_completeness",
+      "writing_structure_compliance"
+    ],
+    "JV:TB:BU:EUAUTO:34F13478666D": [
+      "evidence_fidelity",
+      "traceability",
+      "provenance_completeness",
+      "writing_structure_compliance"
+    ],
+    "JV:TB:BU:EUAUTO:353565A66930": [
+      "evidence_fidelity",
+      "traceability",
+      "provenance_completeness",
+      "writing_structure_compliance"
+    ],
+    "JV:TB:BU:EUAUTO:45BF777A44F6": [
+      "evidence_fidelity",
+      "traceability",
+      "provenance_completeness",
+      "writing_structure_compliance"
+    ],
+    "JV:TB:BU:EUAUTO:4857A3588FCF": [
+      "evidence_fidelity",
+      "traceability",
+      "provenance_completeness",
+      "writing_structure_compliance"
+    ],
+    "JV:TB:BU:EUAUTO:4A83A1D70B2A": [
+      "evidence_fidelity",
+      "traceability",
+      "provenance_completeness",
+      "writing_structure_compliance"
+    ],
+    "JV:TB:BU:EUAUTO:4B57C4BA7B96": [
+      "evidence_fidelity",
+      "traceability",
+      "provenance_completeness",
+      "writing_structure_compliance"
+    ],
+    "JV:TB:BU:EUAUTO:4D1DD90DCF1B": [
+      "evidence_fidelity",
+      "traceability",
+      "provenance_completeness",
+      "writing_structure_compliance"
+    ],
+    "JV:TB:BU:EUAUTO:521F5345152D": [
+      "evidence_fidelity",
+      "traceability",
+      "provenance_completeness",
+      "writing_structure_compliance"
+    ],
+    "JV:TB:BU:EUAUTO:6019AD5F3973": [
+      "evidence_fidelity",
+      "traceability",
+      "provenance_completeness",
+      "writing_structure_compliance"
+    ],
+    "JV:TB:BU:EUAUTO:6ACD5D8B1C78": [
+      "evidence_fidelity",
+      "traceability",
+      "provenance_completeness",
+      "writing_structure_compliance"
+    ],
+    "JV:TB:BU:EUAUTO:794BC62E28A8": [
+      "evidence_fidelity",
+      "traceability",
+      "provenance_completeness",
+      "writing_structure_compliance"
+    ],
+    "JV:TB:BU:EUAUTO:82ACA31DD305": [
+      "evidence_fidelity",
+      "traceability",
+      "provenance_completeness",
+      "writing_structure_compliance"
+    ],
+    "JV:TB:BU:EUAUTO:949EC77621C6": [
+      "evidence_fidelity",
+      "traceability",
+      "provenance_completeness",
+      "writing_structure_compliance"
+    ],
+    "JV:TB:BU:EUAUTO:989AA91F987A": [
+      "evidence_fidelity",
+      "traceability",
+      "provenance_completeness",
+      "writing_structure_compliance"
+    ]
+  },
+  "missing_task_bundle_ids": [],
+  "ok": false,
+  "ready_units": 0,
+  "release_tier_counts": {
+    "shadow_gold": 30
+  },
+  "study_class_counts": {
+    "animal_preclinical": 6,
+    "human_interventional": 6,
+    "mechanistic_experimental": 6,
+    "methods_resource": 6,
+    "systematic_review_meta_analysis": 6
+  },
+  "task_family_counts": {
+    "abstract_from_evidence": 10,
+    "methods_to_text": 10,
+    "results_to_text": 10
+  },
+  "total_units": 30
+}

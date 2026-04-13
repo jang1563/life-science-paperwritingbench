@@ -1,0 +1,23 @@
+{
+  "aggregated_review_count": 180,
+  "candidate_tier_counts": {},
+  "completeness_counts": {
+    "metadata_only": 1,
+    "partial": 3,
+    "review_ready": 176
+  },
+  "confidence_counts": {},
+  "eligible_for_unit_extraction_count": 0,
+  "generated_at": "2026-04-13T04:58:52Z",
+  "notes": [
+    "auto-only mode caps all decisions below public_gold_candidate"
+  ],
+  "packaging_counts": {},
+  "panel_vote_count": 540,
+  "qualification_count": 0,
+  "scientific_counts": {},
+  "skipped_writing_review_count": 1,
+  "source_bundle_count": 180,
+  "total_papers": 180,
+  "writing_counts": {}
+}

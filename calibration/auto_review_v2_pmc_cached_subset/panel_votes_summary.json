@@ -1,0 +1,22 @@
+{
+  "aggregated_review_count": 0,
+  "candidate_tier_counts": {},
+  "completeness_counts": {
+    "partial": 5,
+    "review_ready": 65
+  },
+  "confidence_counts": {},
+  "eligible_for_unit_extraction_count": 0,
+  "generated_at": "2026-04-11T03:46:32Z",
+  "notes": [
+    "auto-only mode caps all decisions below public_gold_candidate"
+  ],
+  "packaging_counts": {},
+  "panel_vote_count": 210,
+  "qualification_count": 0,
+  "scientific_counts": {},
+  "skipped_writing_review_count": 0,
+  "source_bundle_count": 70,
+  "total_papers": 70,
+  "writing_counts": {}
+}

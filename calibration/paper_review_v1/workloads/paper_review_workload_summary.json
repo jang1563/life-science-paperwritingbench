@@ -1,0 +1,40 @@
+{
+  "batch_id": "paper_review_v1",
+  "generated_at": "2026-04-10T20:01:56Z",
+  "notes": [],
+  "reviewer_assignment_counts": {
+    "reviewer_a": 180,
+    "reviewer_b": 180
+  },
+  "reviewer_ids": [
+    "reviewer_a",
+    "reviewer_b"
+  ],
+  "top_priority_paper_ids_by_reviewer": {
+    "reviewer_a": [
+      "DOI:10.1186/s12889-023-16960-6",
+      "DOI:10.1007/s00431-026-06844-3",
+      "DOI:10.1007/s00520-026-10393-8",
+      "DOI:10.1136/bmj-2025-087259",
+      "DOI:10.1136/bmjgh-2024-016886",
+      "DOI:10.1371/journal.pone.0345106",
+      "DOI:10.1371/journal.pone.0345784",
+      "DOI:10.3390/medicina62030515",
+      "DOI:10.3390/medsci14010129",
+      "DOI:10.1016/j.xcrm.2026.102648"
+    ],
+    "reviewer_b": [
+      "DOI:10.1186/s12889-023-16960-6",
+      "DOI:10.1007/s00431-026-06844-3",
+      "DOI:10.1007/s00520-026-10393-8",
+      "DOI:10.1136/bmj-2025-087259",
+      "DOI:10.1136/bmjgh-2024-016886",
+      "DOI:10.1371/journal.pone.0345106",
+      "DOI:10.1371/journal.pone.0345784",
+      "DOI:10.3390/medicina62030515",
+      "DOI:10.3390/medsci14010129",
+      "DOI:10.1016/j.xcrm.2026.102648"
+    ]
+  },
+  "total_assignments": 360
+}

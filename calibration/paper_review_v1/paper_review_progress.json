@@ -1,0 +1,12 @@
+{
+  "finalized_adjudications": 0,
+  "queue_status_counts": {
+    "awaiting_reviews": 180
+  },
+  "required_reviewer_count": 2,
+  "scientific_review_slots_completed": 0,
+  "scientific_review_slots_total": 360,
+  "total_papers": 180,
+  "writing_review_slots_completed": 0,
+  "writing_review_slots_total": 360
+}

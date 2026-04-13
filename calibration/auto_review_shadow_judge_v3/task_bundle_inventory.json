@@ -1,0 +1,30 @@
+{
+  "claim_mode_counts": {
+    "confirmatory": 48,
+    "descriptive": 69,
+    "exploratory": 171,
+    "negative_result": 54,
+    "resource_release": 63
+  },
+  "generated_at": "2026-04-13T04:17:02Z",
+  "holdout_bucket_counts": {
+    "public": 405
+  },
+  "release_tier_counts": {
+    "shadow_gold": 405
+  },
+  "study_class_counts": {
+    "animal_preclinical": 69,
+    "human_interventional": 69,
+    "human_observational": 63,
+    "mechanistic_experimental": 72,
+    "methods_resource": 57,
+    "systematic_review_meta_analysis": 75
+  },
+  "task_family_counts": {
+    "abstract_from_evidence": 135,
+    "methods_to_text": 135,
+    "results_to_text": 135
+  },
+  "total_bundles": 405
+}

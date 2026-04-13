@@ -1,0 +1,7 @@
+{
+  "execution_profile": "configs/execution/cayuga_profile.json",
+  "model_id": "cayuga-shadow-v1",
+  "panel_votes_written": 540,
+  "papers_loaded": 180,
+  "source_bundles_loaded": 180
+}

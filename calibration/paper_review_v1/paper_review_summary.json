@@ -1,0 +1,26 @@
+{
+  "batch_id": "paper_review_v1",
+  "claim_mode_counts": {
+    "confirmatory": 22,
+    "descriptive": 30,
+    "exploratory": 75,
+    "negative_result": 20,
+    "resource_release": 33
+  },
+  "generated_at": "2026-04-10T15:52:28Z",
+  "metadata_warning_count": 86,
+  "notes": [],
+  "peer_reviewed_count": 180,
+  "publication_status_counts": {
+    "published": 180
+  },
+  "study_class_counts": {
+    "animal_preclinical": 30,
+    "human_interventional": 30,
+    "human_observational": 30,
+    "mechanistic_experimental": 30,
+    "methods_resource": 30,
+    "systematic_review_meta_analysis": 30
+  },
+  "total_papers": 180
+}

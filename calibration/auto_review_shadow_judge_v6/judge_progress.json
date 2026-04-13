@@ -1,0 +1,11 @@
+{
+  "finalized_adjudications": 0,
+  "queue_status_counts": {
+    "awaiting_reviews": 30
+  },
+  "required_reviewer_count": 2,
+  "review_completion_rate": 0.0,
+  "review_slots_completed": 0,
+  "review_slots_total": 60,
+  "total_judge_units": 30
+}
