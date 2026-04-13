@@ -121,6 +121,7 @@ What changed:
   - no `resource_identifiers` or `trial_registry_ids` are present
 - new taxonomy category `fulltext_acquisition_gap` (priority `high`) is emitted when `abstract_inferred_only` is present on an entry
 - `resource_release_specificity` is now suppressed when `abstract_inferred_only` is also present, so the two remaining resource-release residuals with `fetch_error` + abstract-inferred methods/results get reclassified as `fulltext_acquisition_gap` instead of being tagged as parser-labeling risk
+- `identifier_sparse_low_confidence` is also suppressed when `abstract_inferred_only` is present, because lacking resource/trial-registry identifiers in an abstract-inferred bundle is a downstream consequence of the fetch failure rather than a genuine identifier-sparsity signal; the category is preserved for the true case where a paper has full text but still lacks identifiers
 - `compare_shadow_inspection_reports` now emits delta notes when `fulltext_acquisition_gap` grows/shrinks or when `abstract_inferred_only` entries enter a slice
 
 The previous change (still current) remains:
@@ -184,32 +185,62 @@ If starting fresh, inspect these in order:
 
 ## Best next step
 
-The `fulltext_acquisition_gap` category is now implemented in code and
-covered by unit tests. The logical next step is to **run it against the
-current full-corpus inspection artifacts** and confirm that the two
-remaining resource-release residuals (`DOI:10.1016/j.jmr.2022.107268` and
-`DOI:10.1002/cpz1.1028`) move out of `resource_release_specificity` and
-into `fulltext_acquisition_gap` as expected.
+The `fulltext_acquisition_gap` category is implemented, the
+`identifier_sparse_low_confidence` suppression is in place, and both
+are verified end-to-end on the enriched `full180` corpus. The
+`v6 → v7 → v8` chain now shows:
+
+- `v6 → v7`: `resource_release_specificity -2`, `fulltext_acquisition_gap +3`
+  (the third entry is `DOI:10.1002/jpen.70069`, a descriptive paper whose
+  bundle also suffered a DNS fetch failure)
+- `v7 → v8`: `identifier_sparse_low_confidence -3` (the three identifier-
+  sparse entries in v7 were the same papers as the fulltext-gap entries;
+  none remain once suppression is applied)
+
+Current `v8` slice buckets:
+
+- `stable_shadow_controls = 23`
+- `fulltext_acquisition_gap = 3`
+- `low_confidence_shadow = 3`
+- `hybrid_overlay_complexity = 3`
+- `writing_quality_risk = 2`
+- `figure_table_grounding = 1`
+
+The three papers currently gated by `fulltext_acquisition_gap` are:
+
+- `DOI:10.1016/j.jmr.2022.107268` (SpecDB NMR database)
+- `DOI:10.1002/cpz1.1028` (Optimized proteomics workflow)
+- `DOI:10.1002/jpen.70069` (Body composition / 12-month mortality)
+
+All three share the same note pattern:
+
+```
+fetch_error:<urlopen error [Errno 8] nodename nor servname provided, or not known>
+methods inferred from abstract for auto-review bundling
+results inferred from abstract for auto-review bundling
+```
+
+This is **DNS resolution failure** during a prior enrichment run, not
+a publisher refusal. Re-running the enrichment with working network
+should shrink the bucket.
 
 Recommended next target:
 
-- rebuild the inspection batch and taxonomy on the current enriched
-  `full180` corpus and compare against `shadow_public_inspection_v6`
-- confirm the two residuals are now tagged `fulltext_acquisition_gap`
-  rather than `resource_release_specificity`
-- use the paired delta report to verify `resource_release_specificity -2`
-  and `fulltext_acquisition_gap +2`
-
-After that, the next substantive improvements in priority order are:
-
-1. **Retry full-text acquisition** for the two `fulltext_acquisition_gap`
-   papers — publisher-native or Europe PMC refetch — and re-run the lane
-   to see whether they can leave the gap category.
-2. **Tighten `identifier_sparse_low_confidence`**: the remaining 3 cases
-   are not explained by the gap category and deserve their own audit.
-3. **Promote confidence calibration `v14` semantics** into a
+1. **Re-run evidence enrichment for these three DOIs with network
+   available**, then rebuild source bundles, qualification records, and
+   the inspection slice. Verify `fulltext_acquisition_gap` shrinks.
+   - if a paper has full text and still shows sparse identifiers, the
+     `identifier_sparse_low_confidence` category is the right diagnosis
+     and will re-fire naturally
+   - if a paper remains abstract-only after a successful refetch
+     (publisher paywall or missing PMC copy), the gap category is the
+     honest diagnosis and points at an acquisition-strategy problem
+2. **Promote confidence calibration `v14` semantics** into a
    reproducible pass (the `34/146 → 5/175` low/medium shift has held
    across recent inspections and is load-bearing for downstream gates).
+3. **Audit the three `low_confidence_shadow` entries** once fulltext
+   acquisition is fixed, since `low_confidence_shadow` should now be a
+   purer signal uncontaminated by fetch failures.
 
 ## Suggested commands for the next session
 

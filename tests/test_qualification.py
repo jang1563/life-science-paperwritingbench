@@ -2338,6 +2338,78 @@ class QualificationTests(unittest.TestCase):
         self.assertEqual(gap_category.priority, "high")
         self.assertEqual(gap_category.entry_count, 1)
 
+    def test_build_shadow_inspection_taxonomy_suppresses_identifier_sparse_when_fulltext_gap(self):
+        gap_entry = ShadowInspectionEntry(
+            inspection_id="INSPECT:FTGAP:ID:001",
+            task_bundle_id="TB:FTGAP:ID:001",
+            benchmark_unit_id="BU:FTGAP:ID:001",
+            paper_id="PMID:FTGAP:ID:001",
+            title="Identifier-sparse entry with full-text gap",
+            publication_year=2024,
+            task_family=TaskFamily.METHODS_TO_TEXT,
+            study_class=StudyClass.HUMAN_OBSERVATIONAL,
+            claim_mode=ClaimMode.DESCRIPTIVE,
+            release_tier=ReleaseTier.SHADOW_GOLD,
+            holdout_bucket="public",
+            writing=PaperWritingQualification.W3,
+            confidence=AutoReviewConfidence.LOW,
+            bundle_completeness=AutoReviewBundleCompleteness.REVIEW_READY,
+            focus_tags=("low_confidence", "writing_w3", "abstract_inferred_only"),
+            evidence_snapshot={
+                "abstract_text": 1,
+                "methods_text": 1,
+                "results_text": 1,
+                "figure_captions": 0,
+                "table_snippets": 0,
+                "resource_identifiers": 0,
+                "trial_registry_ids": 0,
+            },
+            qualification_reasons=("paper is shadow-ready under auto-only rules",),
+            source_bundle_notes=(
+                "fetch_error:HTTPError 403",
+                "methods inferred from abstract for auto-review bundling",
+                "results inferred from abstract for auto-review bundling",
+            ),
+        )
+        genuine_entry = ShadowInspectionEntry(
+            inspection_id="INSPECT:ID:ONLY:001",
+            task_bundle_id="TB:ID:ONLY:001",
+            benchmark_unit_id="BU:ID:ONLY:001",
+            paper_id="PMID:ID:ONLY:001",
+            title="Genuine identifier-sparse entry without fetch errors",
+            publication_year=2024,
+            task_family=TaskFamily.METHODS_TO_TEXT,
+            study_class=StudyClass.HUMAN_OBSERVATIONAL,
+            claim_mode=ClaimMode.DESCRIPTIVE,
+            release_tier=ReleaseTier.SHADOW_GOLD,
+            holdout_bucket="public",
+            writing=PaperWritingQualification.W2,
+            confidence=AutoReviewConfidence.LOW,
+            bundle_completeness=AutoReviewBundleCompleteness.REVIEW_READY,
+            focus_tags=("low_confidence", "writing_w2", "figure_rich", "figure_grounded"),
+            evidence_snapshot={
+                "abstract_text": 1,
+                "methods_text": 1,
+                "results_text": 1,
+                "figure_captions": 2,
+                "figure_reference_snippets": 2,
+                "resource_identifiers": 0,
+                "trial_registry_ids": 0,
+            },
+            qualification_reasons=("paper is shadow-ready under auto-only rules",),
+            source_bundle_notes=(),
+        )
+        categories = build_shadow_inspection_taxonomy((gap_entry, genuine_entry))
+        category_entries = {
+            category.category_id: category.entry_count for category in categories
+        }
+        self.assertEqual(category_entries.get("fulltext_acquisition_gap"), 1)
+        self.assertEqual(category_entries.get("identifier_sparse_low_confidence"), 1)
+        identifier_sparse = next(
+            category for category in categories if category.category_id == "identifier_sparse_low_confidence"
+        )
+        self.assertEqual(identifier_sparse.representative_inspection_ids, ("INSPECT:ID:ONLY:001",))
+
     def test_cli_summarize_shadow_inspection_taxonomy(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             entries_path = os.path.join(tmpdir, "inspection.jsonl")

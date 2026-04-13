@@ -431,6 +431,7 @@ def _taxonomy_categories_for_entry(entry: ShadowInspectionEntry) -> Tuple[str, .
         entry.confidence == AutoReviewConfidence.LOW
         and entry.evidence_snapshot.get("resource_identifiers", 0) == 0
         and entry.evidence_snapshot.get("trial_registry_ids", 0) == 0
+        and not fulltext_gap
     ):
         categories.append("identifier_sparse_low_confidence")
 
