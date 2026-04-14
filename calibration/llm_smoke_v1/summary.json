@@ -1,0 +1,94 @@
+{
+  "model": "deepseek-chat",
+  "request_model": "deepseek-chat",
+  "producer_id": "llm:deepseek-chat@temp=0.2",
+  "temperature": 0.2,
+  "max_tokens": 1200,
+  "num_tasks": 3,
+  "pass_count": 3,
+  "task_rows": [
+    {
+      "paper_id": "DOI:10.1111/cas.13569",
+      "task_family": "methods_to_text",
+      "task_bundle_id": "TB:BU:EUAUTO:0647BFACA729",
+      "deterministic_checks_passed": true,
+      "scores": {
+        "traceability_coverage": 1.0,
+        "structure_compliance": 1.0,
+        "non_empty_output": 1.0,
+        "length_floor": 1.0,
+        "answer_support": 1.0
+      },
+      "notes": [],
+      "output_word_count": 293
+    },
+    {
+      "paper_id": "DOI:10.1186/s13018-023-04496-9",
+      "task_family": "results_to_text",
+      "task_bundle_id": "TB:BU:EUAUTO:DE9706E77A3C",
+      "deterministic_checks_passed": true,
+      "scores": {
+        "traceability_coverage": 1.0,
+        "structure_compliance": 1.0,
+        "non_empty_output": 1.0,
+        "length_floor": 1.0,
+        "answer_support": 1.0
+      },
+      "notes": [],
+      "output_word_count": 230
+    },
+    {
+      "paper_id": "DOI:10.1128/mbio.00933-24",
+      "task_family": "abstract_from_evidence",
+      "task_bundle_id": "TB:BU:EUAUTO:EFABE066E1CC",
+      "deterministic_checks_passed": true,
+      "scores": {
+        "traceability_coverage": 1.0,
+        "structure_compliance": 1.0,
+        "non_empty_output": 1.0,
+        "length_floor": 1.0,
+        "answer_support": 1.0
+      },
+      "notes": [],
+      "output_word_count": 173
+    }
+  ],
+  "usage": [
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:0647BFACA729",
+      "prompt_tokens": 3447,
+      "completion_tokens": 441,
+      "total_tokens": 3888,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_cache_hit_tokens": 0,
+      "prompt_cache_miss_tokens": 3447,
+      "elapsed_seconds": 14.87
+    },
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:DE9706E77A3C",
+      "prompt_tokens": 2515,
+      "completion_tokens": 350,
+      "total_tokens": 2865,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_cache_hit_tokens": 0,
+      "prompt_cache_miss_tokens": 2515,
+      "elapsed_seconds": 12.32
+    },
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:EFABE066E1CC",
+      "prompt_tokens": 3566,
+      "completion_tokens": 265,
+      "total_tokens": 3831,
+      "prompt_tokens_details": {
+        "cached_tokens": 64
+      },
+      "prompt_cache_hit_tokens": 64,
+      "prompt_cache_miss_tokens": 3502,
+      "elapsed_seconds": 11.35
+    }
+  ]
+}

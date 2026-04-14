@@ -294,7 +294,44 @@ papers the current `identifier_sparse_low_confidence` signal is
 genuine: the papers describe resources but do not publish standard-
 format accessions (GSE/SRR/PXD/RRID/PDB/etc.).
 
-Recommended next target (in priority order):
+## First LLM smoke test (Phase 2 entry point)
+
+The first end-to-end LLM run against the benchmark is now in place:
+
+- `scripts/llm_smoke_eval.py` picks one public shadow bundle per task
+  family (`methods_to_text`, `results_to_text`, `abstract_from_evidence`),
+  loads evidence from the merged `source_bundles_full180_enriched_v16`
+  corpus, calls a cost-effective model through an OpenAI-compatible
+  endpoint (default: DeepSeek V3 chat), writes `SubmissionRecord`
+  JSONL, and runs the existing `evaluate_submissions` deterministic
+  checks.
+- API keys are read from `~/.api_keys` in `export KEY=VALUE` form.
+  Providers pre-wired: DeepSeek, Gemini 2.5 Flash, GPT-4o-mini.
+- Submissions, evaluations, and a `summary.md` land under
+  `calibration/llm_smoke_v1/` (tracked in git; each run overwrites).
+- First DeepSeek V3 run: **3/3 deterministic checks passed**; outputs
+  were 173–293 words, cited figures/tables and specific quantitative
+  details from the evidence, and explicitly name every required
+  evidence identifier. Total cost ≈ $0.003; latency 11–15s per call.
+
+This is the start of Phase 2 (actual model evaluation) after the Phase 1
+governance/taxonomy work. Next substantive targets after this:
+
+1. Scale to the full 30-paper public inspection slice (one submission
+   per bundle per model, ~30 calls per model, still pennies per run).
+2. Add a second provider run (e.g. Gemini 2.5 Flash or Haiku 4.5) to
+   get cross-model score deltas before judge validation.
+3. Wire the LLM submissions into the `judge_v*` scaffolding so the
+   rubric axes (`writing_structure_compliance`, `results_grounding`,
+   etc.) actually get scored — currently deterministic-checks-only,
+   which is necessary but nowhere near sufficient.
+4. Only then revisit `leaderboard_gate_passed` — the release summary
+   will still show `false` until judge-validated scores exist.
+
+## Follow-up tasks on the governance side
+
+These are still open from Phase 1 and are worth finishing before the
+benchmark is claimed to be production-ready:
 
 1. **Audit `identifier_sparse_low_confidence` as a real signal now**.
    With the acquisition-gap collapse done, decide whether these three
