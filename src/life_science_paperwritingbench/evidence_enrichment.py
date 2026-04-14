@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 import hashlib
 import re
 import urllib.error
@@ -219,6 +220,18 @@ def _pmc_fulltext_url(pmcid: str) -> str:
     return f"https://www.ebi.ac.uk/europepmc/webservices/rest/{pmcid}/fullTextXML"
 
 
+def _ncbi_pmc_efetch_url(pmcid: str) -> str:
+    numeric = pmcid[3:] if pmcid.upper().startswith("PMC") else pmcid
+    return (
+        "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi"
+        f"?db=pmc&id={numeric}&rettype=xml&retmode=xml"
+    )
+
+
+def _is_http_4xx_error(exc: BaseException) -> bool:
+    return isinstance(exc, urllib.error.HTTPError) and 400 <= exc.code < 500
+
+
 def _read_url_bytes(url: str, *, headers: Optional[Mapping[str, str]] = None, timeout: int = 30) -> bytes:
     request = urllib.request.Request(url, headers=dict(headers or {}))
     with urllib.request.urlopen(request, timeout=timeout) as response:  # noqa: S310
@@ -370,54 +383,93 @@ def build_auto_review_evidence_enrichments(
             )
             continue
 
-        url = _pmc_fulltext_url(pmcid)
-        raw_payload_path = raw_path / f"{pmcid}.xml"
+        epmc_url = _pmc_fulltext_url(pmcid)
+        epmc_path = raw_path / f"{pmcid}.xml"
+        ncbi_url = _ncbi_pmc_efetch_url(pmcid)
+        ncbi_path = raw_path / f"{pmcid}.ncbi.xml"
+
+        payload: Optional[bytes] = None
+        used_cache = False
+        fetch_url_used = epmc_url
+        raw_payload_used = epmc_path
+        fetch_source_note: Optional[str] = None
+        fetch_error: Optional[BaseException] = None
+        ncbi_fallback_error: Optional[BaseException] = None
         try:
             payload, used_cache = _load_or_fetch_bytes(
-                raw_payload_path,
-                url,
+                epmc_path,
+                epmc_url,
                 refresh=refresh,
                 headers={"User-Agent": "life-science-paperwritingbench/0.1 (mailto:local@example.com)"},
                 fetcher=fetcher,
             )
+        except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, OSError) as exc:
+            fetch_error = exc
+            if _is_http_4xx_error(exc):
+                try:
+                    payload, used_cache = _load_or_fetch_bytes(
+                        ncbi_path,
+                        ncbi_url,
+                        refresh=refresh,
+                        headers={"User-Agent": "life-science-paperwritingbench/0.1 (mailto:local@example.com)"},
+                        fetcher=fetcher,
+                    )
+                    fetch_url_used = ncbi_url
+                    raw_payload_used = ncbi_path
+                    fetch_source_note = "pmc_source:ncbi_efetch_fallback"
+                    fetch_error = None
+                except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, OSError) as ncbi_exc:
+                    ncbi_fallback_error = ncbi_exc
+
+        if payload is not None and fetch_error is None:
             fetch_records.append(
                 PmcFullTextFetchRecord(
                     paper_id=paper.paper_id,
                     pmcid=pmcid,
-                    fetch_url=url,
-                    raw_payload_path=str(raw_payload_path),
+                    fetch_url=fetch_url_used,
+                    raw_payload_path=str(raw_payload_used),
                     fetch_ok=True,
                     used_cache=used_cache,
                     content_sha256=hashlib.sha256(payload).hexdigest(),
                 )
             )
-            enrichments.append(
-                _parse_fulltext_payload(
-                    payload,
-                    raw_payload_path=str(raw_payload_path),
-                    pmcid=pmcid,
-                    paper_id=paper.paper_id,
-                )
+            enrichment = _parse_fulltext_payload(
+                payload,
+                raw_payload_path=str(raw_payload_used),
+                pmcid=pmcid,
+                paper_id=paper.paper_id,
             )
-        except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, OSError) as exc:
+            if fetch_source_note is not None:
+                enrichment = dataclasses.replace(
+                    enrichment,
+                    notes=enrichment.notes + (fetch_source_note,),
+                )
+            enrichments.append(enrichment)
+        else:
+            error_text = str(fetch_error)
+            if ncbi_fallback_error is not None:
+                error_text = f"{error_text} | ncbi_fallback_error:{ncbi_fallback_error}"
             fetch_records.append(
                 PmcFullTextFetchRecord(
                     paper_id=paper.paper_id,
                     pmcid=pmcid,
-                    fetch_url=url,
-                    raw_payload_path=str(raw_payload_path),
+                    fetch_url=epmc_url,
+                    raw_payload_path=str(epmc_path),
                     fetch_ok=False,
                     used_cache=False,
                     content_sha256="",
-                    error=str(exc),
+                    error=error_text,
                 )
             )
+            notes_list: List[str] = [f"fetch_error:{fetch_error}"]
+            if ncbi_fallback_error is not None:
+                notes_list.append(f"ncbi_fallback_error:{ncbi_fallback_error}")
             enrichments.append(
                 AutoReviewEvidenceEnrichmentRecord(
                     paper_id=paper.paper_id,
                     pmcid=pmcid,
-                    raw_payload_path=str(raw_payload_path),
-                    notes=(f"fetch_error:{exc}",),
+                    raw_payload_path=str(epmc_path),
+                    notes=tuple(notes_list),
                 )
             )
     return tuple(fetch_records), tuple(enrichments)
@@ -444,6 +496,7 @@ def audit_auto_review_evidence_enrichments(
         fetch_ok_count=sum(1 for item in fetch_records if item.fetch_ok),
         notes=(
             "PMCID-backed Europe PMC fullTextXML is replay-first and reuses cached raw XML unless --refresh is supplied.",
+            "When Europe PMC returns an HTTP 4xx (for example non-OA papers), the pipeline retries via NCBI PMC efetch and writes a separate <pmcid>.ncbi.xml cache; successful fallbacks are tagged pmc_source:ncbi_efetch_fallback.",
         ),
     )
 

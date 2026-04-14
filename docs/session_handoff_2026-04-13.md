@@ -109,8 +109,35 @@ Key delta facts:
 
 The latest code change was in:
 
+- `src/life_science_paperwritingbench/evidence_enrichment.py`
 - `src/life_science_paperwritingbench/inspection.py`
 - `tests/test_qualification.py`
+
+Evidence enrichment now has an NCBI PMC efetch fallback:
+
+- when the Europe PMC `fullTextXML` fetch returns an HTTP 4xx (i.e. the
+  paper is non-OA or not in the Europe PMC redistribution set), the
+  pipeline transparently retries via
+  `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pmc&id=...`
+  and writes a separate `<pmcid>.ncbi.xml` cache file
+- on NCBI success the enrichment record is tagged
+  `pmc_source:ncbi_efetch_fallback` in its notes so downstream gates can
+  detect the backend that succeeded
+- on NCBI failure the fetch record captures both the Europe PMC error
+  and the NCBI error so the audit trail is complete
+- the fallback only fires on HTTP 4xx; transient failures (DNS,
+  timeouts, 5xx) fall back to the previous behavior so an outage does
+  not mask itself as a structural gap
+
+Verified end-to-end on the three previously-blocked papers: all three
+were successfully fetched via NCBI, producing methods/results text and
+grounded figure/table evidence. The `v9 → v10` inspection delta shows
+`fulltext_acquisition_gap -3` and `fulltext_acquisition_blocked_upstream
+-3`, and `identifier_sparse_low_confidence` re-emerges at `3` —
+exactly the category's intended meaning now that the three papers have
+full text but still lack resource/trial-registry identifiers.
+
+Prior inspection-layer changes (still in place):
 
 What changed:
 
@@ -186,68 +213,75 @@ If starting fresh, inspect these in order:
 
 ## Best next step
 
-The inspection taxonomy is now resolved for these three papers as far as
-Europe PMC can take it. The `v6 → v7 → v8 → v9` chain shows:
+The `v6 → v7 → v8 → v9 → v10` trajectory closed the fulltext-acquisition
+branch end-to-end:
 
 - `v6 → v7`: `resource_release_specificity -2`, `fulltext_acquisition_gap +3`
 - `v7 → v8`: `identifier_sparse_low_confidence -3` (suppressed when
   the same entry is already in `fulltext_acquisition_gap`)
 - `v8 → v9`: `fulltext_acquisition_blocked_upstream +3` after re-running
   evidence enrichment with working network — all three fetches returned
-  HTTP 404 from Europe PMC's `fullTextXML`. Europe PMC's own search API
-  confirms two of the three PMCIDs are `isOpenAccess=N` and the third
-  (`PMC13047292`) is not indexed at all.
+  HTTP 404 from Europe PMC. Europe PMC's own search API confirmed two
+  of the three PMCIDs are `isOpenAccess=N` and the third (`PMC13047292`)
+  is not indexed at all
+- `v9 → v10`: after adding the NCBI efetch fallback in
+  `evidence_enrichment.py`, all three blocked papers were successfully
+  fetched via `eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi`,
+  producing methods/results text and grounded figure/table evidence.
+  `fulltext_acquisition_gap` and `fulltext_acquisition_blocked_upstream`
+  both dropped from `3` to `0`, and `identifier_sparse_low_confidence`
+  re-emerged at `3` — exactly its intended meaning now that the three
+  papers have full text but still lack resource/trial-registry
+  identifiers
 
-Current `v9` slice buckets:
+Current `v10` slice buckets:
 
 - `stable_shadow_controls = 23`
-- `fulltext_acquisition_gap = 3`
-- `fulltext_acquisition_blocked_upstream = 3` (same three entries)
+- `identifier_sparse_low_confidence = 3`
 - `low_confidence_shadow = 3`
 - `hybrid_overlay_complexity = 3`
 - `writing_quality_risk = 2`
 - `figure_table_grounding = 1`
+- `fulltext_acquisition_gap = 0`
+- `fulltext_acquisition_blocked_upstream = 0`
 
-The three papers still gated by the acquisition gap, with their refreshed
-(HTTP 404) fetch records, are:
+Artifacts for the three newly-recovered papers live at:
 
-- `DOI:10.1016/j.jmr.2022.107268` → `PMC9922030` (SpecDB NMR database, non-OA)
-- `DOI:10.1002/cpz1.1028` → `PMC11179667` (Optimized proteomics workflow, non-OA)
-- `DOI:10.1002/jpen.70069` → `PMC13047292` (Body composition / 12-month mortality, no EPMC index entry)
-
-Key interpretation: **re-running Europe PMC enrichment for these papers
-will not help**. The gap is a real upstream-acquisition problem, not a
-transient network issue. Continuing to retry the same backend is wasted
-effort — an alternate source or an explicit exclusion is required.
-
-Refreshed bundle artifacts for these three papers live at:
-
+- `knowledge_base/qualified/collection_v1_2018_present/auto_review/recovery_v7/rerun_outputs/pmc_fulltext_raw/{PMC11179667,PMC13047292,PMC9922030}.ncbi.xml`
 - `knowledge_base/qualified/collection_v1_2018_present/auto_review/recovery_v7/rerun_outputs/evidence_enrichments.jsonl`
-- `knowledge_base/qualified/collection_v1_2018_present/auto_review/recovery_v7/rerun_outputs/source_bundles.jsonl`
-- `knowledge_base/enriched/collection_v1_2018_present/auto_review/source_bundles_full180_enriched_v14.jsonl` (180-paper merged corpus with the three replacements)
+- `knowledge_base/enriched/collection_v1_2018_present/auto_review/source_bundles_full180_enriched_v15.jsonl` (180-paper merged corpus with the three recovered bundles)
+
+A manual regex sweep of the three NCBI XMLs found **no** missed
+accessions (only DOI citations in references). So for these three
+papers the current `identifier_sparse_low_confidence` signal is
+genuine: the papers describe resources but do not publish standard-
+format accessions (GSE/SRR/PXD/RRID/PDB/etc.).
 
 Recommended next target (in priority order):
 
-1. **Decide the acquisition-strategy path** for the three blocked papers:
-   - (a) add an **NCBI PMC efetch** backend as a secondary fetcher in
-     `src/life_science_paperwritingbench/evidence_enrichment.py` — NCBI
-     occasionally serves XML for papers Europe PMC does not redistribute;
-   - (b) accept the gap and **flag these papers for exclusion** from the
-     shadow lane until a manual acquisition path exists;
-   - (c) introduce a publisher-native ingestion lane (larger project).
-
-   Whichever path is chosen, the `fulltext_acquisition_blocked_upstream`
-   category is the right gate — it will shrink automatically when a
-   paper becomes fetchable, and stay populated when it is genuinely out
-   of reach.
-
-2. **Promote confidence calibration `v14` semantics** into a
+1. **Audit `identifier_sparse_low_confidence` as a real signal now**.
+   With the acquisition-gap collapse done, decide whether these three
+   entries represent:
+   - (a) a parser-pattern gap (accessions are present in non-standard
+     form, e.g. BMRB IDs, author-assigned resource URLs, Zenodo/Github
+     links) that `_ACCESSION_PATTERN` in `evidence_enrichment.py`
+     should learn;
+   - (b) a genuine authorship quality issue (papers that describe a
+     resource without publishing a persistent identifier).
+   The first NCBI XML (SpecDB) is especially worth reading — a
+   biomolecular NMR database paper almost certainly mentions a BMRB
+   accession or a project URL that the current regex does not catch.
+2. **Refresh the whole corpus via the new NCBI fallback path** in a
+   single batch run to pull any other non-OA papers that were silently
+   abstract-inferred up to this point; then rebuild the auto
+   qualification + inspection slices. This is the cheapest way to find
+   out whether `fulltext_acquisition_blocked_upstream` is truly zero
+   corpus-wide or just zero in the current 30-entry public slice.
+3. **Promote confidence calibration `v14` semantics** into a
    reproducible pass (the `34/146 → 5/175` low/medium shift has held
    across recent inspections and is load-bearing for downstream gates).
-
-3. **Audit the three `low_confidence_shadow` entries** once the gap
-   cohort is handled, since `low_confidence_shadow` should then be a
-   purer signal uncontaminated by fetch failures.
+4. **Audit the three `low_confidence_shadow` entries** now that
+   `low_confidence_shadow` is no longer contaminated by fetch failures.
 
 ## Suggested commands for the next session
 

@@ -6791,6 +6791,114 @@ class PaperQualificationFlowTests(unittest.TestCase):
             self.assertIn("trial_registry_reference_snippets", enrichment.provenance_fields)
             self.assertIn("data_availability_section_used_for_identifier_scan", enrichment.notes)
 
+    def test_build_auto_review_evidence_enrichments_falls_back_to_ncbi_on_http_404(self):
+        paper = make_source_paper(
+            paper_id="PMID:auto-enrich-ncbi-fallback",
+            study_class=StudyClass.METHODS_RESOURCE,
+            claim_mode=ClaimMode.RESOURCE_RELEASE,
+            metadata={
+                "abstract": "Non-OA paper abstract.",
+                "pmcid": "PMC11179667",
+            },
+        )
+        ncbi_payload = b"""
+<pmc-articleset>
+  <article>
+    <body>
+      <sec><title>Methods</title><p>We described an optimized workflow.</p></sec>
+      <sec><title>Results</title><p>Performance improved across cohorts.</p></sec>
+    </body>
+  </article>
+</pmc-articleset>
+"""
+
+        def fetcher(url, headers=None):
+            if "ebi.ac.uk" in url:
+                raise urllib.error.HTTPError(url, 404, "Not Found", {}, None)
+            if "eutils.ncbi.nlm.nih.gov" in url:
+                return ncbi_payload
+            raise AssertionError(f"unexpected url: {url}")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            fetch_records, enrichments = build_auto_review_evidence_enrichments(
+                (paper,),
+                raw_dir=tmpdir,
+                fetcher=fetcher,
+            )
+            self.assertEqual(len(fetch_records), 1)
+            self.assertTrue(fetch_records[0].fetch_ok)
+            self.assertIn("eutils.ncbi.nlm.nih.gov", fetch_records[0].fetch_url)
+            self.assertTrue(fetch_records[0].raw_payload_path.endswith("PMC11179667.ncbi.xml"))
+            self.assertEqual(len(enrichments), 1)
+            self.assertIn("pmc_source:ncbi_efetch_fallback", enrichments[0].notes)
+            self.assertIn("optimized workflow", enrichments[0].methods_text.lower())
+            self.assertIn("cohorts", enrichments[0].results_text.lower())
+
+    def test_build_auto_review_evidence_enrichments_records_both_errors_when_ncbi_also_fails(self):
+        paper = make_source_paper(
+            paper_id="PMID:auto-enrich-both-fail",
+            study_class=StudyClass.METHODS_RESOURCE,
+            claim_mode=ClaimMode.RESOURCE_RELEASE,
+            metadata={"abstract": "x", "pmcid": "PMC99999999"},
+        )
+
+        def fetcher(url, headers=None):
+            if "ebi.ac.uk" in url:
+                raise urllib.error.HTTPError(url, 404, "Not Found", {}, None)
+            if "eutils.ncbi.nlm.nih.gov" in url:
+                raise urllib.error.HTTPError(url, 500, "Internal Server Error", {}, None)
+            raise AssertionError(f"unexpected url: {url}")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            fetch_records, enrichments = build_auto_review_evidence_enrichments(
+                (paper,),
+                raw_dir=tmpdir,
+                fetcher=fetcher,
+            )
+            self.assertEqual(len(fetch_records), 1)
+            self.assertFalse(fetch_records[0].fetch_ok)
+            self.assertIn("HTTP Error 404", fetch_records[0].error)
+            self.assertIn("ncbi_fallback_error", fetch_records[0].error)
+            self.assertIn("HTTP Error 500", fetch_records[0].error)
+            self.assertEqual(len(enrichments), 1)
+            self.assertTrue(
+                any("fetch_error" in note and "404" in note for note in enrichments[0].notes)
+            )
+            self.assertTrue(
+                any("ncbi_fallback_error" in note for note in enrichments[0].notes)
+            )
+
+    def test_build_auto_review_evidence_enrichments_does_not_fall_back_on_transient_error(self):
+        paper = make_source_paper(
+            paper_id="PMID:auto-enrich-transient",
+            study_class=StudyClass.METHODS_RESOURCE,
+            claim_mode=ClaimMode.RESOURCE_RELEASE,
+            metadata={"abstract": "x", "pmcid": "PMC88888888"},
+        )
+        calls: list = []
+
+        def fetcher(url, headers=None):
+            calls.append(url)
+            if "ebi.ac.uk" in url:
+                raise urllib.error.URLError("DNS resolution failed")
+            raise AssertionError(f"unexpected url: {url}")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            fetch_records, enrichments = build_auto_review_evidence_enrichments(
+                (paper,),
+                raw_dir=tmpdir,
+                fetcher=fetcher,
+            )
+            self.assertEqual(len(calls), 1)
+            self.assertIn("ebi.ac.uk", calls[0])
+            self.assertEqual(len(fetch_records), 1)
+            self.assertFalse(fetch_records[0].fetch_ok)
+            self.assertNotIn("ncbi_fallback_error", fetch_records[0].error)
+            self.assertEqual(len(enrichments), 1)
+            self.assertFalse(
+                any("ncbi_fallback_error" in note for note in enrichments[0].notes)
+            )
+
     def test_cli_auto_review_evidence_enrichment_from_cached_xml(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             papers_path = os.path.join(tmpdir, "papers.jsonl")
