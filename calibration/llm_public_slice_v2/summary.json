@@ -1,0 +1,1559 @@
+{
+  "model": "deepseek-chat",
+  "request_model": "deepseek-chat",
+  "producer_id": "llm:deepseek-chat@temp=0.2",
+  "temperature": 0.2,
+  "max_tokens": 1200,
+  "task_source": "inspection-slice",
+  "prompt_version": "v2",
+  "num_tasks": 30,
+  "pass_count": 0,
+  "mean_citation_specificity_score": 0.822,
+  "forbidden_pointer_free_count": 30,
+  "by_task_family": {
+    "abstract_from_evidence": {
+      "total": 12,
+      "passed": 0,
+      "failed_task_bundle_ids": [
+        "TB:BU:EUAUTO:EFABE066E1CC",
+        "TB:BU:EUAUTO:E372771DAE12",
+        "TB:BU:EUAUTO:F383AAF2D9C8",
+        "TB:BU:EUAUTO:EA7AA161E315",
+        "TB:BU:EUAUTO:4B6B808009BE",
+        "TB:BU:EUAUTO:2FB750F6DC42",
+        "TB:BU:EUAUTO:2A956C890C93",
+        "TB:BU:EUAUTO:8613E1B4CEB3",
+        "TB:BU:EUAUTO:4E02B5B6E6B7",
+        "TB:BU:EUAUTO:D9F982457632",
+        "TB:BU:EUAUTO:E427AF85C37D",
+        "TB:BU:EUAUTO:7491F1D683B2"
+      ],
+      "failure_note_counter": {
+        "traceability coverage below threshold": 12
+      },
+      "mean_citation_score": 0.583,
+      "forbidden_pointer_free_count": 12
+    },
+    "methods_to_text": {
+      "total": 12,
+      "passed": 0,
+      "failed_task_bundle_ids": [
+        "TB:BU:EUAUTO:0647BFACA729",
+        "TB:BU:EUAUTO:4EE60B35277A",
+        "TB:BU:EUAUTO:9B993FC003FA",
+        "TB:BU:EUAUTO:8F1919A560A4",
+        "TB:BU:EUAUTO:574F9D766255",
+        "TB:BU:EUAUTO:DBF39730EECC",
+        "TB:BU:EUAUTO:4EB4DEC74F35",
+        "TB:BU:EUAUTO:0A61A085F8E3",
+        "TB:BU:EUAUTO:23CD58731E80",
+        "TB:BU:EUAUTO:203BF5F7D3BE",
+        "TB:BU:EUAUTO:C8FB544B54D1",
+        "TB:BU:EUAUTO:79EBDAF6B695"
+      ],
+      "failure_note_counter": {
+        "traceability coverage below threshold": 12
+      },
+      "mean_citation_score": 0.972,
+      "forbidden_pointer_free_count": 12
+    },
+    "results_to_text": {
+      "total": 6,
+      "passed": 0,
+      "failed_task_bundle_ids": [
+        "TB:BU:EUAUTO:DE9706E77A3C",
+        "TB:BU:EUAUTO:258F224C1556",
+        "TB:BU:EUAUTO:9C556312AA06",
+        "TB:BU:EUAUTO:03FB6686FE89",
+        "TB:BU:EUAUTO:2D82A93D3D12",
+        "TB:BU:EUAUTO:D80B030F985D"
+      ],
+      "failure_note_counter": {
+        "traceability coverage below threshold": 6
+      },
+      "mean_citation_score": 1.0,
+      "forbidden_pointer_free_count": 6
+    }
+  },
+  "total_prompt_tokens": 93692,
+  "total_completion_tokens": 13134,
+  "task_rows": [
+    {
+      "paper_id": "DOI:10.1128/mbio.00933-24",
+      "task_family": "abstract_from_evidence",
+      "task_bundle_id": "TB:BU:EUAUTO:EFABE066E1CC",
+      "deterministic_checks_passed": false,
+      "scores": {
+        "traceability_coverage": 0.0,
+        "structure_compliance": 1.0,
+        "non_empty_output": 1.0,
+        "length_floor": 1.0,
+        "answer_support": 1.0
+      },
+      "notes": [
+        "traceability coverage below threshold"
+      ],
+      "output_word_count": 203,
+      "citation": {
+        "figure_refs": [],
+        "table_refs": [],
+        "pvalues": [],
+        "numeric_magnitudes": [],
+        "accessions": [],
+        "repo_urls": [],
+        "forbidden_pointer_hits": [],
+        "citation_count": 0,
+        "citation_specificity_score": 0.0,
+        "forbidden_pointer_free": true
+      }
+    },
+    {
+      "paper_id": "DOI:10.1007/s00520-026-10393-8",
+      "task_family": "abstract_from_evidence",
+      "task_bundle_id": "TB:BU:EUAUTO:E372771DAE12",
+      "deterministic_checks_passed": false,
+      "scores": {
+        "traceability_coverage": 0.0,
+        "structure_compliance": 1.0,
+        "non_empty_output": 1.0,
+        "length_floor": 1.0,
+        "answer_support": 1.0
+      },
+      "notes": [
+        "traceability coverage below threshold"
+      ],
+      "output_word_count": 178,
+      "citation": {
+        "figure_refs": [],
+        "table_refs": [],
+        "pvalues": [
+          "p=0.011",
+          "p=0.002",
+          "p=0.005"
+        ],
+        "numeric_magnitudes": [],
+        "accessions": [],
+        "repo_urls": [],
+        "forbidden_pointer_hits": [],
+        "citation_count": 3,
+        "citation_specificity_score": 1.0,
+        "forbidden_pointer_free": true
+      }
+    },
+    {
+      "paper_id": "DOI:10.1002/jpen.70069",
+      "task_family": "abstract_from_evidence",
+      "task_bundle_id": "TB:BU:EUAUTO:F383AAF2D9C8",
+      "deterministic_checks_passed": false,
+      "scores": {
+        "traceability_coverage": 0.0,
+        "structure_compliance": 0.0,
+        "non_empty_output": 1.0,
+        "length_floor": 1.0,
+        "answer_support": 1.0
+      },
+      "notes": [
+        "traceability coverage below threshold"
+      ],
+      "output_word_count": 221,
+      "citation": {
+        "figure_refs": [],
+        "table_refs": [],
+        "pvalues": [],
+        "numeric_magnitudes": [
+          "19.4 kg",
+          "15 kg",
+          "13.1 kg",
+          "21 kg"
+        ],
+        "accessions": [],
+        "repo_urls": [],
+        "forbidden_pointer_hits": [],
+        "citation_count": 4,
+        "citation_specificity_score": 1.0,
+        "forbidden_pointer_free": true
+      }
+    },
+    {
+      "paper_id": "DOI:10.1002/advs.202500369",
+      "task_family": "abstract_from_evidence",
+      "task_bundle_id": "TB:BU:EUAUTO:EA7AA161E315",
+      "deterministic_checks_passed": false,
+      "scores": {
+        "traceability_coverage": 0.0,
+        "structure_compliance": 0.0,
+        "non_empty_output": 1.0,
+        "length_floor": 1.0,
+        "answer_support": 1.0
+      },
+      "notes": [
+        "traceability coverage below threshold"
+      ],
+      "output_word_count": 176,
+      "citation": {
+        "figure_refs": [],
+        "table_refs": [],
+        "pvalues": [
+          "p < 0.01",
+          "P < 0.01"
+        ],
+        "numeric_magnitudes": [],
+        "accessions": [],
+        "repo_urls": [],
+        "forbidden_pointer_hits": [],
+        "citation_count": 2,
+        "citation_specificity_score": 0.667,
+        "forbidden_pointer_free": true
+      }
+    },
+    {
+      "paper_id": "DOI:10.1016/j.jmr.2022.107268",
+      "task_family": "abstract_from_evidence",
+      "task_bundle_id": "TB:BU:EUAUTO:4B6B808009BE",
+      "deterministic_checks_passed": false,
+      "scores": {
+        "traceability_coverage": 0.0,
+        "structure_compliance": 0.0,
+        "non_empty_output": 1.0,
+        "length_floor": 1.0,
+        "answer_support": 1.0
+      },
+      "notes": [
+        "traceability coverage below threshold"
+      ],
+      "output_word_count": 218,
+      "citation": {
+        "figure_refs": [],
+        "table_refs": [],
+        "pvalues": [],
+        "numeric_magnitudes": [],
+        "accessions": [],
+        "repo_urls": [],
+        "forbidden_pointer_hits": [],
+        "citation_count": 0,
+        "citation_specificity_score": 0.0,
+        "forbidden_pointer_free": true
+      }
+    },
+    {
+      "paper_id": "DOI:10.3389/fendo.2026.1726938",
+      "task_family": "abstract_from_evidence",
+      "task_bundle_id": "TB:BU:EUAUTO:2FB750F6DC42",
+      "deterministic_checks_passed": false,
+      "scores": {
+        "traceability_coverage": 0.0,
+        "structure_compliance": 1.0,
+        "non_empty_output": 1.0,
+        "length_floor": 1.0,
+        "answer_support": 1.0
+      },
+      "notes": [
+        "traceability coverage below threshold"
+      ],
+      "output_word_count": 218,
+      "citation": {
+        "figure_refs": [],
+        "table_refs": [],
+        "pvalues": [
+          "P = 0.04",
+          "P = 0.002",
+          "P = 0.02",
+          "P = 0.0009",
+          "P < 0.0001",
+          "P = 0.0008"
+        ],
+        "numeric_magnitudes": [],
+        "accessions": [],
+        "repo_urls": [],
+        "forbidden_pointer_hits": [],
+        "citation_count": 6,
+        "citation_specificity_score": 1.0,
+        "forbidden_pointer_free": true
+      }
+    },
+    {
+      "paper_id": "DOI:10.1111/cas.13569",
+      "task_family": "methods_to_text",
+      "task_bundle_id": "TB:BU:EUAUTO:0647BFACA729",
+      "deterministic_checks_passed": false,
+      "scores": {
+        "traceability_coverage": 0.0,
+        "structure_compliance": 1.0,
+        "non_empty_output": 1.0,
+        "length_floor": 1.0,
+        "answer_support": 1.0
+      },
+      "notes": [
+        "traceability coverage below threshold"
+      ],
+      "output_word_count": 338,
+      "citation": {
+        "figure_refs": [
+          "Fig. 1",
+          "Fig. 2",
+          "Fig. 3F",
+          "Fig. 3E",
+          "Fig. 6A"
+        ],
+        "table_refs": [
+          "Table 1",
+          "Table 2"
+        ],
+        "pvalues": [],
+        "numeric_magnitudes": [
+          "121-fold",
+          "30 mg"
+        ],
+        "accessions": [],
+        "repo_urls": [],
+        "forbidden_pointer_hits": [],
+        "citation_count": 9,
+        "citation_specificity_score": 1.0,
+        "forbidden_pointer_free": true
+      }
+    },
+    {
+      "paper_id": "DOI:10.3389/fimmu.2026.1768201",
+      "task_family": "methods_to_text",
+      "task_bundle_id": "TB:BU:EUAUTO:4EE60B35277A",
+      "deterministic_checks_passed": false,
+      "scores": {
+        "traceability_coverage": 0.0,
+        "structure_compliance": 1.0,
+        "non_empty_output": 1.0,
+        "length_floor": 1.0,
+        "answer_support": 1.0
+      },
+      "notes": [
+        "traceability coverage below threshold"
+      ],
+      "output_word_count": 286,
+      "citation": {
+        "figure_refs": [
+          "Fig. 1",
+          "Fig. 2",
+          "Fig. 3"
+        ],
+        "table_refs": [
+          "Table 1",
+          "Table 2"
+        ],
+        "pvalues": [],
+        "numeric_magnitudes": [],
+        "accessions": [],
+        "repo_urls": [],
+        "forbidden_pointer_hits": [],
+        "citation_count": 5,
+        "citation_specificity_score": 1.0,
+        "forbidden_pointer_free": true
+      }
+    },
+    {
+      "paper_id": "DOI:10.3389/fpubh.2026.1763175",
+      "task_family": "methods_to_text",
+      "task_bundle_id": "TB:BU:EUAUTO:9B993FC003FA",
+      "deterministic_checks_passed": false,
+      "scores": {
+        "traceability_coverage": 0.0,
+        "structure_compliance": 0.0,
+        "non_empty_output": 1.0,
+        "length_floor": 1.0,
+        "answer_support": 1.0
+      },
+      "notes": [
+        "traceability coverage below threshold"
+      ],
+      "output_word_count": 416,
+      "citation": {
+        "figure_refs": [
+          "Figure 2"
+        ],
+        "table_refs": [
+          "Table 1",
+          "Table 6"
+        ],
+        "pvalues": [],
+        "numeric_magnitudes": [
+          "180 mg"
+        ],
+        "accessions": [],
+        "repo_urls": [],
+        "forbidden_pointer_hits": [],
+        "citation_count": 4,
+        "citation_specificity_score": 1.0,
+        "forbidden_pointer_free": true
+      }
+    },
+    {
+      "paper_id": "DOI:10.3389/fonc.2024.1389136",
+      "task_family": "methods_to_text",
+      "task_bundle_id": "TB:BU:EUAUTO:8F1919A560A4",
+      "deterministic_checks_passed": false,
+      "scores": {
+        "traceability_coverage": 0.0,
+        "structure_compliance": 1.0,
+        "non_empty_output": 1.0,
+        "length_floor": 1.0,
+        "answer_support": 1.0
+      },
+      "notes": [
+        "traceability coverage below threshold"
+      ],
+      "output_word_count": 417,
+      "citation": {
+        "figure_refs": [
+          "Fig. 1A",
+          "Fig. 2A",
+          "Fig. 3A",
+          "Fig. 2E",
+          "Fig. 3E",
+          "Fig. 2G",
+          "Fig. 3G",
+          "Fig. 4A",
+          "Fig. 5",
+          "Fig. 6",
+          "Fig. 8A",
+          "Fig. 7A"
+        ],
+        "table_refs": [
+          "Table 3",
+          "Table 4"
+        ],
+        "pvalues": [
+          "p < 0.05",
+          "p < 0.01"
+        ],
+        "numeric_magnitudes": [],
+        "accessions": [],
+        "repo_urls": [],
+        "forbidden_pointer_hits": [],
+        "citation_count": 16,
+        "citation_specificity_score": 1.0,
+        "forbidden_pointer_free": true
+      }
+    },
+    {
+      "paper_id": "DOI:10.1038/s41592-021-01336-8",
+      "task_family": "methods_to_text",
+      "task_bundle_id": "TB:BU:EUAUTO:574F9D766255",
+      "deterministic_checks_passed": false,
+      "scores": {
+        "traceability_coverage": 0.0,
+        "structure_compliance": 1.0,
+        "non_empty_output": 1.0,
+        "length_floor": 1.0,
+        "answer_support": 1.0
+      },
+      "notes": [
+        "traceability coverage below threshold"
+      ],
+      "output_word_count": 327,
+      "citation": {
+        "figure_refs": [
+          "Fig. 1"
+        ],
+        "table_refs": [
+          "Table 1"
+        ],
+        "pvalues": [],
+        "numeric_magnitudes": [],
+        "accessions": [],
+        "repo_urls": [],
+        "forbidden_pointer_hits": [],
+        "citation_count": 2,
+        "citation_specificity_score": 0.667,
+        "forbidden_pointer_free": true
+      }
+    },
+    {
+      "paper_id": "DOI:10.1002/cre2.70314",
+      "task_family": "methods_to_text",
+      "task_bundle_id": "TB:BU:EUAUTO:DBF39730EECC",
+      "deterministic_checks_passed": false,
+      "scores": {
+        "traceability_coverage": 0.0,
+        "structure_compliance": 0.0,
+        "non_empty_output": 1.0,
+        "length_floor": 1.0,
+        "answer_support": 1.0
+      },
+      "notes": [
+        "traceability coverage below threshold"
+      ],
+      "output_word_count": 387,
+      "citation": {
+        "figure_refs": [
+          "Figure 1",
+          "Figures 2, 4, 6",
+          "Figures 3, 5"
+        ],
+        "table_refs": [
+          "Table 1",
+          "Table 2"
+        ],
+        "pvalues": [],
+        "numeric_magnitudes": [],
+        "accessions": [],
+        "repo_urls": [],
+        "forbidden_pointer_hits": [],
+        "citation_count": 5,
+        "citation_specificity_score": 1.0,
+        "forbidden_pointer_free": true
+      }
+    },
+    {
+      "paper_id": "DOI:10.1186/s13018-023-04496-9",
+      "task_family": "results_to_text",
+      "task_bundle_id": "TB:BU:EUAUTO:DE9706E77A3C",
+      "deterministic_checks_passed": false,
+      "scores": {
+        "traceability_coverage": 0.0,
+        "structure_compliance": 1.0,
+        "non_empty_output": 1.0,
+        "length_floor": 1.0,
+        "answer_support": 1.0
+      },
+      "notes": [
+        "traceability coverage below threshold"
+      ],
+      "output_word_count": 236,
+      "citation": {
+        "figure_refs": [
+          "Fig. 1",
+          "Fig. 4B",
+          "Fig. 4E",
+          "Fig. 5B",
+          "Fig. 7"
+        ],
+        "table_refs": [
+          "Table 2",
+          "Table 1"
+        ],
+        "pvalues": [],
+        "numeric_magnitudes": [],
+        "accessions": [],
+        "repo_urls": [],
+        "forbidden_pointer_hits": [],
+        "citation_count": 7,
+        "citation_specificity_score": 1.0,
+        "forbidden_pointer_free": true
+      }
+    },
+    {
+      "paper_id": "DOI:10.1038/s41398-026-03964-0",
+      "task_family": "results_to_text",
+      "task_bundle_id": "TB:BU:EUAUTO:258F224C1556",
+      "deterministic_checks_passed": false,
+      "scores": {
+        "traceability_coverage": 0.0,
+        "structure_compliance": 1.0,
+        "non_empty_output": 1.0,
+        "length_floor": 1.0,
+        "answer_support": 1.0
+      },
+      "notes": [
+        "traceability coverage below threshold"
+      ],
+      "output_word_count": 247,
+      "citation": {
+        "figure_refs": [
+          "Fig. 2",
+          "Fig. 1",
+          "Fig. 3",
+          "Fig. 4A",
+          "Fig. 4B",
+          "Fig. 4"
+        ],
+        "table_refs": [
+          "Table 1",
+          "Table 2"
+        ],
+        "pvalues": [],
+        "numeric_magnitudes": [],
+        "accessions": [],
+        "repo_urls": [],
+        "forbidden_pointer_hits": [],
+        "citation_count": 8,
+        "citation_specificity_score": 1.0,
+        "forbidden_pointer_free": true
+      }
+    },
+    {
+      "paper_id": "DOI:10.2147/dddt.s585709",
+      "task_family": "results_to_text",
+      "task_bundle_id": "TB:BU:EUAUTO:9C556312AA06",
+      "deterministic_checks_passed": false,
+      "scores": {
+        "traceability_coverage": 0.0,
+        "structure_compliance": 0.0,
+        "non_empty_output": 1.0,
+        "length_floor": 1.0,
+        "answer_support": 1.0
+      },
+      "notes": [
+        "traceability coverage below threshold"
+      ],
+      "output_word_count": 302,
+      "citation": {
+        "figure_refs": [
+          "Fig. 4",
+          "Fig. 5A",
+          "Fig. 6",
+          "Fig. 5E",
+          "Fig. 7",
+          "Fig. 8",
+          "Fig. 1",
+          "Fig. 2",
+          "Fig. 3"
+        ],
+        "table_refs": [
+          "Table 3",
+          "Table 4",
+          "Table 2",
+          "Table 1"
+        ],
+        "pvalues": [],
+        "numeric_magnitudes": [],
+        "accessions": [],
+        "repo_urls": [],
+        "forbidden_pointer_hits": [],
+        "citation_count": 13,
+        "citation_specificity_score": 1.0,
+        "forbidden_pointer_free": true
+      }
+    },
+    {
+      "paper_id": "DOI:10.1016/j.heliyon.2024.e30110",
+      "task_family": "results_to_text",
+      "task_bundle_id": "TB:BU:EUAUTO:03FB6686FE89",
+      "deterministic_checks_passed": false,
+      "scores": {
+        "traceability_coverage": 0.0,
+        "structure_compliance": 1.0,
+        "non_empty_output": 1.0,
+        "length_floor": 1.0,
+        "answer_support": 1.0
+      },
+      "notes": [
+        "traceability coverage below threshold"
+      ],
+      "output_word_count": 302,
+      "citation": {
+        "figure_refs": [
+          "Fig. 1A",
+          "Fig. 1B",
+          "Fig. 2A",
+          "Fig. 2D",
+          "Fig. 3A",
+          "Fig. 3B",
+          "Fig. 4A",
+          "Fig. 4B",
+          "Fig. 4C",
+          "Fig. 4E",
+          "Fig. 5A",
+          "Fig. 6A",
+          "Fig. 6D",
+          "Fig. 7A",
+          "Fig. 8A"
+        ],
+        "table_refs": [],
+        "pvalues": [],
+        "numeric_magnitudes": [],
+        "accessions": [],
+        "repo_urls": [],
+        "forbidden_pointer_hits": [],
+        "citation_count": 15,
+        "citation_specificity_score": 1.0,
+        "forbidden_pointer_free": true
+      }
+    },
+    {
+      "paper_id": "DOI:10.1093/bib/bbae048",
+      "task_family": "results_to_text",
+      "task_bundle_id": "TB:BU:EUAUTO:2D82A93D3D12",
+      "deterministic_checks_passed": false,
+      "scores": {
+        "traceability_coverage": 0.0,
+        "structure_compliance": 0.0,
+        "non_empty_output": 1.0,
+        "length_floor": 1.0,
+        "answer_support": 1.0
+      },
+      "notes": [
+        "traceability coverage below threshold"
+      ],
+      "output_word_count": 325,
+      "citation": {
+        "figure_refs": [
+          "Fig. 1",
+          "Fig. 6",
+          "Figure 2",
+          "Fig. 3",
+          "Fig. 5",
+          "Fig. 8A"
+        ],
+        "table_refs": [
+          "Table 1",
+          "Table 2",
+          "Table 3"
+        ],
+        "pvalues": [],
+        "numeric_magnitudes": [],
+        "accessions": [],
+        "repo_urls": [
+          "https://github.com/Zhaonan99/Antibody-antigen-complex-structure-benchmark-dataset."
+        ],
+        "forbidden_pointer_hits": [],
+        "citation_count": 10,
+        "citation_specificity_score": 1.0,
+        "forbidden_pointer_free": true
+      }
+    },
+    {
+      "paper_id": "DOI:10.12688/f1000research.170388.2",
+      "task_family": "results_to_text",
+      "task_bundle_id": "TB:BU:EUAUTO:D80B030F985D",
+      "deterministic_checks_passed": false,
+      "scores": {
+        "traceability_coverage": 0.0,
+        "structure_compliance": 1.0,
+        "non_empty_output": 1.0,
+        "length_floor": 1.0,
+        "answer_support": 1.0
+      },
+      "notes": [
+        "traceability coverage below threshold"
+      ],
+      "output_word_count": 191,
+      "citation": {
+        "figure_refs": [
+          "Fig. 1"
+        ],
+        "table_refs": [
+          "Table 5",
+          "Table 6",
+          "Table 7",
+          "Table 8",
+          "Table 1",
+          "Table 2",
+          "Table 3",
+          "Table 4"
+        ],
+        "pvalues": [],
+        "numeric_magnitudes": [],
+        "accessions": [],
+        "repo_urls": [],
+        "forbidden_pointer_hits": [],
+        "citation_count": 9,
+        "citation_specificity_score": 1.0,
+        "forbidden_pointer_free": true
+      }
+    },
+    {
+      "paper_id": "DOI:10.1038/s41598-018-29441-3",
+      "task_family": "abstract_from_evidence",
+      "task_bundle_id": "TB:BU:EUAUTO:2A956C890C93",
+      "deterministic_checks_passed": false,
+      "scores": {
+        "traceability_coverage": 0.0,
+        "structure_compliance": 0.0,
+        "non_empty_output": 1.0,
+        "length_floor": 1.0,
+        "answer_support": 1.0
+      },
+      "notes": [
+        "traceability coverage below threshold"
+      ],
+      "output_word_count": 208,
+      "citation": {
+        "figure_refs": [],
+        "table_refs": [],
+        "pvalues": [],
+        "numeric_magnitudes": [],
+        "accessions": [],
+        "repo_urls": [],
+        "forbidden_pointer_hits": [],
+        "citation_count": 0,
+        "citation_specificity_score": 0.0,
+        "forbidden_pointer_free": true
+      }
+    },
+    {
+      "paper_id": "DOI:10.1097/md.0000000000048111",
+      "task_family": "abstract_from_evidence",
+      "task_bundle_id": "TB:BU:EUAUTO:8613E1B4CEB3",
+      "deterministic_checks_passed": false,
+      "scores": {
+        "traceability_coverage": 0.0,
+        "structure_compliance": 1.0,
+        "non_empty_output": 1.0,
+        "length_floor": 1.0,
+        "answer_support": 1.0
+      },
+      "notes": [
+        "traceability coverage below threshold"
+      ],
+      "output_word_count": 236,
+      "citation": {
+        "figure_refs": [],
+        "table_refs": [],
+        "pvalues": [
+          "P = .526"
+        ],
+        "numeric_magnitudes": [],
+        "accessions": [],
+        "repo_urls": [],
+        "forbidden_pointer_hits": [],
+        "citation_count": 1,
+        "citation_specificity_score": 0.333,
+        "forbidden_pointer_free": true
+      }
+    },
+    {
+      "paper_id": "DOI:10.1097/md.0000000000047858",
+      "task_family": "abstract_from_evidence",
+      "task_bundle_id": "TB:BU:EUAUTO:4E02B5B6E6B7",
+      "deterministic_checks_passed": false,
+      "scores": {
+        "traceability_coverage": 0.0,
+        "structure_compliance": 0.0,
+        "non_empty_output": 1.0,
+        "length_floor": 1.0,
+        "answer_support": 1.0
+      },
+      "notes": [
+        "traceability coverage below threshold"
+      ],
+      "output_word_count": 196,
+      "citation": {
+        "figure_refs": [],
+        "table_refs": [],
+        "pvalues": [
+          "P<.001",
+          "P=.328",
+          "P=.013",
+          "P<.05"
+        ],
+        "numeric_magnitudes": [],
+        "accessions": [],
+        "repo_urls": [],
+        "forbidden_pointer_hits": [],
+        "citation_count": 4,
+        "citation_specificity_score": 1.0,
+        "forbidden_pointer_free": true
+      }
+    },
+    {
+      "paper_id": "DOI:10.1007/s12672-024-01496-x",
+      "task_family": "abstract_from_evidence",
+      "task_bundle_id": "TB:BU:EUAUTO:D9F982457632",
+      "deterministic_checks_passed": false,
+      "scores": {
+        "traceability_coverage": 0.0,
+        "structure_compliance": 0.0,
+        "non_empty_output": 1.0,
+        "length_floor": 1.0,
+        "answer_support": 1.0
+      },
+      "notes": [
+        "traceability coverage below threshold"
+      ],
+      "output_word_count": 202,
+      "citation": {
+        "figure_refs": [],
+        "table_refs": [],
+        "pvalues": [
+          "P<0.01",
+          "P=0.01",
+          "P=0.033"
+        ],
+        "numeric_magnitudes": [],
+        "accessions": [],
+        "repo_urls": [],
+        "forbidden_pointer_hits": [],
+        "citation_count": 3,
+        "citation_specificity_score": 1.0,
+        "forbidden_pointer_free": true
+      }
+    },
+    {
+      "paper_id": "DOI:10.1002/cpz1.1028",
+      "task_family": "abstract_from_evidence",
+      "task_bundle_id": "TB:BU:EUAUTO:E427AF85C37D",
+      "deterministic_checks_passed": false,
+      "scores": {
+        "traceability_coverage": 0.0,
+        "structure_compliance": 0.0,
+        "non_empty_output": 1.0,
+        "length_floor": 1.0,
+        "answer_support": 1.0
+      },
+      "notes": [
+        "traceability coverage below threshold"
+      ],
+      "output_word_count": 189,
+      "citation": {
+        "figure_refs": [],
+        "table_refs": [],
+        "pvalues": [],
+        "numeric_magnitudes": [],
+        "accessions": [],
+        "repo_urls": [],
+        "forbidden_pointer_hits": [],
+        "citation_count": 0,
+        "citation_specificity_score": 0.0,
+        "forbidden_pointer_free": true
+      }
+    },
+    {
+      "paper_id": "DOI:10.3389/fendo.2026.1735660",
+      "task_family": "abstract_from_evidence",
+      "task_bundle_id": "TB:BU:EUAUTO:7491F1D683B2",
+      "deterministic_checks_passed": false,
+      "scores": {
+        "traceability_coverage": 0.0,
+        "structure_compliance": 0.0,
+        "non_empty_output": 1.0,
+        "length_floor": 1.0,
+        "answer_support": 1.0
+      },
+      "notes": [
+        "traceability coverage below threshold"
+      ],
+      "output_word_count": 241,
+      "citation": {
+        "figure_refs": [],
+        "table_refs": [],
+        "pvalues": [],
+        "numeric_magnitudes": [
+          "10 mg",
+          "20 mg",
+          "2 mm",
+          "2.46 mm"
+        ],
+        "accessions": [],
+        "repo_urls": [],
+        "forbidden_pointer_hits": [],
+        "citation_count": 4,
+        "citation_specificity_score": 1.0,
+        "forbidden_pointer_free": true
+      }
+    },
+    {
+      "paper_id": "DOI:10.1111/cpr.70078",
+      "task_family": "methods_to_text",
+      "task_bundle_id": "TB:BU:EUAUTO:4EB4DEC74F35",
+      "deterministic_checks_passed": false,
+      "scores": {
+        "traceability_coverage": 0.0,
+        "structure_compliance": 1.0,
+        "non_empty_output": 1.0,
+        "length_floor": 1.0,
+        "answer_support": 1.0
+      },
+      "notes": [
+        "traceability coverage below threshold"
+      ],
+      "output_word_count": 380,
+      "citation": {
+        "figure_refs": [
+          "Fig. 1A",
+          "Fig. 2A",
+          "Fig. 4A",
+          "Fig. 6A",
+          "Fig. 3A",
+          "Fig. 5A",
+          "Fig. 3B",
+          "Fig. 8A"
+        ],
+        "table_refs": [],
+        "pvalues": [],
+        "numeric_magnitudes": [
+          "0.4 mg",
+          "4 mg",
+          "65 mg"
+        ],
+        "accessions": [],
+        "repo_urls": [],
+        "forbidden_pointer_hits": [],
+        "citation_count": 11,
+        "citation_specificity_score": 1.0,
+        "forbidden_pointer_free": true
+      }
+    },
+    {
+      "paper_id": "DOI:10.3390/nu18060904",
+      "task_family": "methods_to_text",
+      "task_bundle_id": "TB:BU:EUAUTO:0A61A085F8E3",
+      "deterministic_checks_passed": false,
+      "scores": {
+        "traceability_coverage": 0.0,
+        "structure_compliance": 0.0,
+        "non_empty_output": 1.0,
+        "length_floor": 1.0,
+        "answer_support": 1.0
+      },
+      "notes": [
+        "traceability coverage below threshold"
+      ],
+      "output_word_count": 341,
+      "citation": {
+        "figure_refs": [
+          "Figure 1",
+          "Figure 2",
+          "Figure 4",
+          "Figure 5"
+        ],
+        "table_refs": [
+          "Table 1",
+          "Table 3",
+          "Table 4",
+          "Table 6"
+        ],
+        "pvalues": [],
+        "numeric_magnitudes": [],
+        "accessions": [],
+        "repo_urls": [],
+        "forbidden_pointer_hits": [],
+        "citation_count": 8,
+        "citation_specificity_score": 1.0,
+        "forbidden_pointer_free": true
+      }
+    },
+    {
+      "paper_id": "DOI:10.1080/07853890.2026.2628353",
+      "task_family": "methods_to_text",
+      "task_bundle_id": "TB:BU:EUAUTO:23CD58731E80",
+      "deterministic_checks_passed": false,
+      "scores": {
+        "traceability_coverage": 0.0,
+        "structure_compliance": 1.0,
+        "non_empty_output": 1.0,
+        "length_floor": 1.0,
+        "answer_support": 1.0
+      },
+      "notes": [
+        "traceability coverage below threshold"
+      ],
+      "output_word_count": 273,
+      "citation": {
+        "figure_refs": [
+          "Figure 1",
+          "Figure 3",
+          "Figure 4"
+        ],
+        "table_refs": [
+          "Table 1",
+          "Table 2",
+          "Table 3",
+          "Table 4"
+        ],
+        "pvalues": [],
+        "numeric_magnitudes": [],
+        "accessions": [],
+        "repo_urls": [],
+        "forbidden_pointer_hits": [],
+        "citation_count": 7,
+        "citation_specificity_score": 1.0,
+        "forbidden_pointer_free": true
+      }
+    },
+    {
+      "paper_id": "DOI:10.1158/1541-7786.mcr-22-0835",
+      "task_family": "methods_to_text",
+      "task_bundle_id": "TB:BU:EUAUTO:203BF5F7D3BE",
+      "deterministic_checks_passed": false,
+      "scores": {
+        "traceability_coverage": 0.0,
+        "structure_compliance": 1.0,
+        "non_empty_output": 1.0,
+        "length_floor": 1.0,
+        "answer_support": 1.0
+      },
+      "notes": [
+        "traceability coverage below threshold"
+      ],
+      "output_word_count": 495,
+      "citation": {
+        "figure_refs": [
+          "Fig. 1D",
+          "Fig. 4B",
+          "Fig. 2I",
+          "Fig. 5",
+          "Fig. 6A",
+          "Fig. 7A",
+          "Fig. 1F",
+          "Fig. 4C",
+          "Fig. 5I",
+          "Fig. 1G",
+          "Fig. 3D",
+          "Fig. 4G",
+          "Fig. 5K",
+          "Fig. 6E",
+          "Fig. 7E",
+          "Fig. 2A",
+          "Fig. 5A",
+          "Fig. 2C",
+          "Fig. 5C",
+          "Fig. 6B",
+          "Fig. 7B",
+          "Fig. 2E",
+          "Fig. 5E",
+          "Fig. 6C",
+          "Fig. 7C",
+          "Fig. 4A",
+          "Fig. 4D",
+          "Fig. 4E",
+          "Fig. 3E"
+        ],
+        "table_refs": [],
+        "pvalues": [],
+        "numeric_magnitudes": [],
+        "accessions": [],
+        "repo_urls": [],
+        "forbidden_pointer_hits": [],
+        "citation_count": 29,
+        "citation_specificity_score": 1.0,
+        "forbidden_pointer_free": true
+      }
+    },
+    {
+      "paper_id": "DOI:10.1038/s41586-023-06812-z",
+      "task_family": "methods_to_text",
+      "task_bundle_id": "TB:BU:EUAUTO:C8FB544B54D1",
+      "deterministic_checks_passed": false,
+      "scores": {
+        "traceability_coverage": 0.0,
+        "structure_compliance": 1.0,
+        "non_empty_output": 1.0,
+        "length_floor": 1.0,
+        "answer_support": 1.0
+      },
+      "notes": [
+        "traceability coverage below threshold"
+      ],
+      "output_word_count": 362,
+      "citation": {
+        "figure_refs": [
+          "Fig. 1",
+          "Fig. 1a",
+          "Fig. 1b",
+          "Fig. 2a",
+          "Fig. 2b",
+          "Fig. 2c",
+          "Fig. 2d",
+          "Fig. 6a"
+        ],
+        "table_refs": [],
+        "pvalues": [],
+        "numeric_magnitudes": [],
+        "accessions": [],
+        "repo_urls": [],
+        "forbidden_pointer_hits": [],
+        "citation_count": 8,
+        "citation_specificity_score": 1.0,
+        "forbidden_pointer_free": true
+      }
+    },
+    {
+      "paper_id": "DOI:10.1097/md.0000000000047994",
+      "task_family": "methods_to_text",
+      "task_bundle_id": "TB:BU:EUAUTO:79EBDAF6B695",
+      "deterministic_checks_passed": false,
+      "scores": {
+        "traceability_coverage": 0.0,
+        "structure_compliance": 1.0,
+        "non_empty_output": 1.0,
+        "length_floor": 1.0,
+        "answer_support": 1.0
+      },
+      "notes": [
+        "traceability coverage below threshold"
+      ],
+      "output_word_count": 313,
+      "citation": {
+        "figure_refs": [
+          "Fig. 1",
+          "Fig. 2",
+          "Fig. 7"
+        ],
+        "table_refs": [
+          "Table 1",
+          "Table 2",
+          "Table 3",
+          "Table 4"
+        ],
+        "pvalues": [],
+        "numeric_magnitudes": [],
+        "accessions": [],
+        "repo_urls": [],
+        "forbidden_pointer_hits": [],
+        "citation_count": 7,
+        "citation_specificity_score": 1.0,
+        "forbidden_pointer_free": true
+      }
+    }
+  ],
+  "usage": [
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:EFABE066E1CC",
+      "prompt_tokens": 3676,
+      "completion_tokens": 313,
+      "total_tokens": 3989,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_cache_hit_tokens": 0,
+      "prompt_cache_miss_tokens": 3676,
+      "elapsed_seconds": 13.05
+    },
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:E372771DAE12",
+      "prompt_tokens": 3878,
+      "completion_tokens": 251,
+      "total_tokens": 4129,
+      "prompt_tokens_details": {
+        "cached_tokens": 256
+      },
+      "prompt_cache_hit_tokens": 256,
+      "prompt_cache_miss_tokens": 3622,
+      "elapsed_seconds": 9.61
+    },
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:F383AAF2D9C8",
+      "prompt_tokens": 3664,
+      "completion_tokens": 348,
+      "total_tokens": 4012,
+      "prompt_tokens_details": {
+        "cached_tokens": 256
+      },
+      "prompt_cache_hit_tokens": 256,
+      "prompt_cache_miss_tokens": 3408,
+      "elapsed_seconds": 11.98
+    },
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:EA7AA161E315",
+      "prompt_tokens": 2943,
+      "completion_tokens": 271,
+      "total_tokens": 3214,
+      "prompt_tokens_details": {
+        "cached_tokens": 256
+      },
+      "prompt_cache_hit_tokens": 256,
+      "prompt_cache_miss_tokens": 2687,
+      "elapsed_seconds": 10.16
+    },
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:4B6B808009BE",
+      "prompt_tokens": 3040,
+      "completion_tokens": 285,
+      "total_tokens": 3325,
+      "prompt_tokens_details": {
+        "cached_tokens": 256
+      },
+      "prompt_cache_hit_tokens": 256,
+      "prompt_cache_miss_tokens": 2784,
+      "elapsed_seconds": 11.81
+    },
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:2FB750F6DC42",
+      "prompt_tokens": 4219,
+      "completion_tokens": 436,
+      "total_tokens": 4655,
+      "prompt_tokens_details": {
+        "cached_tokens": 256
+      },
+      "prompt_cache_hit_tokens": 256,
+      "prompt_cache_miss_tokens": 3963,
+      "elapsed_seconds": 14.61
+    },
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:0647BFACA729",
+      "prompt_tokens": 3578,
+      "completion_tokens": 521,
+      "total_tokens": 4099,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_cache_hit_tokens": 0,
+      "prompt_cache_miss_tokens": 3578,
+      "elapsed_seconds": 17.82
+    },
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:4EE60B35277A",
+      "prompt_tokens": 2763,
+      "completion_tokens": 465,
+      "total_tokens": 3228,
+      "prompt_tokens_details": {
+        "cached_tokens": 256
+      },
+      "prompt_cache_hit_tokens": 256,
+      "prompt_cache_miss_tokens": 2507,
+      "elapsed_seconds": 16.2
+    },
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:9B993FC003FA",
+      "prompt_tokens": 3122,
+      "completion_tokens": 593,
+      "total_tokens": 3715,
+      "prompt_tokens_details": {
+        "cached_tokens": 256
+      },
+      "prompt_cache_hit_tokens": 256,
+      "prompt_cache_miss_tokens": 2866,
+      "elapsed_seconds": 20.15
+    },
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:8F1919A560A4",
+      "prompt_tokens": 3322,
+      "completion_tokens": 654,
+      "total_tokens": 3976,
+      "prompt_tokens_details": {
+        "cached_tokens": 256
+      },
+      "prompt_cache_hit_tokens": 256,
+      "prompt_cache_miss_tokens": 3066,
+      "elapsed_seconds": 22.41
+    },
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:574F9D766255",
+      "prompt_tokens": 2753,
+      "completion_tokens": 493,
+      "total_tokens": 3246,
+      "prompt_tokens_details": {
+        "cached_tokens": 256
+      },
+      "prompt_cache_hit_tokens": 256,
+      "prompt_cache_miss_tokens": 2497,
+      "elapsed_seconds": 17.34
+    },
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:DBF39730EECC",
+      "prompt_tokens": 2711,
+      "completion_tokens": 530,
+      "total_tokens": 3241,
+      "prompt_tokens_details": {
+        "cached_tokens": 256
+      },
+      "prompt_cache_hit_tokens": 256,
+      "prompt_cache_miss_tokens": 2455,
+      "elapsed_seconds": 18.22
+    },
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:DE9706E77A3C",
+      "prompt_tokens": 2646,
+      "completion_tokens": 351,
+      "total_tokens": 2997,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_cache_hit_tokens": 0,
+      "prompt_cache_miss_tokens": 2646,
+      "elapsed_seconds": 12.95
+    },
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:258F224C1556",
+      "prompt_tokens": 2879,
+      "completion_tokens": 378,
+      "total_tokens": 3257,
+      "prompt_tokens_details": {
+        "cached_tokens": 256
+      },
+      "prompt_cache_hit_tokens": 256,
+      "prompt_cache_miss_tokens": 2623,
+      "elapsed_seconds": 13.14
+    },
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:9C556312AA06",
+      "prompt_tokens": 2554,
+      "completion_tokens": 498,
+      "total_tokens": 3052,
+      "prompt_tokens_details": {
+        "cached_tokens": 256
+      },
+      "prompt_cache_hit_tokens": 256,
+      "prompt_cache_miss_tokens": 2298,
+      "elapsed_seconds": 16.06
+    },
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:03FB6686FE89",
+      "prompt_tokens": 3429,
+      "completion_tokens": 559,
+      "total_tokens": 3988,
+      "prompt_tokens_details": {
+        "cached_tokens": 256
+      },
+      "prompt_cache_hit_tokens": 256,
+      "prompt_cache_miss_tokens": 3173,
+      "elapsed_seconds": 18.31
+    },
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:2D82A93D3D12",
+      "prompt_tokens": 3078,
+      "completion_tokens": 531,
+      "total_tokens": 3609,
+      "prompt_tokens_details": {
+        "cached_tokens": 256
+      },
+      "prompt_cache_hit_tokens": 256,
+      "prompt_cache_miss_tokens": 2822,
+      "elapsed_seconds": 17.32
+    },
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:D80B030F985D",
+      "prompt_tokens": 1058,
+      "completion_tokens": 254,
+      "total_tokens": 1312,
+      "prompt_tokens_details": {
+        "cached_tokens": 256
+      },
+      "prompt_cache_hit_tokens": 256,
+      "prompt_cache_miss_tokens": 802,
+      "elapsed_seconds": 8.94
+    },
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:2A956C890C93",
+      "prompt_tokens": 4272,
+      "completion_tokens": 312,
+      "total_tokens": 4584,
+      "prompt_tokens_details": {
+        "cached_tokens": 256
+      },
+      "prompt_cache_hit_tokens": 256,
+      "prompt_cache_miss_tokens": 4016,
+      "elapsed_seconds": 11.66
+    },
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:8613E1B4CEB3",
+      "prompt_tokens": 3402,
+      "completion_tokens": 373,
+      "total_tokens": 3775,
+      "prompt_tokens_details": {
+        "cached_tokens": 256
+      },
+      "prompt_cache_hit_tokens": 256,
+      "prompt_cache_miss_tokens": 3146,
+      "elapsed_seconds": 12.6
+    },
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:4E02B5B6E6B7",
+      "prompt_tokens": 3910,
+      "completion_tokens": 281,
+      "total_tokens": 4191,
+      "prompt_tokens_details": {
+        "cached_tokens": 256
+      },
+      "prompt_cache_hit_tokens": 256,
+      "prompt_cache_miss_tokens": 3654,
+      "elapsed_seconds": 11.33
+    },
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:D9F982457632",
+      "prompt_tokens": 3871,
+      "completion_tokens": 291,
+      "total_tokens": 4162,
+      "prompt_tokens_details": {
+        "cached_tokens": 256
+      },
+      "prompt_cache_hit_tokens": 256,
+      "prompt_cache_miss_tokens": 3615,
+      "elapsed_seconds": 11.62
+    },
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:E427AF85C37D",
+      "prompt_tokens": 1482,
+      "completion_tokens": 279,
+      "total_tokens": 1761,
+      "prompt_tokens_details": {
+        "cached_tokens": 256
+      },
+      "prompt_cache_hit_tokens": 256,
+      "prompt_cache_miss_tokens": 1226,
+      "elapsed_seconds": 11.23
+    },
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:7491F1D683B2",
+      "prompt_tokens": 3276,
+      "completion_tokens": 459,
+      "total_tokens": 3735,
+      "prompt_tokens_details": {
+        "cached_tokens": 256
+      },
+      "prompt_cache_hit_tokens": 256,
+      "prompt_cache_miss_tokens": 3020,
+      "elapsed_seconds": 15.56
+    },
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:4EB4DEC74F35",
+      "prompt_tokens": 3207,
+      "completion_tokens": 600,
+      "total_tokens": 3807,
+      "prompt_tokens_details": {
+        "cached_tokens": 256
+      },
+      "prompt_cache_hit_tokens": 256,
+      "prompt_cache_miss_tokens": 2951,
+      "elapsed_seconds": 19.68
+    },
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:0A61A085F8E3",
+      "prompt_tokens": 3478,
+      "completion_tokens": 551,
+      "total_tokens": 4029,
+      "prompt_tokens_details": {
+        "cached_tokens": 256
+      },
+      "prompt_cache_hit_tokens": 256,
+      "prompt_cache_miss_tokens": 3222,
+      "elapsed_seconds": 19.05
+    },
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:23CD58731E80",
+      "prompt_tokens": 3201,
+      "completion_tokens": 439,
+      "total_tokens": 3640,
+      "prompt_tokens_details": {
+        "cached_tokens": 256
+      },
+      "prompt_cache_hit_tokens": 256,
+      "prompt_cache_miss_tokens": 2945,
+      "elapsed_seconds": 14.77
+    },
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:203BF5F7D3BE",
+      "prompt_tokens": 3268,
+      "completion_tokens": 845,
+      "total_tokens": 4113,
+      "prompt_tokens_details": {
+        "cached_tokens": 256
+      },
+      "prompt_cache_hit_tokens": 256,
+      "prompt_cache_miss_tokens": 3012,
+      "elapsed_seconds": 26.57
+    },
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:C8FB544B54D1",
+      "prompt_tokens": 2037,
+      "completion_tokens": 536,
+      "total_tokens": 2573,
+      "prompt_tokens_details": {
+        "cached_tokens": 256
+      },
+      "prompt_cache_hit_tokens": 256,
+      "prompt_cache_miss_tokens": 1781,
+      "elapsed_seconds": 18.24
+    },
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:79EBDAF6B695",
+      "prompt_tokens": 2975,
+      "completion_tokens": 437,
+      "total_tokens": 3412,
+      "prompt_tokens_details": {
+        "cached_tokens": 256
+      },
+      "prompt_cache_hit_tokens": 256,
+      "prompt_cache_miss_tokens": 2719,
+      "elapsed_seconds": 14.7
+    }
+  ]
+}

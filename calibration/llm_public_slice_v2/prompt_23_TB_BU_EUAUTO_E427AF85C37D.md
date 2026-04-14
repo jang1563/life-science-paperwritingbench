@@ -1,0 +1,37 @@
+You are a biomedical scientific-writing assistant. Draft the "Abstract" section of a research paper using ONLY the evidence provided below.
+
+Hard requirements:
+- Begin with a heading line that is exactly: Abstract
+- Use 150-300 words. Abstracts should be compact.
+- Ground every substantive claim in a specific piece of the evidence.
+- Abstracts do NOT cite figure or table numbers. Instead, name the specific entities, sample sizes, p-values, effect sizes, and accession identifiers as they appear in the evidence. Do not write 'as shown in Fig. 1' in an abstract.
+- If a detail is not in the evidence, state that explicitly rather than inventing it. Do not speculate.
+- Do not copy sentences verbatim from the evidence; paraphrase while preserving specific values and entities.
+
+Forbidden patterns (these are automatic quality failures — do NOT do any of them):
+- Inventing numerical values, p-values, sample sizes, organism names, or citations that are not in the evidence.
+- Citing placeholder pointer labels like "methods_section", "abstract_section", "results_section", or "section_text". These are internal artifact names; they are not real scientific citations and must never appear in the output.
+- Self-referential meta-commentary such as "this abstract" or "the methods_section of this paper".
+
+Paper context:
+- Paper title: DOI:10.1002/cpz1.1028
+- Task family: abstract_from_evidence
+- Study class: methods_resource
+- Claim mode: resource_release
+
+Evidence:
+
+## Methods
+While experimental methods and workflows have been established in this field, a persistent challenge arises when dealing with small samples containing a limited amount of protein. In response to this challenge, we have developed a comprehensive experimental workflow tailored specifically for small-scale samples, with a special emphasis on neuronal tissues like the trigeminal ganglion. Our proposed workflow consists of seven steps aimed at optimizing the preparation of limited tissue samples for both proteomic and phosphoproteomic analyses. This innovative workflow not only overcomes the challenges posed by limited sample sizes but also establishes a new benchmark for precision and efficiency in proteomic investigations.
+
+## Results
+UNDERSTANDING RESULTS: This protocol outlines a workflow for preparing limited protein tissue samples, applicable to other neuronal tissues. We conducted tests with various lysis buffers, as showed in Fig 1 .A, and observed that different lysis buffers yielded varying protein quantities. When we employed T-per and added proteases, it resulted in a total recovery of 1995 proteins. By using a miniprep kit from Thermo Fisher Scientific, we successfully identified 1283 proteins. The utilization of a 5% SDS lysis buffer allowed us to identify a total of 3662 proteins. The Venn diagram illustrates the overlap and unique proteins identified with different lysis buffers. Consequently, for neuronal tissues such as trigeminal ganglion or dorsal root ganglion, we recommend using a 5% SDS lysis buffer. Following protein digestion and clean-up, TMT labeling is executed to consolidate the protein samples for subsequent workflow steps. This process is vital for ensuring efficient downstream analysis. Post-labeling, we routinely assess the effectiveness of TMT labeling. Typically, we analyze 1 μg of the labeled sample to confirm that each sample has been sufficiently and uniformly labeled, as illustrated in Figure 1B . Ensuring even labeling of samples is crucial, as it significantly impacts the accuracy and reliability of subsequent experimental stages, including quantitative analysis and the detection of subtle changes in protein expression across different samples. In our protocol, we outline a three-step enrichment process aimed at improving phosphopeptide identification. We successfully identified a total of 4,454 phosphopeptides. Figure 1C details the number of phosphopeptides identified via each enrichment step. The initial Fe-NTA method led to the identification of 1,433 phosphopeptides, followed by the TiO2 step, which uncovered an additional 199 phosphopeptides. The third step, employing Thermo Fisher Scientific Fe-NTA, revealed 62 more phosphopeptides. There is a final step of fractionation of the combined sample from the above three-step enrichments, resulting in a total of 4,454 phosphopeptides. Each method uniquely captures different proteins, thereby enhancing the overall yield in phosphoproteomics. Furthermore, although not illustrated in the figure, we identified a total of 2,923 phosphoproteins, corresponding to 13,460 peptide groups. The volcano plot in Figure 1D displays the global phosphoproteome data from trigeminal ganglion. It plots log2 fold changes on the x-axis against p-values on the y-axis. Using high-sensitivity LC-MS/MS for proteomics and phosphoproteomics, we identified peptides and phosphopeptides with differential expression in the trigeminal ganglia. A peptide is deemed differentially expressed if it exhibits a fold change greater than 1.5 and a p-value below 0.05. The plot, generated by Proteome Discoverer 2.5, shows the overall peptide profile, highlighting peptides with significant increases or decreases. In the treated group, analysis revealed 61 upregulated and 33 downregulated peptides within the total proteome dataset. Time Considerations: Basic Protocol 1 first section takes approximately 1–2 hours, including the BCA assay process. Basic Protocol 1 second section requires around 4–5 hours, which includes the drying process. Drying times may vary depending on the equipment used. Basic Protocols 2 together take about 1–2 hours. Basic Protocol 3 lasts 5–6 hours and incorporates the drying process. Basic Protocol 4 is completed in approximately 2–3 hours, including the drying process. Basic protocol 5 takes around 4–5 hours including drying process. Basic Protocol 6 takes around 6 hours.
+
+## Figure captions
+1. Fig. 1.. A. Different lysis buffers yield varying amounts of proteins from trigeminal ganglion tissue. Fig. 1 . B. Ten samples are abundantly and evenly labeled with TMTpro labeling reagents. Fig. 1 . C. A Venn diagram depicting how each step of the 3-step phosphopeptide enrichment process captures different quantities and groups of proteins. Fig. 1 . D. A volcano plot presenting the quantitative analysis of the global phosphopeptides dataset from the trigeminal ganglion, as identified by mass spectrometry. In the treated group, the analysis revealed 61 upregulated and 33 downregulated pept...
+
+## Table snippets
+1. Table 1.. Preparation of elution solutions for Thermo Fisher Scientific TMT-labeled peptides. | Fraction No.; Acetonitrile (%); Acetonitrile (μL); Triethylamine (0.1%) (μL); Wash; 5.0
+2. Table 2.. Troubleshooting Guide for proteomic and phosphoproteomics analysis for limited tissue | Problem; Possible Cause; Solution; Low protein yield; Insufficient lysis of the tissue; To enhance tissue lysis, consider increasing the volume of the lysis buffer or incorporating additional mechanical disruption methods. These steps can help prevent the formation of an insufficiently lysed tissue pellet after centrifugation.
+
+Write the "Abstract" section now, starting with the required heading line and satisfying all requirements.

@@ -384,26 +384,89 @@ Cost: 114,726 input + 26,891 output tokens ≈ $0.75 (plus $0.05 dev).
 Artifacts: `calibration/llm_public_slice_v1_judged/{judgments.jsonl,
 summary.{json,md}}` plus 30 per-bundle judge prompts for auditing.
 
-Remaining substantive targets after this:
+## Second submission + judge pass (prompt v2)
 
-1. **Fix the submission prompt** so it does not instruct the model to
-   cite internal pointer tokens. The model should cite real figures,
-   tables, quantitative values, and accessions actually present in
-   the evidence (or explicitly state that a given detail is not
-   available). This is upstream of everything else and will also
-   require the deterministic `traceability_coverage` check to stop
-   rewarding the pointer tokens — the two changes need to land
-   together so the benchmark stays internally consistent.
-2. **Cross-model cost-effective run** (Gemini 2.5 Flash or Claude
-   Haiku 4.5) to measure whether the above diagnostic is model-
-   specific or task-specific. Still pennies per run.
-3. **Second judge** (Gemini 2.5 Pro or DeepSeek Reasoner) on the same
-   submissions to measure judge-to-judge agreement. If Sonnet 4.6's
-   0.467 traceability mean is reproducible across judges, we know the
-   diagnostic is real.
-4. **Only then revisit `leaderboard_gate_passed`** — the release
-   summary will still show `false` until judge-validated scores exist
-   and the submission-prompt design is understood to be honest.
+The diagnostic loop closed: the submission prompt was rewritten to
+forbid placeholder-pointer citation and instead demand citation of
+real figures, tables, quantitative values, and accessions. A new
+supplementary metric `citation_specificity` was added to the submission
+script, measuring real citation patterns (figure/table references,
+p-values, numeric magnitudes with units, accessions matching the
+canonical life-sciences regex set, and repository URLs) and explicitly
+scoring 0.0 on any output that contains a forbidden pointer token.
+
+Re-running all 30 DeepSeek V3 submissions with prompt v2 and then
+re-judging with Claude Sonnet 4.6:
+
+| axis or metric | v1 | v2 |
+|---|---:|---:|
+| judge overall_pass | 7 / 30 | **15 / 30** |
+| all axes >= 0.6 | 7 / 30 | 18 / 30 |
+| grounding issues flagged | 139 | 111 |
+| mean writing_structure_compliance | 0.665 | 0.816 |
+| mean evidence_grounding | 0.693 | 0.808 |
+| mean factual_fidelity | 0.683 | 0.779 |
+| mean traceability | 0.467 | 0.632 |
+| mean hallucination_absence | 0.689 | 0.781 |
+| forbidden-pointer-free outputs | 0 / 30 | 30 / 30 |
+| deterministic_checks_passed | 30 / 30 | 0 / 30 |
+
+Every axis improved. `results_to_text` went 2 / 6 -> 6 / 6 (judge),
+`methods_to_text` 5 / 12 -> 8 / 12, `abstract_from_evidence`
+0 / 12 -> 1 / 12 (abstracts remain weakest because the judge rubric
+penalizes missing figure/table refs even though abstracts do not
+conventionally carry them — see below).
+
+The deterministic pass rate dropped to 0 / 30 in v2 by design, because
+the `evaluate_submission` traceability check in `src/life_science_paperwritingbench/baselines.py`
+literally looks for the pointer tokens (`methods_section`,
+`abstract_section`, etc.) in the output. v2 outputs are correctly free
+of those, so the check fails for exactly the reason it was gameable
+before. The drop is the diagnostic, not a regression — **the old 30 / 30
+pass rate was the false-green-light signal we fixed**.
+
+Cost of the v2 iteration: ~$0.81 ($0.04 submissions + $0.72 judge +
+$0.05 dev). Cumulative Phase-2 session spend: ~$1.61.
+
+Artifacts: `calibration/llm_public_slice_v2/{submissions.jsonl,
+summary.{json,md}}` and `calibration/llm_public_slice_v2_judged/
+{judgments.jsonl, summary.{json,md}}`, plus the updated
+`scripts/llm_smoke_eval.py` with `PROMPT_VERSION = "v2"` and the
+`citation_specificity` helper.
+
+### Remaining diagnostic
+
+`abstract_from_evidence` still scores 1 / 12 on the judge, dragged down
+by a mean traceability of 0.354. The per-axis inspection shows the
+judge penalizes abstracts for not citing specific figures/tables — but
+real scientific abstracts conventionally do not cite figures or tables.
+This is a rubric-fit problem, not a generation problem: the traceability
+axis needs to be family-aware (for abstracts, "traceability" should
+reward specific quantitative values and named accessions; figure/table
+citations should be waived). Fixing this will likely raise the
+abstract pass rate without changing the model.
+
+## Remaining substantive targets
+
+1. **Adapt the judge rubric per task family** so abstracts are not
+   penalized for following the genre convention of not citing
+   figures/tables. Swap the traceability axis for a `quantitative_
+   specificity` axis on abstracts (p-values, sample sizes, named
+   accessions). Other families keep the current rubric.
+2. **Refresh `evaluate_submission` / `_evidence_tokens`** in
+   `src/life_science_paperwritingbench/baselines.py` so the
+   deterministic layer agrees with the v2 semantics (real citation
+   patterns, not pointer tokens). Currently the deterministic layer
+   is stale and fails all v2 outputs. Once this is fixed, the
+   v2 deterministic and v2 judge pass rates should move in the same
+   direction, restoring internal consistency. This is a breaking
+   change to the release-submissions contract and must be rev-labeled.
+3. **Cross-model cost-effective run** (Gemini 2.5 Flash or Claude
+   Haiku 4.5) on prompt v2 to measure whether the improvements are
+   DeepSeek-specific or prompt-specific.
+4. **Second judge** (Gemini 2.5 Pro or DeepSeek Reasoner) on the v2
+   submissions to measure judge-to-judge agreement.
+5. **Only then revisit `leaderboard_gate_passed`**.
 
 ## Follow-up tasks on the governance side
 

@@ -25,7 +25,7 @@ Usage (defaults operate on the 30-bundle DeepSeek run):
 Judge model defaults to Claude Sonnet 4.6. See PROVIDERS for other choices.
 
 Cost footprint on the 30-bundle run: ~132k input + ~15k output tokens,
-~\$0.62 at Claude Sonnet 4.6 rates. Use --limit N for a cheaper dev pass.
+~$0.62 at Claude Sonnet 4.6 rates (using raw-string style dollar notation). Use --limit N for a cheaper dev pass.
 """
 
 from __future__ import annotations

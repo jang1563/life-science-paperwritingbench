@@ -1,0 +1,83 @@
+You are an expert biomedical scientific-writing reviewer performing a rigorous peer-review-style evaluation.
+
+Your job: score the candidate model's generated "Methods" section against the source evidence for a methods_to_text task, using the rubric below. Be strict and specific. Punish invented numbers, invented experiments, misattributed figures, and claims that cannot be traced to the provided evidence. Reward outputs whose details are demonstrably present in the evidence.
+
+## Rubric axes (score each 0.0 to 1.0)
+
+- `writing_structure_compliance`
+- `evidence_grounding`
+- `factual_fidelity`
+- `traceability`
+- `hallucination_absence`
+
+Axis definitions:
+
+- writing_structure_compliance: Does the output open with the expected section heading and follow a plausible section structure (appropriate level of detail, logical flow, typical subsections for the task family)?
+- evidence_grounding: Is every non-trivial claim traceable to specific content in the source evidence? Penalize free-floating claims.
+- factual_fidelity: Do quantitative values, qualifiers ("significantly", "modestly"), organisms, time points, sample sizes, and cited figures/tables exactly match the source? Any mismatch is a serious deduction.
+- traceability: Are evidence identifiers, section pointers (e.g. "methods_section", "abstract_section"), figure/table references, or accessions cited where useful? 0.0 if there are zero references; 1.0 if they are pervasive and correct.
+- hallucination_absence: Is the output free of fabricated content (made-up citations, phantom experiments, invented numerical values)? 1.0 = no hallucinations found; 0.0 = at least one clear fabrication.
+
+## Pass threshold
+
+An axis is considered passing at >= 0.6. overall_pass is true if and only if every axis is at or above that threshold.
+
+## Source evidence
+
+## Abstract
+Specificity protein 4 transcription factor (SP4), a member of the Sp/Krüppel-like family (KLF), could bind to GT and GC box promoters, and plays an essential role in transcriptional activating. Despite SP4 having been detected to be highly expressed in a variety of human tumors, its biological effect and underlying molecular mechanism in esophageal squamous cell carcinoma (ESCC) remains unclear. Our research discovered that high SP4 expression is detected in primary ESCC specimens and cell lines and is strongly associated with the ESCC tumor grade and poor prognosis. In vitro, knockdown of SP4 suppressed cell proliferation and cell-cycle progression and promoted apoptosis, whereas overexpression of SP4 did the opposite. In vivo, inhibiting SP4 expression in ESCC cells suppresses tumor growth. Subsequently, we demonstrated that SP4 acts as the transcriptional upstream of PHF14, which binds to PHF14 promoter region, thus promoting PHF14 transcription. PHF14 was also significantly expressed in patient tissues and various ESCC cell lines and its expression promoted cell proliferation and inhibited apoptosis. Moreover, knockdown of SP4 inhibited the Wnt/β-catenin signaling pathway, whereas overexpression of PHF14 eliminated the effects of SP4 knockdown in ESCC cells. These results demonstrate that SP4 activates the Wnt/β-catenin signaling pathway by driving PHF14 transcription, thereby promoting ESCC progression, which indicates that SP4 might act as a prospective prognostic indicator or therapeutic target for patients with ESCC. This study identified SP4/PH14 axis as a new mechanism to promote the progression of ESCC, which may serve as a novel therapeutic target for patients with ESCC.
+
+## Results
+Results High expression of SP4 in ESCC is relevant to clinicopathologic characteristics Aiming to describe the profile of SP4 in ESCC progression, we first investigated the correlation between SP4 expression and ESCC clinicopathologic features. University of California Santa Cruz (UCSC, Santa Cruz, CA) Xena online data illustrated that, compared with normal esophageal squamous tissue, SP4 had higher expression in ESCC tissues ( P < 0.05) and was correlated with poor phase G, TNM ( P < 0.05; Fig. 1A – C ). Moreover, Kaplan–Meier analysis from UCSC Xena showed that high expression of SP4 was negatively associated with disease-specific survival (DSS) and progression-free interval (FPI; P < 0.01; Fig. 1D and E ). We next analyzed its expression levels in 73 ESCC tissues and matched adjacent nontumor tissues by qRT-PCR to further confirm the SP4 expression in ESCC tissues. The results showed that mRNA expression of SP4 was upregulated in ESCC tissues compared with normal tissues ( Fig. 1F ; P < 0.01). Western blot analysis showed that SP4 was additionally expressed in ESCC tissues than in normal esophageal squamous tissues ( Fig. 1G ). Furthermore, the relevance between SP4 mRNA levels with the patient clinicopathologic feature of 73 ESCC sufferers was recorded in Supplementary Table S1, which illustrated that high SP4 mRNA expression was correlated with histologic grade [G1: 61.9% (13/21); G2: 82.4% (28/34); G3: 94.4% (17/18)] ( P < 0.01), T stage [T1/T2: 64.7% (11/17); T3/T4: 83.9% (47/56)] ( P < 0.01), and TNM stage [I/II: 56.7% (17/30); III/IV: 95.3% (41/43)] ( P < 0.01), and not associated with age and gender. Figure 1. High expression of SP4 in ESCC is relevant to clinicopathologic characteristics. A, SP4 expression in patients with ESCC. B, Correlation between SP4 expression and G stage in patients with ESCC. C, Correlation between SP4 expression and TNM stage in patients with ESCC. D, Patients’ disease-specific survival (DSS) estimation datasets of SP4 high expression correlation group compared with low expression correlation group. E, Patients’ progression-free interval estimation datasets of SP4 high expression correlation group compared with low expression correlation group. F, SP4 mRNA expression in ESCC tissues versus normal esophageal squamous tissues ( n = 73; P < 0.01). G, SP4 protein expression in ESCC tissues versus normal esophageal squamous tissues. GAPDH was used as an internal reference. H, SP4 mRNA expression in ESCC cells (EC109, TE-1, SEG-1) versus esophageal squamous cells (Het-1A). GAPDH was used as an internal reference. I, SP4 protein expression in ESCC cells (EC109, TE-1, SEG-1) versus normal esophageal squamous cells (Het-1A). GAPDH was used as an internal reference. Each experiment was performed in triplicate. According to the data characteristics, quantitative data of ( A – C , F , H ) were analyzed by Student t test, quantitative data of D and E were analyzed by Pearson χ 2 test, *, P < 0.05. Figure 1. High expression of SP4 in ESCC is relevant to clinicopathologic characteristics. A, SP4 expression in patients with ESCC. B, Correlation between SP4 expression and G stage in patients with ESCC. C, Correlation between SP4 expression and TNM stage in patients with ESCC. D, Patients’ disease-specific survival (DSS) estimation datasets of SP4 high expression correlation group compared with low expression correlation group. E, Patients’ progression-free interval estimation datasets of SP4 high expression correlation group compared with low expression correlation group. F, SP4 mRNA expression in ESCC tissues versus normal esophageal squamous tissues (n = 73; P < 0.01). G, SP4 protein expression in ESCC tissues versus normal esophageal squamous tissues. GAPDH was used as an internal reference. H, SP4 mRNA expression in ESCC cells (EC109, TE-1, SEG-1) versus esophageal squamous cells (Het-1A). GAPDH was used as an internal reference. I, SP4 protein expression in ESCC cells (EC109, TE-1, SEG-1) versus normal esophageal squamous cells (Het-1A). GAPDH was used as an internal reference. Each experiment was performed in triplicate. According to the data characteristics, quantitative data of (A–C, F, H) were analyzed by Student t test, quantitative data of D and E were analyzed by Pearson χ2 test, *, P < 0.05. To facilitate subsequent in vitro experiments, we validated the above results in ESCC cell lines (EC109, TE-1, SEG-1) by Western blot and qRT-PCR analyses, which demonstrated that SP4 expressio...
+
+## Figure captions
+1. Figure 1.. High expression of SP4 in ESCC is relevant to clinicopathologic characteristics. A, SP4 expression in patients with ESCC. B, Correlation between SP4 expression and G stage in patients with ESCC. C, Correlation between SP4 expression and TNM stage in patients with ESCC. D, Patients’ disease-specific survival (DSS) estimation datasets of SP4 high expression correlation group compared with low expression correlation group. E, Patients’ progression-free interval estimation datasets of SP4 high expression correlation group compared with low expression correlation group. F, SP4 mRNA ex...
+2. Figure 2.. SP4 promotes ESCC cell proliferation and inhibits apoptosis in vitro. A, Viability of ESCC cells after transfection with SP4 siRNA. B, Viability of ESCC cells after transfection with SP4 overexpression plasmid. C, Cell number of ESCC cells after transfection with SP4 siRNA. D, Cell number of ESCC cells after transfection with SP4 overexpression plasmid. E, The cell cycle of ESCC cells after transfection with SP4 siRNA was analyzed by flow cytometry. F, The cell cycle of ESCC cells after transfection with SP4 overexpression plasmid was analyzed by flow cytometry. G, Apoptosis of E...
+3. Figure 3.. SP4 shRNA inhibits ESCC cell proliferation and promotes apoptosis in vitro and in vivo . A, Viability and cell number of ESCC cells after SP4-knockdown. B, The cell cycle and apoptosis of ESCC cells after SP4-knockdown were analyzed by flow cytometry. C, SP4 mRNA expression after SP4 knockdown in ESCC cells. GAPDH was used as an internal reference. D, SP4, CDK4, CDK6, Cyclin D1, and active caspase 3 expressions were measured after SP4 knockdown in ESCC cells. GAPDH was used as an internal reference. E, Morphology of isolated tumors from nude mice. F, Growth curvatures of tumor vo...
+4. Figure 4.. SP4 binds the promoter of PHF14 to mediate its transcription. A, Bioinformatics analysis (UCSC Genome Browser) predicted the SP4 binding site in the promoter of PHF14. B, Correlation analysis between SP4 and PHF14 using TCGA data. C, mRNA correlation between SP4 and PHF14 in ESCC tissues. D, ChIP-qRT-PCR analysis showed that SP4 binds the promoter of PHF14. E, ESCC cells were transfected with pGL3-PHF14-luc (target sequences of SP4), and the luciferase activity was examined at 48 h after transfection. Renilla luciferase was known as the internal control. F, ESCC cells were co-tra...
+5. Figure 5.. PHF14 promotes ESCC cell proliferation and inhibits apoptosis in vitro . A, Viability of ESCC cells after transfection with PHF14 siRNA. B, Viability of ESCC cells after transfection with PHF14 overexpression plasmid. C, Cell number of ESCC cells after transfection with PHF14 siRNA. D, Cell number of ESCC cells after transfection with PHF14 overexpression plasmid. E, The cell cycle of ESCC cells after transfection with PHF14 siRNA was analyzed by flow cytometry. F, The cell cycle of ESCC cells after transfection with PHF14 overexpression plasmid was analyzed by flow cytometry. G,...
+6. Figure 6.. SP4 facilitates ESCC progression via modulating the Wnt/β-catenin signaling pathway by promoting PHF14 transcription. A, Viability of ESCC cells after cotransfection with SP4 siRNA-1 and PHF14 overexpression plasmid. B, Cell number of ESCC cells after cotransfection with SP4 siRNA-1 and PHF14 overexpression plasmid. C, The cell cycle of ESCC cells after cotransfection with SP4 siRNA-1 and PHF14 overexpression plasmid was analyzed by flow cytometry. D, Apoptosis of ESCC cells after cotransfection with SP4 siRNA-1 and PHF14-overexpression plasmid was analyzed by flow cytometry. E,...
+7. Figure 7.. Wnt/β-Catenin signaling pathway is downstream of SP4/PHF14. A, Viability of ESCC cells after treatment with Vector, ov-SP4, ov-SP4+LGK974. B, Cell number of ESCC cells after treatment with Vector, ov-SP4, ov-SP4+LGK974. C, The cell cycle of ESCC cells after treatment with vector, ov-SP4, ov-SP4+LGK974. D, Apoptosis of ESCC cells after treatment with vector, ov-SP4, ov-SP4+LGK974. E, Wnt3a, β-catenin expressions were measured after treatment with Vector, ov-SP4, ov-SP4+LGK974. GAPDH was used as an internal reference. F, PHF14, Wnt3a, β-catenin, CDK4, CDK6, Cyclin D1, and active ca...
+
+## Candidate output (to be judged)
+
+Methods
+
+**Clinical and bioinformatics analysis.** The correlation between SP4 expression and clinicopathologic features in esophageal squamous cell carcinoma (ESCC) was analyzed using the University of California Santa Cruz (UCSC) Xena online data (1). Survival analysis, including disease-specific survival (DSS) and progression-free interval, was performed using Kaplan–Meier analysis from the same source (Fig. 1D, E). The correlation between SP4 and PHF14 was analyzed using TCGA data (Fig. 4B). A cohort of 73 paired ESCC tissues and adjacent nontumor tissues was collected from patients, though the specific ethics approval and consent details are not provided in the evidence. The relevance between SP4 mRNA levels and patient clinicopathologic features for these 73 patients was recorded in Supplementary Table S1 (1).
+
+**Cell culture and transfections.** The human ESCC cell lines EC109, TE-1, and SEG-1, and the normal human esophageal epithelial cell line Het-1A were used. Specific culture conditions are not detailed in the evidence. For functional assays, EC109 and TE-1 cells were transfected with SP4-specific siRNAs or an SP4 overexpression plasmid (Fig. 2I-L). Similarly, cells were transfected with PHF14-specific siRNAs or a PHF14 overexpression plasmid (Fig. 5). For rescue experiments, cells were co-transfected with SP4 siRNA-1 and a PHF14 overexpression plasmid (Fig. 6A-D). Pharmacological inhibition of Wnt signaling was achieved using LGK974 (Fig. 7A-E).
+
+**Quantitative real-time PCR (qRT-PCR) and Western blot.** SP4 and PHF14 mRNA expression levels in tissues and cell lines were analyzed by qRT-PCR, with GAPDH used as an internal reference (Fig. 1F, H; Fig. 4C; Fig. 5I, J). Protein expression was assessed by Western blot, also using GAPDH as a loading control (Fig. 1G, I; Fig. 2I-L; Fig. 3D; Fig. 4G, H; Fig. 5K, L; Fig. 6E, F; Fig. 7E, F). Each experiment was performed in triplicate (1).
+
+**Functional assays in vitro.** Cell viability was measured by MTT assay (Fig. 2A, B; Fig. 5A, B; Fig. 6A; Fig. 7A). Cell proliferation was also monitored using a live-cell imaging system to count cell numbers (Fig. 2C, D; Fig. 5C, D; Fig. 6B; Fig. 7B). Cell-cycle distribution and apoptosis rates were analyzed by flow cytometry (Fig. 2E-H; Fig. 5E-H; Fig. 6C, D; Fig. 7C, D).
+
+**Chromatin immunoprecipitation (ChIP) and luciferase reporter assays.** The binding of SP4 to the PHF14 promoter was predicted using the UCSC Genome Browser (Fig. 4A) and validated by ChIP-qRT-PCR (Fig. 4D). For luciferase assays, ESCC cells were transfected with a pGL3-PHF14-luc reporter plasmid containing the SP4 target sequences, and luciferase activity was measured 48 hours post-transfection, with Renilla luciferase as an internal control (Fig. 4E, F).
+
+**In vivo xenograft experiments.** ESCC cells with stable SP4 knockdown were subcutaneously injected into nude mice to establish xenograft models. Tumor volume was monitored, and tumors were excised for analysis (Fig. 3E-G). Specific animal numbers and housing conditions are not provided in the evidence.
+
+**Statistical analysis.** Quantitative data were analyzed by Student’s *t* test or Pearson χ² test as appropriate, as indicated in the figure legends (1). A *P* value of less than 0.05 was considered statistically significant.
+
+## Output format
+
+Respond with ONLY a single JSON object. No prose before or after. No markdown code fences. The JSON must match this schema exactly:
+
+{
+  "axis_scores": {
+    "writing_structure_compliance": <float 0.0-1.0>,
+    "evidence_grounding": <float 0.0-1.0>,
+    "factual_fidelity": <float 0.0-1.0>,
+    "traceability": <float 0.0-1.0>,
+    "hallucination_absence": <float 0.0-1.0>
+  },
+  "axis_rationales": {
+    "writing_structure_compliance": "<1-3 sentences>",
+    "evidence_grounding": "<1-3 sentences>",
+    "factual_fidelity": "<1-3 sentences>",
+    "traceability": "<1-3 sentences>",
+    "hallucination_absence": "<1-3 sentences>"
+  },
+  "grounding_issues": [
+    "<specific concern citing the exact claim and why it is unsupported or inconsistent with the evidence>"
+  ],
+  "overall_pass": <true or false>
+}

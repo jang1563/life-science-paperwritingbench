@@ -1,0 +1,84 @@
+You are an expert biomedical scientific-writing reviewer performing a rigorous peer-review-style evaluation.
+
+Your job: score the candidate model's generated "Methods" section against the source evidence for a methods_to_text task, using the rubric below. Be strict and specific. Punish invented numbers, invented experiments, misattributed figures, and claims that cannot be traced to the provided evidence. Reward outputs whose details are demonstrably present in the evidence.
+
+## Rubric axes (score each 0.0 to 1.0)
+
+- `writing_structure_compliance`
+- `evidence_grounding`
+- `factual_fidelity`
+- `traceability`
+- `hallucination_absence`
+
+Axis definitions:
+
+- writing_structure_compliance: Does the output open with the expected section heading and follow a plausible section structure (appropriate level of detail, logical flow, typical subsections for the task family)?
+- evidence_grounding: Is every non-trivial claim traceable to specific content in the source evidence? Penalize free-floating claims.
+- factual_fidelity: Do quantitative values, qualifiers ("significantly", "modestly"), organisms, time points, sample sizes, and cited figures/tables exactly match the source? Any mismatch is a serious deduction.
+- traceability: Are evidence identifiers, section pointers (e.g. "methods_section", "abstract_section"), figure/table references, or accessions cited where useful? 0.0 if there are zero references; 1.0 if they are pervasive and correct.
+- hallucination_absence: Is the output free of fabricated content (made-up citations, phantom experiments, invented numerical values)? 1.0 = no hallucinations found; 0.0 = at least one clear fabrication.
+
+## Pass threshold
+
+An axis is considered passing at >= 0.6. overall_pass is true if and only if every axis is at or above that threshold.
+
+## Source evidence
+
+## Abstract
+Type 1 diabetes (T1D) requires specialized, multidisciplinary, and technology-driven care, which can be difficult to guarantee across regions with fragmented services. In July 2023, the Liguria region (Italy) reorganized pediatric diabetes care into a Hub and Spoke model, coordinated by the Gaslini Institute (hub) and three peripheral pediatric departments (spokes). This study aimed to evaluate the first year of application of this model in terms of clinical, technological, and environmental outcomes. This retrospective observational study included T1D patients aged less than 35 years in follow-up at the new regional Hub and Spoke system. Patients were categorized as transferred (previously followed at the hub), acquired (previously followed at a local center), and new onset (followed from the beginning at the Hub and Spoke system). The primary outcome was the change in time in range 70-180 mg/dL after 12 months. Secondary outcomes were additional indicators of glycemic control (CGM metrics), adoption of technologies (rtCGM and AID), and economic and environmental impact (travel distance, costs, and CO₂ emissions). 129 patients were referred to the new Hub and Spoke system during the first 2 years of its implementation. Among them, 88 (50 transferred, 38 acquired) had available data at baseline and completed the 1-year follow up period and were included in the study. In this cohort, TIR increased from 57.2 to 65.1% and TITR from 35.1 to 41.7% (p < 0.001), with improvement in other CGM metrics. Improvements were more pronounced in acquired patients, whose TIR rose from 53.9 to 65.7% (+11.2%, p < 0.001). AID use increased significantly with a larger rise among acquired (from 26.3 to 60.5%, +34.2%) compared with transferred patients (+26%). The program generated environmental and economic benefits, with estimated 70,192 km of travel, 11,932 kg CO₂, and € 25,760 saved yearly. The Hub and Spoke model proved feasible and effective, leading to more standardized care delivery, broader adoption of diabetes technologies, improved glycemic control, and significant reductions in travel-related costs and environmental impact. This approach may offer a scalable and sustainable solution for managing T1D, particularly in regions with complex geography and variable healthcare infrastructures.
+
+## Results
+Results 129 patients were referred to the new Hub and Spoke system during the first 2 years of its implementation. Among them, 88 (50 transferred, 38 acquired) had available data at baseline and completed the 1-year follow up period and were included in the study. In this cohort, TIR increased from 57.2 to 65.1% and TITR from 35.1 to 41.7% ( p < 0.001), with improvement in other CGM metrics. Improvements were more pronounced in acquired patients, whose TIR rose from 53.9 to 65.7% (+11.2%, p < 0.001). AID use increased significantly with a larger rise among acquired (from 26.3 to 60.5%, +34.2%) compared with transferred patients (+26%). The program generated environmental and economic benefits, with estimated 70,192 km of travel, 11,932 kg CO₂, and € 25,760 saved yearly. 2.3. Outcomes and data collection The primary outcome of the study was the change in glycemic control, assessed as time in range 70–180 mg/dL (TIR) after 1 year of follow-up at a spoke center within the Hub and Spoke system. The following patients were excluded from this analysis: patients in the new-onset group, since no baseline comparison was possible, patients with less than 12 months of follow-up and those with absent or insufficient CGM data, defined as fewer than 12 days of valid recordings or <80% sensor usage in the predefined assessment window. Secondary outcomes included: Additional indicators of glycemic control, measured as the change between T0 and T1 of CGM-derived metrics: time in tight range 70–140 mg/dL (TITR), time above range 181–250 mg/dL (TAR), time above 250 mg/dL (TAR250), time below range 54–69 mg/dL (TBR), time below 54 mg/dL (TBR54), average glucose (AG), standard deviation (SD), coefficient of variation (CV), glucose management indicator (GMI), glycemia risk index (GRI) and percentage of CGM use (%CGM). Adoption of advanced technologies, measured as the change between T0 and T1 in the proportion of patients using real-time continuous glucose monitoring (rtCGM) and automated insulin delivery (AID) systems. AID was defined as any pump able to adjust insulin delivery in response to sensor glucose data ( 9 ). Glucose monitoring was categorized as self-monitoring of blood glucose (SMBG), flash glucose monitoring (FGM), or real-time CGM (rtCGM). Insulin therapy was classified as multiple daily injections (MDI), sensor-augmented pump (SAP), pumps with pre-low glucose suspend (PLGS), or AID systems. Clinical parameters, including changes in BMI and BMI z-score. Service utilization outcomes, assessed as the number of outpatient visits performed in the year preceding each timepoint. Environmental outcomes, expressed in terms of kilometers saved, CO₂ emissions spared, and travel-related costs avoided. Environmental outcomes were estimated through travel analyses. Using ViaMichelin® route planning, we calculated the round-trip distance between each spoke center and the regional hub in Genoa ( 10 ). For each patient, the number of visits performed at the spoke during the 1-year follow-up period was multiplied by the corresponding round-trip distance, under the assumption that patients lived near their local center. CO₂ emissions spared were obtained by multiplying kilometers saved by the national average emission factor for private vehicles in Italy, as reported by ISPRA (0.17 kgCO₂/km) ( 11 ). Travel-related cost savings were estimated using the official per-kilometer operating cost published in the 2025 ACI (Automobile Club d’Italia) tables ( 12 ). A Fiat Panda 1.2 petrol (69 CV), the most widely owned city car in Italy, was selected as the reference vehicle, with a reported cost of €0.367/km. Clinical, glycemic, environmental and service utilization data were collected at baseline (T0), corresponding to the first outpatient visit performed at a spoke center, and at the 12-month (±3 months) follow-up visit (T1). Information on number of outpatient visits in the previous 12 months were available at baseline only for transferred patients due to lack of pre-implementation data for acquired patients. All data were recorded in the shared electronic platform REDCap® (Vanderbilt University, Nashville, TN, United States). 3. Results 3.1. Study population and baseline characteristics During the first 2 years of implementation, 129 patients were referred to the new Hub and Spoke system, of whom 27 were new-onset patients and 102 were previously followed patients. Clinical and demographic characteristics of these patients are presented in Sup...
+
+## Figure captions
+1. Figure 1. Patient entry pathways and care organization within the regional Hub and Spoke model. At the time of model implementation (Phase 1), patients living outside Genoa, previously followed exclusively at the Hub were offered the possibility to continue follow-up at the spoke center closest to their residence (transferred patients), while patients previously followed locally were newly taken in charge within the Gaslini network while maintaining follow-up at their local spoke (acquired patients). During the ongoing operational phase, patients with new-onset T1D present to the ED of the...
+2. Figure 2. Flow of participants through the study. All percentages shown in the figure refer to the total number of patients managed within the Hub and Spoke model during its first 2 years of implementation ( N = 129). *CGM data are considered insufficient when <12 days of valid recordings or <80% sensor usage were available in the 14 days before each time point. T1D, Type 1 Diabetes; ADA, American Diabetes Association.
+3. Figure 3. Changes in glycemic control, assessed through percentage of time spent in different CGM ranges, at baseline (T0) and after 1 year of follow-up at a spoke center of the Hub and Spoke system (T1) in the 88 patients included in the study.
+4. Figure 4. Improvements in time in range 70–180 mg/dL (TIR) and time in tight range 70–140 mg/dL (TITR) at baseline (T0) and after 1 year of follow-up at a spoke center of the Hub and Spoke system (T1) in the 88 patients included in the study.
+5. Figure 5. Percentage of patients meeting ADA-recommended glycemic targets at baseline (T0) and after 12 months of follow-up (T1) in the 88 patients included in the study. For each glycemic target, paired columns represent the proportion of patients achieving the recommended threshold at T0 and T1.
+6. Figure 6. Changes in insulin therapy over the study period. Bars represent the percentage of patients in each treatment category at baseline (T0) and after 12 months of follow-up (T1). Panel ( A ): overall cohort ( n = 88); Panel ( B ): transferred patients ( n = 50); Panel ( C ): acquired patients ( n = 38). MDI, Multiple Daily Injection; SAP, Sensor Augmented Pump; AID, Automated Insulin Delivery.
+
+## Table snippets
+1. Table 1. Baseline characteristics of patients included in the study ( N = 88). | Variable; T0-Baseline ( N = 88); Sex assigned at birth; Female; 41 (46.6%); Male
+2. Table 2. Clinical and glycemic outcomes at baseline (T0) and after 12 months of follow-up (T1) in the 88 patients included in the study. | Variable; T0; T1; p value; TBR54 (%); 0.52 ± 1.19
+3. Table 3. Glycemic and organizational outcomes at baseline (T0) and after 12 months of follow-up (T1) in the subgroup of acquired patients ( n = 38). | Variable; T0; T1; p value; TBR54 (%); 0.34 ± 0.53
+4. Table 4. Glycemic and organizational outcomes at baseline (T0) and after 12 months of follow-up (T1) in the subgroup of transferred patients ( n = 50). | Variable; T0; T1; p value; TBR54 (%); 0.66 ± 1.51
+5. Table 5. Use of technologies at baseline and 1 year after the implementation of the regional Hub and Spoke model. | Variable; T0; T1; % variation; p value; All patients ( N = 88)
+6. Table 6. Environmental impact of the Hub and Spoke system in terms of estimated kilometers, CO2 emissions and travel-related costs saved during the first year of its implementation. | Estimate; Travel (Km); CO2 emissions (KgCO2); Costs (€); Per year; 70,192
+
+## Candidate output (to be judged)
+
+Methods
+
+This retrospective observational study evaluated the first year of a regional Hub and Spoke model for pediatric type 1 diabetes (T1D) care implemented in July 2023 in Liguria, Italy. The model was coordinated by the Gaslini Institute (hub) and three peripheral pediatric departments (spokes). The study population comprised T1D patients aged less than 35 years in follow-up within this new system. Patients were categorized as transferred (previously followed at the hub), acquired (previously followed at a local center), or new onset. During the first two years of implementation, 129 patients were referred to the system. From this group, 88 patients (50 transferred, 38 acquired) who had available data at baseline and completed the 1-year follow-up were included in the final analysis; new-onset patients were excluded as no baseline comparison was possible. The flow of participant selection is detailed in **Figure 2**. Baseline characteristics of the included cohort (mean age 13 years ± 5.9, 53.4% male) are presented in **Table 1**.
+
+The primary outcome was the change in glycemic control, measured as time in range (TIR) 70–180 mg/dL after 12 months of follow-up at a spoke center. Patients with insufficient continuous glucose monitoring (CGM) data, defined as fewer than 12 days of valid recordings or <80% sensor usage in the assessment window, were excluded. Secondary outcomes included changes in other CGM metrics (e.g., time in tight range, time above/below range), adoption of technologies (real-time CGM and automated insulin delivery [AID] systems), clinical parameters (BMI), service utilization (number of outpatient visits), and environmental impact.
+
+Data were collected at baseline (T0), corresponding to the first visit at a spoke, and at the 12-month (±3 months) follow-up visit (T1). All data were recorded in the REDCap® electronic platform. Technology use was categorized: glucose monitoring as self-monitoring of blood glucose, flash monitoring, or real-time CGM; insulin therapy as multiple daily injections, sensor-augmented pump, pumps with predictive low glucose suspend, or AID systems.
+
+Environmental outcomes—travel distance saved, CO₂ emissions spared, and travel-related costs avoided—were estimated via travel analysis. The round-trip distance between each spoke and the hub was calculated using ViaMichelin® route planning. For each patient, the number of visits at the spoke during the follow-up year was multiplied by this distance. CO₂ emissions spared were calculated by multiplying kilometers saved by the national average emission factor for private vehicles in Italy (0.17 kgCO₂/km). Cost savings were estimated using the official per-kilometer operating cost (€0.367/km) for a reference vehicle (Fiat Panda 1.2 petrol). These annual estimates are shown in **Table 6**.
+
+## Output format
+
+Respond with ONLY a single JSON object. No prose before or after. No markdown code fences. The JSON must match this schema exactly:
+
+{
+  "axis_scores": {
+    "writing_structure_compliance": <float 0.0-1.0>,
+    "evidence_grounding": <float 0.0-1.0>,
+    "factual_fidelity": <float 0.0-1.0>,
+    "traceability": <float 0.0-1.0>,
+    "hallucination_absence": <float 0.0-1.0>
+  },
+  "axis_rationales": {
+    "writing_structure_compliance": "<1-3 sentences>",
+    "evidence_grounding": "<1-3 sentences>",
+    "factual_fidelity": "<1-3 sentences>",
+    "traceability": "<1-3 sentences>",
+    "hallucination_absence": "<1-3 sentences>"
+  },
+  "grounding_issues": [
+    "<specific concern citing the exact claim and why it is unsupported or inconsistent with the evidence>"
+  ],
+  "overall_pass": <true or false>
+}

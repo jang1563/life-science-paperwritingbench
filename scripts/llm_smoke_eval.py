@@ -29,6 +29,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import sys
 import time
 import urllib.error
@@ -183,16 +184,12 @@ def _format_list(items: Sequence[str], limit_each: int = 800, max_items: int = 8
     return "\n".join(lines)
 
 
+PROMPT_VERSION = "v2"
+
+
 def build_prompt(task_bundle, source_bundle, paper_title: str) -> str:
     task_family_value = task_bundle.task_family.value
     section_title, include_fields = TASK_FAMILY_TO_TARGET[task_family_value]
-
-    artifacts = dict(task_bundle.input_artifacts)
-    evidence_tokens: List[str] = []
-    for key in ("evidence_pointers", "evidence_items", "evidence_types"):
-        for value in artifacts.get(key, ()) or ():
-            if isinstance(value, str) and value and value not in evidence_tokens:
-                evidence_tokens.append(value)
 
     sections: List[Tuple[str, str]] = []
     if "abstract_text" in include_fields and source_bundle.abstract_text:
@@ -207,18 +204,37 @@ def build_prompt(task_bundle, source_bundle, paper_title: str) -> str:
         sections.append(("Table snippets", _format_list(source_bundle.table_snippets)))
 
     sections_block = "\n\n".join(f"## {title}\n{content}" for title, content in sections)
-    evidence_line = ", ".join(evidence_tokens) if evidence_tokens else "(none listed)"
 
-    prompt = f"""You are a biomedical scientific-writing assistant. Draft the \"{section_title}\" section of a research paper, grounded strictly in the evidence provided below.
+    if task_family_value == "abstract_from_evidence":
+        length_guidance = "Use 150-300 words. Abstracts should be compact."
+        citation_guidance = (
+            "Abstracts do NOT cite figure or table numbers. Instead, name the specific entities, "
+            "sample sizes, p-values, effect sizes, and accession identifiers as they appear in the "
+            "evidence. Do not write 'as shown in Fig. 1' in an abstract."
+        )
+    else:
+        length_guidance = "Use 200-400 words."
+        citation_guidance = (
+            "Cite specific figures and tables from the evidence using the exact label as it appears "
+            "(e.g. 'Fig. 1', 'Figure 2B', 'Table 3'). Cite accession identifiers, trial-registry IDs, "
+            "or repository URLs when they appear in the evidence. Quote quantitative values exactly "
+            "as given (sample sizes, p-values, fold changes, time points, organism strains)."
+        )
+
+    prompt = f"""You are a biomedical scientific-writing assistant. Draft the "{section_title}" section of a research paper using ONLY the evidence provided below.
 
 Hard requirements:
 - Begin with a heading line that is exactly: {section_title}
-- Explicitly mention the word \"evidence\" at least once in the body.
-- Explicitly cite every one of the following evidence identifiers by name, spelled exactly as written, somewhere in the prose: {evidence_line}.
-- Use at least 120 words and no more than 350 words.
-- Do not copy sentences verbatim from the source paper; rephrase.
-- Do not fabricate findings, quantities, or citations not present in the evidence.
-- If a detail is missing, say so explicitly rather than inventing it.
+- {length_guidance}
+- Ground every substantive claim in a specific piece of the evidence.
+- {citation_guidance}
+- If a detail is not in the evidence, state that explicitly rather than inventing it. Do not speculate.
+- Do not copy sentences verbatim from the evidence; paraphrase while preserving specific values and entities.
+
+Forbidden patterns (these are automatic quality failures — do NOT do any of them):
+- Inventing numerical values, p-values, sample sizes, organism names, or citations that are not in the evidence.
+- Citing placeholder pointer labels like "methods_section", "abstract_section", "results_section", or "section_text". These are internal artifact names; they are not real scientific citations and must never appear in the output.
+- Self-referential meta-commentary such as "this abstract" or "the methods_section of this paper".
 
 Paper context:
 - Paper title: {paper_title}
@@ -230,9 +246,97 @@ Evidence:
 
 {sections_block}
 
-Write the \"{section_title}\" section now, starting with the required heading line and satisfying all hard requirements."""
+Write the "{section_title}" section now, starting with the required heading line and satisfying all requirements."""
 
     return prompt
+
+
+# ---------------------------------------------------------------------------
+# Citation-specificity metric — measures real citation patterns in the output
+# to complement the existing traceability_coverage deterministic check, which
+# is a token-overlap heuristic that is satisfied by placeholder pointer labels.
+# ---------------------------------------------------------------------------
+
+
+_FIGURE_REF_RE = re.compile(r"\b(?:Fig(?:ure)?s?\.?|FIG\.?)\s*\d+[A-Za-z]?(?:[-,\s]+\d+[A-Za-z]?)*\b")
+_TABLE_REF_RE = re.compile(r"\bTable[s]?\s*\d+[A-Za-z]?(?:[-,\s]+\d+[A-Za-z]?)*\b", re.IGNORECASE)
+_PVALUE_RE = re.compile(r"\b[pP]\s*[<>=]\s*0?\.\d+\b")
+_NUMERIC_MAGNITUDE_RE = re.compile(r"\b\d[\d,]*\.?\d*\s*(?:%|-fold|fold|mg|kg|nm|μm|µm|mm|cm|ml|kb|bp|nM|µM|mM|mg/kg|mg/mL|ml/kg)\b", re.IGNORECASE)
+_ACCESSION_RE = re.compile(
+    r"\b(?:"
+    r"GSE\d+|GSM\d+|SRR\d+|ERR\d+|PRJNA\d+|PXD\d+|"
+    r"PDB[:\s]?[A-Za-z0-9]{4}|RRID:[A-Za-z0-9:_-]+|"
+    r"NCT\d{8}|ISRCTN\d+|ACTRN\d+|"
+    r"E-(?:MTAB|GEOD)-\d+"
+    r")\b",
+    re.IGNORECASE,
+)
+_REPO_URL_RE = re.compile(r"https?://(?:github\.com|github(?:\.[\w\-]+)+\.edu|gitlab\.com|bitbucket\.org|zenodo\.org|osf\.io|figshare\.com)/[\w\-./]+", re.IGNORECASE)
+
+_FORBIDDEN_POINTER_TOKENS = (
+    "methods_section",
+    "results_section",
+    "abstract_section",
+    "section_text",
+    "methods_evidence",
+    "results_evidence",
+)
+
+
+def citation_specificity(output_text: str) -> Dict[str, Any]:
+    """Return citation-specificity scoring for a generated section.
+
+    - figure_refs / table_refs / pvalues / numeric_magnitudes / accessions / repo_urls:
+      lists of unique matches.
+    - forbidden_pointer_hits: placeholder tokens like "methods_section" found in the
+      text (should be zero).
+    - citation_count: total unique real-citation tokens.
+    - citation_specificity_score: 1.0 if citation_count >= 3 and no forbidden hits;
+      0.0 if citation_count == 0 or any forbidden hits; linear in between.
+    - forbidden_pointer_free: bool.
+    """
+    def _uniq(pattern: "re.Pattern[str]") -> List[str]:
+        seen = []
+        for match in pattern.finditer(output_text):
+            token = match.group(0)
+            if token not in seen:
+                seen.append(token)
+        return seen
+
+    figure_refs = _uniq(_FIGURE_REF_RE)
+    table_refs = _uniq(_TABLE_REF_RE)
+    pvalues = _uniq(_PVALUE_RE)
+    numeric_magnitudes = _uniq(_NUMERIC_MAGNITUDE_RE)
+    accessions = _uniq(_ACCESSION_RE)
+    repo_urls = _uniq(_REPO_URL_RE)
+
+    forbidden_hits = [token for token in _FORBIDDEN_POINTER_TOKENS if token in output_text]
+
+    citation_count = (
+        len(figure_refs) + len(table_refs) + len(pvalues)
+        + len(numeric_magnitudes) + len(accessions) + len(repo_urls)
+    )
+    if forbidden_hits:
+        score = 0.0
+    elif citation_count == 0:
+        score = 0.0
+    elif citation_count >= 3:
+        score = 1.0
+    else:
+        score = citation_count / 3.0
+
+    return {
+        "figure_refs": figure_refs,
+        "table_refs": table_refs,
+        "pvalues": pvalues,
+        "numeric_magnitudes": numeric_magnitudes,
+        "accessions": accessions,
+        "repo_urls": repo_urls,
+        "forbidden_pointer_hits": forbidden_hits,
+        "citation_count": citation_count,
+        "citation_specificity_score": round(score, 3),
+        "forbidden_pointer_free": not forbidden_hits,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -450,13 +554,25 @@ def main() -> int:
                 "output_word_count": len(submission.output_text.split()),
             }
         )
+    # Citation-specificity metric (supplementary to deterministic checks)
+    for row, submission in zip(rows, submissions):
+        row["citation"] = citation_specificity(submission.output_text)
+
     # Per-task-family breakdown
     family_stats: Dict[str, Dict[str, Any]] = {}
     for row in rows:
         family = row["task_family"]
         bucket = family_stats.setdefault(
             family,
-            {"total": 0, "passed": 0, "failed_task_bundle_ids": [], "failure_note_counter": {}},
+            {
+                "total": 0,
+                "passed": 0,
+                "failed_task_bundle_ids": [],
+                "failure_note_counter": {},
+                "mean_citation_score": 0.0,
+                "forbidden_pointer_free_count": 0,
+                "_citation_scores": [],
+            },
         )
         bucket["total"] += 1
         if row["deterministic_checks_passed"]:
@@ -465,10 +581,25 @@ def main() -> int:
             bucket["failed_task_bundle_ids"].append(row["task_bundle_id"])
             for note in row["notes"]:
                 bucket["failure_note_counter"][note] = bucket["failure_note_counter"].get(note, 0) + 1
+        bucket["_citation_scores"].append(row["citation"]["citation_specificity_score"])
+        if row["citation"]["forbidden_pointer_free"]:
+            bucket["forbidden_pointer_free_count"] += 1
+    for bucket in family_stats.values():
+        scores = bucket.pop("_citation_scores")
+        bucket["mean_citation_score"] = round(sum(scores) / len(scores), 3) if scores else 0.0
 
     # Total token usage
     total_prompt_tokens = sum((row.get("prompt_tokens") or 0) for row in usage_rows)
     total_completion_tokens = sum((row.get("completion_tokens") or 0) for row in usage_rows)
+
+    overall_mean_citation_score = (
+        round(sum(row["citation"]["citation_specificity_score"] for row in rows) / len(rows), 3)
+        if rows
+        else 0.0
+    )
+    overall_forbidden_pointer_free = sum(
+        1 for row in rows if row["citation"]["forbidden_pointer_free"]
+    )
 
     summary = {
         "model": args.model,
@@ -477,8 +608,11 @@ def main() -> int:
         "temperature": args.temperature,
         "max_tokens": args.max_tokens,
         "task_source": args.task_source,
+        "prompt_version": PROMPT_VERSION,
         "num_tasks": len(picks),
         "pass_count": sum(1 for row in rows if row["deterministic_checks_passed"]),
+        "mean_citation_specificity_score": overall_mean_citation_score,
+        "forbidden_pointer_free_count": overall_forbidden_pointer_free,
         "by_task_family": family_stats,
         "total_prompt_tokens": total_prompt_tokens,
         "total_completion_tokens": total_completion_tokens,
@@ -494,20 +628,25 @@ def main() -> int:
         "",
         f"- model: `{args.model}` (request model: `{provider['request_model']}`)",
         f"- task source: `{args.task_source}`",
+        f"- prompt version: `{PROMPT_VERSION}`",
         f"- temperature: {args.temperature}",
         f"- tasks: {len(picks)}",
         f"- deterministic checks passed: {summary['pass_count']} / {len(picks)}",
+        f"- mean citation_specificity score: {overall_mean_citation_score:.3f}",
+        f"- forbidden-pointer-free outputs: {overall_forbidden_pointer_free} / {len(picks)}",
         f"- total tokens: prompt={total_prompt_tokens}, completion={total_completion_tokens}",
         "",
         "## Per task family",
         "",
-        "| task_family | passed / total | failure notes |",
-        "| --- | ---: | --- |",
+        "| task_family | det. passed / total | mean citation | pointer-free / total | failure notes |",
+        "| --- | ---: | ---: | ---: | --- |",
     ]
     for family in sorted(family_stats):
         bucket = family_stats[family]
         note_summary = ", ".join(f"{k} ({v})" for k, v in sorted(bucket["failure_note_counter"].items(), key=lambda kv: -kv[1]))
-        md_lines.append(f"| {family} | {bucket['passed']} / {bucket['total']} | {note_summary or '—'} |")
+        md_lines.append(
+            f"| {family} | {bucket['passed']} / {bucket['total']} | {bucket['mean_citation_score']:.3f} | {bucket['forbidden_pointer_free_count']} / {bucket['total']} | {note_summary or '—'} |"
+        )
     md_lines.extend(["", "## Per task", ""])
     for row in rows:
         md_lines.extend(
