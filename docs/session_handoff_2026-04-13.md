@@ -309,24 +309,50 @@ The first end-to-end LLM run against the benchmark is now in place:
   Providers pre-wired: DeepSeek, Gemini 2.5 Flash, GPT-4o-mini.
 - Submissions, evaluations, and a `summary.md` land under
   `calibration/llm_smoke_v1/` (tracked in git; each run overwrites).
-- First DeepSeek V3 run: **3/3 deterministic checks passed**; outputs
-  were 173–293 words, cited figures/tables and specific quantitative
-  details from the evidence, and explicitly name every required
-  evidence identifier. Total cost ≈ $0.003; latency 11–15s per call.
+- First DeepSeek V3 run (3 bundles, one per task family): **3/3
+  deterministic checks passed**; outputs 173–293 words, cited figures/
+  tables and specific quantitative details from the evidence, and
+  explicitly named every required evidence identifier. Total cost ≈
+  $0.003; latency 11–15s per call.
+- Full public-slice run (30 bundles, DeepSeek V3): **30/30 passed** the
+  deterministic checks with clean per-family breakdown —
+  `abstract_from_evidence 12/12`, `methods_to_text 12/12`,
+  `results_to_text 6/6`. Total tokens 89,978 prompt + 10,483 completion
+  (~$0.036). Spot-check on a mouse-brain-atlas paper confirmed the
+  model's "7 million cells, 4.0 million passed QC" summary is grounded
+  (both numbers appear in the source evidence) — not hallucinated.
+- The `scripts/llm_smoke_eval.py --task-source inspection-slice` mode
+  drove the 30-bundle run and writes outputs to
+  `calibration/llm_public_slice_v1/`. Retry-with-backoff is built in
+  (3 attempts, exponential backoff) so transient API failures do not
+  waste the whole batch.
+
+Critical caveat: **deterministic checks are structural, not
+substantive.** They verify that the output contains the required
+section marker, the word "evidence", ≥12 words, ≥50% of evidence
+tokens, and matches any `expected_answer_texts` — which the prompt
+explicitly instructs the model to do. 30/30 tells us the pipeline and
+the prompt work end-to-end; it does NOT discriminate between models
+or between genuine grounding and fluent plausibility. Judge-layer
+scoring is still required before any cross-model claim.
 
 This is the start of Phase 2 (actual model evaluation) after the Phase 1
-governance/taxonomy work. Next substantive targets after this:
+governance/taxonomy work. Remaining substantive targets:
 
-1. Scale to the full 30-paper public inspection slice (one submission
-   per bundle per model, ~30 calls per model, still pennies per run).
-2. Add a second provider run (e.g. Gemini 2.5 Flash or Haiku 4.5) to
-   get cross-model score deltas before judge validation.
-3. Wire the LLM submissions into the `judge_v*` scaffolding so the
+1. **Add a second provider** (Gemini 2.5 Flash and/or Claude Haiku 4.5)
+   so we can measure cross-model score deltas before judge validation.
+   With 30 bundles the cost is still pennies per model; the point is
+   to establish that our prompt is not silently over-conditioning one
+   provider's style.
+2. **Wire the LLM submissions into the `judge_v*` scaffolding** so the
    rubric axes (`writing_structure_compliance`, `results_grounding`,
    etc.) actually get scored — currently deterministic-checks-only,
-   which is necessary but nowhere near sufficient.
-4. Only then revisit `leaderboard_gate_passed` — the release summary
-   will still show `false` until judge-validated scores exist.
+   which is necessary but nowhere near sufficient. A frontier model
+   (Claude Sonnet 4.6 or GPT-5) should be the judge, and it should
+   compare LLM outputs against the source evidence, not the deterministic
+   tokens.
+3. **Only then revisit `leaderboard_gate_passed`** — the release
+   summary will still show `false` until judge-validated scores exist.
 
 ## Follow-up tasks on the governance side
 

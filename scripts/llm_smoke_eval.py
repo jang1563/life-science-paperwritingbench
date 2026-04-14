@@ -98,7 +98,12 @@ SOURCE_BUNDLES_PATH = (
     KB_ROOT
     / "enriched/collection_v1_2018_present/auto_review/source_bundles_full180_enriched_v16.jsonl"
 )
-OUTPUT_DIR = REPO_ROOT / "calibration/llm_smoke_v1"
+INSPECTION_SLICE_PATH = (
+    KB_ROOT
+    / "released/collection_v1_2018_present/auto_review_shadow_v10/shadow_public_inspection_v11.jsonl"
+)
+OUTPUT_DIR_SMOKE = REPO_ROOT / "calibration/llm_smoke_v1"
+OUTPUT_DIR_SLICE = REPO_ROOT / "calibration/llm_public_slice_v1"
 
 
 # ---------------------------------------------------------------------------
@@ -257,6 +262,28 @@ def call_llm(prompt: str, *, provider: Mapping[str, Any], api_key: str, temperat
     return decoded
 
 
+def call_llm_with_retry(prompt: str, *, provider: Mapping[str, Any], api_key: str, temperature: float, max_tokens: int, attempts: int = 3, backoff_seconds: float = 2.0) -> Dict[str, Any]:
+    last_exc: Optional[BaseException] = None
+    for attempt in range(1, attempts + 1):
+        try:
+            return call_llm(
+                prompt,
+                provider=provider,
+                api_key=api_key,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+        except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError) as exc:
+            last_exc = exc
+            if attempt == attempts:
+                break
+            sleep_for = backoff_seconds * (2 ** (attempt - 1))
+            print(f"    attempt {attempt} failed ({exc}); sleeping {sleep_for:.1f}s", file=sys.stderr)
+            time.sleep(sleep_for)
+    assert last_exc is not None
+    raise last_exc
+
+
 # ---------------------------------------------------------------------------
 # Submission writing + scoring
 # ---------------------------------------------------------------------------
@@ -272,18 +299,43 @@ def _fingerprint(payload: Mapping[str, Any]) -> str:
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
+def _load_inspection_slice_bundle_ids(path: Path) -> List[str]:
+    ids: List[str] = []
+    with path.open() as handle:
+        for line in handle:
+            line = line.strip()
+            if not line:
+                continue
+            entry = json.loads(line)
+            if entry.get("task_bundle_id"):
+                ids.append(entry["task_bundle_id"])
+    return ids
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--model", default=DEFAULT_MODEL, choices=sorted(PROVIDERS))
     parser.add_argument("--keys-file", default=str(Path.home() / ".api_keys"))
-    parser.add_argument("--output-dir", default=str(OUTPUT_DIR))
+    parser.add_argument("--output-dir", default=None, help="defaults depend on --task-source")
     parser.add_argument("--temperature", type=float, default=0.2)
     parser.add_argument("--max-tokens", type=int, default=1200)
     parser.add_argument("--dry-run", action="store_true", help="print prompts only; do not call the model")
+    parser.add_argument(
+        "--task-source",
+        choices=("smoke", "inspection-slice"),
+        default="smoke",
+        help="smoke: 3 pinned bundles (one per task family). inspection-slice: all 30 entries from shadow_public_inspection_v11.jsonl.",
+    )
+    parser.add_argument("--pause-between-calls", type=float, default=0.3, help="seconds to sleep between calls to be polite to the API")
     args = parser.parse_args()
 
     provider = PROVIDERS[args.model]
-    output_dir = Path(args.output_dir)
+    if args.output_dir:
+        output_dir = Path(args.output_dir)
+    elif args.task_source == "inspection-slice":
+        output_dir = OUTPUT_DIR_SLICE
+    else:
+        output_dir = OUTPUT_DIR_SMOKE
     output_dir.mkdir(parents=True, exist_ok=True)
 
     keys = load_api_keys(Path(args.keys_file).expanduser())
@@ -296,8 +348,13 @@ def main() -> int:
     task_bundles = {bundle.task_bundle_id: bundle for bundle in load_task_bundles(TASK_BUNDLES_PATH)}
     source_bundles = load_source_bundles(SOURCE_BUNDLES_PATH)
 
+    if args.task_source == "inspection-slice":
+        selected_ids: Sequence[str] = _load_inspection_slice_bundle_ids(INSPECTION_SLICE_PATH)
+    else:
+        selected_ids = DEFAULT_TASK_BUNDLE_IDS
+
     picks = []
-    for task_bundle_id in DEFAULT_TASK_BUNDLE_IDS:
+    for task_bundle_id in selected_ids:
         match = task_bundles.get(task_bundle_id)
         if match is None:
             print(f"No task bundle found for id={task_bundle_id}", file=sys.stderr)
@@ -329,7 +386,7 @@ def main() -> int:
         else:
             print(f"[{idx}/{len(picks)}] calling {args.model} on {bundle.task_bundle_id} ({bundle.task_family.value})")
             started = time.time()
-            response = call_llm(
+            response = call_llm_with_retry(
                 prompt,
                 provider=provider,
                 api_key=api_key,
@@ -340,7 +397,9 @@ def main() -> int:
             output_text = response["choices"][0]["message"]["content"].strip()
             usage = dict(response.get("usage") or {})
             usage["elapsed_seconds"] = round(elapsed, 2)
-            print(f"    done in {elapsed:.1f}s  usage={usage}")
+            print(f"    done in {elapsed:.1f}s  prompt_tokens={usage.get('prompt_tokens')} completion_tokens={usage.get('completion_tokens')}")
+            if args.pause_between_calls > 0 and idx < len(picks):
+                time.sleep(args.pause_between_calls)
 
         submission_id = _stable_submission_id(bundle.task_bundle_id, producer_id)
         fingerprint = _fingerprint(
@@ -391,14 +450,38 @@ def main() -> int:
                 "output_word_count": len(submission.output_text.split()),
             }
         )
+    # Per-task-family breakdown
+    family_stats: Dict[str, Dict[str, Any]] = {}
+    for row in rows:
+        family = row["task_family"]
+        bucket = family_stats.setdefault(
+            family,
+            {"total": 0, "passed": 0, "failed_task_bundle_ids": [], "failure_note_counter": {}},
+        )
+        bucket["total"] += 1
+        if row["deterministic_checks_passed"]:
+            bucket["passed"] += 1
+        else:
+            bucket["failed_task_bundle_ids"].append(row["task_bundle_id"])
+            for note in row["notes"]:
+                bucket["failure_note_counter"][note] = bucket["failure_note_counter"].get(note, 0) + 1
+
+    # Total token usage
+    total_prompt_tokens = sum((row.get("prompt_tokens") or 0) for row in usage_rows)
+    total_completion_tokens = sum((row.get("completion_tokens") or 0) for row in usage_rows)
+
     summary = {
         "model": args.model,
         "request_model": provider["request_model"],
         "producer_id": producer_id,
         "temperature": args.temperature,
         "max_tokens": args.max_tokens,
+        "task_source": args.task_source,
         "num_tasks": len(picks),
         "pass_count": sum(1 for row in rows if row["deterministic_checks_passed"]),
+        "by_task_family": family_stats,
+        "total_prompt_tokens": total_prompt_tokens,
+        "total_completion_tokens": total_completion_tokens,
         "task_rows": rows,
         "usage": usage_rows,
     }
@@ -407,16 +490,25 @@ def main() -> int:
 
     # Markdown brief
     md_lines = [
-        "# LLM Smoke Evaluation",
+        "# LLM Evaluation",
         "",
         f"- model: `{args.model}` (request model: `{provider['request_model']}`)",
+        f"- task source: `{args.task_source}`",
         f"- temperature: {args.temperature}",
         f"- tasks: {len(picks)}",
         f"- deterministic checks passed: {summary['pass_count']} / {len(picks)}",
+        f"- total tokens: prompt={total_prompt_tokens}, completion={total_completion_tokens}",
         "",
-        "## Results",
+        "## Per task family",
         "",
+        "| task_family | passed / total | failure notes |",
+        "| --- | ---: | --- |",
     ]
+    for family in sorted(family_stats):
+        bucket = family_stats[family]
+        note_summary = ", ".join(f"{k} ({v})" for k, v in sorted(bucket["failure_note_counter"].items(), key=lambda kv: -kv[1]))
+        md_lines.append(f"| {family} | {bucket['passed']} / {bucket['total']} | {note_summary or '—'} |")
+    md_lines.extend(["", "## Per task", ""])
     for row in rows:
         md_lines.extend(
             [
