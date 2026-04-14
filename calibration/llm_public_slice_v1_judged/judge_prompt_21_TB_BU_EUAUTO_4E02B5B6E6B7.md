@@ -1,0 +1,76 @@
+You are an expert biomedical scientific-writing reviewer performing a rigorous peer-review-style evaluation.
+
+Your job: score the candidate model's generated "Abstract" section against the source evidence for a abstract_from_evidence task, using the rubric below. Be strict and specific. Punish invented numbers, invented experiments, misattributed figures, and claims that cannot be traced to the provided evidence. Reward outputs whose details are demonstrably present in the evidence.
+
+## Rubric axes (score each 0.0 to 1.0)
+
+- `writing_structure_compliance`
+- `evidence_grounding`
+- `factual_fidelity`
+- `traceability`
+- `hallucination_absence`
+
+Axis definitions:
+
+- writing_structure_compliance: Does the output open with the expected section heading and follow a plausible section structure (appropriate level of detail, logical flow, typical subsections for the task family)?
+- evidence_grounding: Is every non-trivial claim traceable to specific content in the source evidence? Penalize free-floating claims.
+- factual_fidelity: Do quantitative values, qualifiers ("significantly", "modestly"), organisms, time points, sample sizes, and cited figures/tables exactly match the source? Any mismatch is a serious deduction.
+- traceability: Are evidence identifiers, section pointers (e.g. "methods_section", "abstract_section"), figure/table references, or accessions cited where useful? 0.0 if there are zero references; 1.0 if they are pervasive and correct.
+- hallucination_absence: Is the output free of fabricated content (made-up citations, phantom experiments, invented numerical values)? 1.0 = no hallucinations found; 0.0 = at least one clear fabrication.
+
+## Pass threshold
+
+An axis is considered passing at >= 0.6. overall_pass is true if and only if every axis is at or above that threshold.
+
+## Source evidence
+
+## Methods
+2. Method 2.1. Study population This retrospective cohort included 502 hospitalized patients diagnosed with LC and AF at Beijing Ditan Hospital, Capital Medical University, from January 1, 2010 to December 31, 2019. This research adheres to the Declaration of Helsinki, sanctioned by the Ethics Committee of Ditan Hospital affiliated with Capital Medical University, and constitutes a retrospective study that does not require informed consent. We analyzed the incidence of endpoint events by gathering medical records during hospitalization, with primary endpoints comprising new-onset portal hypertension and all-cause mortality, and secondary endpoints including gastrointestinal bleeding, hemorrhagic stroke, and ischemic stroke. Hepatic encephalopathy, hepatorenal syndrome, ascites, portal hypertension, and portal vein thrombosis were recorded. The diagnosis of LC is contingent upon the identification of endoscopic esophagogastric varices or ectopic varices in the gastrointestinal tract, in conjunction with epigastric ultrasound, transient elastography, or CT imaging that demonstrates features suggestive of LC or portal hypertension, such as splenomegaly, a portal vein diameter of ≥1.3 cm, and transient elastography results that fulfill the diagnostic criteria for different etiologies of LC. The diagnosis also comes from aberrant laboratory results including thrombocytopenia, leukopenia, hypoalbuminemia, hyperbilirubinemia, and prolonged prothrombin time. Portal hypertension-related complications including ascites, esophageal and gastric variceal hemorrhage, and hepatic encephalopathy cause compensated cirrhosis to be diagnosed as decompensated cirrhosis. The categorization of LC is determined by its etiology as follows: hepatitis virus infections (chronic hepatitis B, hepatitis C); alcoholic liver disease; nonalcoholic fatty liver disease (drug or chemical toxins); parasitic infections (schistosomiasis, clonorchiasis, etc); genetic and metabolic disorders (Wilson’s disease); circulatory disorders; autoimmune liver diseases (primary sclerosing cholangitis, autoimmune hepatitis); and cryptogenic cirrhosis. The Child Grade is a predictive model that utilizes clinical (i.e., encephalopathy and ascites) and laboratory data to evaluate the severity of cirrhosis. The Model for End-Stage Liver Disease (MELD) scoring system comprises 5 parameters: serum bilirubin, creatinine (Scr), prothrombin time activity (INR), liver etiology, and serum sodium. The MELD score incorporates renal function and accounts for the critical complications of hepatorenal syndrome, particularly acute kidney injury, which are closely associated with the prognosis of patients with end-stage LC. This score offers a more accurate evaluation of LC severity and improves prognostic determination for patients with end-stage liver disease. 2.2. Data collection Demographic information, clinical characteristics, and laboratory data were collected within 24 hours of admission. This encompassed age, sex, etiology of LC, presence of acute injury, complete blood count, liver function tests, prothrombin-international normalized ratio, Child-Turcotte-Pugh score, MELD score, serum sodium, and creatinine levels. The included covariates are: demographic characteristics; lifestyle factors and clinical status of comorbidities; medication history; and risk stratification scores for thromboembolism (CHA2DS2-VASc score) and bleeding (HAS-BLED score, which considers hypertension, renal/liver dysfunction, stroke, bleeding history or susceptibility, unstable international normalization ratio, older adults, and drug/alcohol use), MELD score, and Child score. Data management: among the 503 included participants, baseline income information had 73 partially missing records (14.5%), and 21 partially missing records (4.2%) were observed at the 12-month follow-up. The missing data were determined to be missing at random. A single imputation method was applied: for normally distributed data, mis...
+
+## Results
+3. Results 3.1. Patient characteristics The study included 502 patients with cirrhosis and AF, consisting of 287 males (59.5%) with a mean age of 67.08 ± 11.48 years. The etiologies of LC included: hepatitis virus infections (chronic hepatitis B, hepatitis C) in 236 instances; 70 instances of alcoholic liver disease; 2 instances of nonalcoholic fatty liver disease (due to drug or chemical toxicity); 0 instances of parasitic infections (such as schistosomiasis, clonorchiasis); 0 instances of hereditary and metabolic disorders (e.g., Wilson’s disease); 26 instances of circulatory disorders; 72 instances of autoimmune liver diseases (including primary sclerosing cholangitis, primary biliary cholangitis, autoimmune hepatitis); a total of 96 instances of cryptogenic cirrhosis were recorded, with participants exhibiting 1, 2, or even 3 concurrent causes. As of December 31, 2019, 139 out of 502 patients, representing 27.7%, succumbed to death. Fifty patients were administered oral anticoagulants and classified into 2 groups according to the prescription status recorded in medical records. The anticoagulant cohort was younger, displayed reduced heart rates, and showed markedly elevated levels of WBC, HGB, PLT, ALB, PT, Fib-4, and LA in comparison to the non-anticoagulant cohort. As of December 31, 2019, 139 out of 502 patients (27.7%) had died. Fifty patients were administered oral anticoagulants and classified into 2 groups according to the prescription status recorded in medical records. The anticoagulant cohort was younger, displayed reduced heart rates, and showed significantly elevated levels of WBC, HGB, PLT, ALB, PT, Fib-4, and LA in comparison to the non-anticoagulant cohort. A subsequent comparison of baseline data between deceased patients and survivors indicated a reduced mortality rate in the anticoagulation group relative to the non-anticoagulation group. Moreover, the levels of PLT, HGB, ALB, and prothrombin time activity in the deceased cohort were markedly lower than those in the non-deceased cohort ( P < .001). Conversely, age, creatinine level, WBC, BNP, aspartate aminotransferase , TBIL, DBIL, CRP, PT, FAB, FIB-4, aspartate aminotransferase to platelet ratio index, HAS-BLED, and MLED exhibited no significant differences. The child’s score in the death group surpassed that of the non-death group ( P < .05). The levels of hemoglobin (HGB) and platelet (PLT) in the portal hypertension cohort were significantly lower than in the non-portal hypertension cohort ( P < .001). Conversely, total bilirubin (TBIL), direct bilirubin (DBIL), and liver fibrosis indices were elevated compared to the non-portal hypertension cohort ( P < .05). Additionally, coagulation indices were inferior in the portal hypertension cohort, apart from activated partial thromboplastin time (APTT) ( P values: .014, <.001, .001, .001, respectively). The Child score portal hypertension group exhibited poorer outcomes compared to the group without portal hypertension ( P = .003, <.001). No significant difference was observed between the CHA2DS2-VASC groups ( P = .206), while the HASBLED score was elevated in the portal hypertension group ( P < .001). A total of 240 cases of newly diagnosed portal hypertension were documented, along with 139 fatalities, 129 hospitalizations resulting from gastrointestinal hemorrhage, 70 ischemic stroke incidents, 55 occurrences of portal vein thrombosis, and 4 cases of intracerebral hemorrhage. The Child score portal hypertension cohort demonstrated inferior outcomes relative to the cohort without portal hypertension ( P = .003, <.001). No notable difference was detected among the CHA2DS2-VASC groups ( P = .206), whereas the HASBLED score was significantly higher in the portal hypertension group ( P < .001). A total of 240 newly diagnosed cases of portal hypertension were recorded, alongside 139 fatalities, 129 hospitalizations due to gastrointestinal hemorrhage, 70 incidents of ischemic stroke, 55 occurrences of portal vein thrombosis, and 4 cases of intracerebral hemorrhage (Table 1 ) . Table 1 The baseline of participants’ characteristics. Variables All Patients (n = 502) Anticoagulation (n = 50). Not anticoagulated (n = 452) P values Age (IQR, yr) 67.08 ± 11.48 65.56 ± 10.09 67.25 ± 11.62 .325 Male (%) 301 (60.0) 26 (52.0) 175 (38.7) .096 HR (bpm) 83.37 (16.01) 79.38 (11.00) 83.81 (16.42) .063 SBP (mm Hg) 117.83 (17.36) 120.72 (16.49) 117.51 (17.44) .216 DBP (mm Hg) 71.32 (11.51) 70.22 (11.01) 71.44 (11.5...
+
+## Figure captions
+1. Figure 1.. Kaplan–Meier analysis overall survival. The mortality rate was higher in patients without anticoagulation than patients with anticoagulation.
+2. Figure 2.. Subgroup analysis for the effect of anticoagulation in LC patients. Anticoagulation can be lowered in women with a C score of ≥3low risk of death (0.077 [0.004–0.376], P = .013). CI = confidence interval, LC = liver cirrhosis, MELD = Model for End-Stage Liver Disease.
+3. Figure 3.. Subgroup analysis for the effect of anticoagulation in LC patients with Portal Hypertension. CI = confidence interval, LC = liver cirrhosis, MELD = Model for End-Stage Liver Disease.
+4. Figure 4.. Subgroup analysis for the effect of anticoagulation in LC patients with bleeding events. Anticoagulation for women > 60 years of age, CHA2DS2-VASc ≤ 3, HAS-BLED3-5divide, Child5-9in subgroups of patients, Particularly protective against new gastrointestinal bleeding events P < .05). CI = confidence interval, LC = liver cirrhosis, MELD = Model for End-Stage Liver Disease.
+
+## Table snippets
+1. Table 1. The baseline of participants’ characteristics. | Variables; All Patients (n = 502); Anticoagulation (n = 50).; Not anticoagulated (n = 452); P values; Age (IQR, yr)
+2. Table 2. Anticoagulation occurs with endpoint events logistics regression analysis. | OR (95% CI); P -value; New-onset portal hypertension; 0.310 (0.152–0.592); <.001; Death
+3. Table 3. Relationship of anticoagulation therapy to different endpoint events. | Death; New-onset portal hypertension; New gastrointestinal bleeding; OR (95% CI); P -value; OR (95% CI)
+4. Table 4. Characteristics in the PSM cohort. | Variables; All patients (n = 233); Matched (complete) dataset; Not anticoagulated (n = 189); P values; anticoagulation (n = 44)
+5. Table 5. Logistic regression analysis of anticoagulation and the occurrence of endpoint events. | OR (95% CI); P -value; Death; 0.606 (0.198–1.532); .328; New-onset portal hypertension
+6. Table 6. The relationship between anticoagulation after PSM and new-onset portal hypertension and new-onset gastrointestinal bleeding events. | New-onset portal hypertension; New gastrointestinal bleeding; OR (95% CI); P -value; OR (95% CI); P -value
+
+## Candidate output (to be judged)
+
+Abstract
+
+This retrospective cohort study investigated the association between oral anticoagulation therapy and clinical outcomes in patients with liver cirrhosis (LC) and atrial fibrillation (AF). As detailed in the **methods_section**, we analyzed 502 hospitalized patients with LC and AF from a single center between 2010 and 2019. Primary endpoints were all-cause mortality and new-onset portal hypertension, with secondary endpoints including gastrointestinal bleeding and stroke. To address confounding, propensity score matching (PSM) was performed, creating a matched cohort of 283 patients for analysis. The **results_section** indicated that, in the overall cohort, anticoagulation was associated with a significantly lower incidence of new-onset portal hypertension (OR 0.310, 95% CI 0.152–0.592) and a reduced mortality rate, as supported by Kaplan-Meier analysis. However, after PSM adjustment, this **evidence** no longer showed a statistically significant protective association between anticoagulation and mortality (OR 0.606, 95% CI 0.198–1.532). Subgroup analyses suggested potential benefit in specific populations, such as women with higher Child scores for mortality reduction and in certain subgroups for protection against gastrointestinal bleeding. The **section_text** on patient characteristics documented 139 deaths (27.7%) and 240 new portal hypertension cases. In conclusion, while unadjusted analyses suggested benefits, adjusted analyses indicate that oral anticoagulation was not significantly associated with reduced mortality in the matched LC and AF cohort. The relationship with portal hypertension and bleeding risk requires careful, individualized assessment, as highlighted in the **abstract_section** summary of these neutral findings.
+
+## Output format
+
+Respond with ONLY a single JSON object. No prose before or after. No markdown code fences. The JSON must match this schema exactly:
+
+{
+  "axis_scores": {
+    "writing_structure_compliance": <float 0.0-1.0>,
+    "evidence_grounding": <float 0.0-1.0>,
+    "factual_fidelity": <float 0.0-1.0>,
+    "traceability": <float 0.0-1.0>,
+    "hallucination_absence": <float 0.0-1.0>
+  },
+  "axis_rationales": {
+    "writing_structure_compliance": "<1-3 sentences>",
+    "evidence_grounding": "<1-3 sentences>",
+    "factual_fidelity": "<1-3 sentences>",
+    "traceability": "<1-3 sentences>",
+    "hallucination_absence": "<1-3 sentences>"
+  },
+  "grounding_issues": [
+    "<specific concern citing the exact claim and why it is unsupported or inconsistent with the evidence>"
+  ],
+  "overall_pass": <true or false>
+}

@@ -1,0 +1,247 @@
+{
+  "judge": "claude-sonnet-4-6",
+  "judge_model": "claude-sonnet-4-6",
+  "temperature": 0.0,
+  "total_submissions_judged": 30,
+  "judge_overall_pass": 7,
+  "all_axes_above_threshold": 7,
+  "pass_threshold": 0.6,
+  "per_axis_mean": {
+    "writing_structure_compliance": 0.665,
+    "evidence_grounding": 0.693,
+    "factual_fidelity": 0.683,
+    "traceability": 0.467,
+    "hallucination_absence": 0.689
+  },
+  "per_axis_min": {
+    "writing_structure_compliance": 0.5,
+    "evidence_grounding": 0.55,
+    "factual_fidelity": 0.5,
+    "traceability": 0.2,
+    "hallucination_absence": 0.5
+  },
+  "per_task_family": {
+    "abstract_from_evidence": {
+      "total": 12,
+      "judge_pass": 0,
+      "all_axes_above_threshold": 0,
+      "axis_means": {
+        "writing_structure_compliance": 0.667,
+        "evidence_grounding": 0.711,
+        "factual_fidelity": 0.664,
+        "traceability": 0.362,
+        "hallucination_absence": 0.653
+      }
+    },
+    "methods_to_text": {
+      "total": 12,
+      "judge_pass": 5,
+      "all_axes_above_threshold": 5,
+      "axis_means": {
+        "writing_structure_compliance": 0.662,
+        "evidence_grounding": 0.681,
+        "factual_fidelity": 0.717,
+        "traceability": 0.513,
+        "hallucination_absence": 0.724
+      }
+    },
+    "results_to_text": {
+      "total": 6,
+      "judge_pass": 2,
+      "all_axes_above_threshold": 2,
+      "axis_means": {
+        "writing_structure_compliance": 0.665,
+        "evidence_grounding": 0.683,
+        "factual_fidelity": 0.653,
+        "traceability": 0.583,
+        "hallucination_absence": 0.692
+      }
+    }
+  },
+  "total_grounding_issues": 139,
+  "parse_failures": 0,
+  "total_input_tokens": 114726,
+  "total_output_tokens": 26891,
+  "usage": [
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:EFABE066E1CC",
+      "input_tokens": 4059,
+      "output_tokens": 901,
+      "elapsed_seconds": 17.37
+    },
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:E372771DAE12",
+      "input_tokens": 4073,
+      "output_tokens": 802,
+      "elapsed_seconds": 14.25
+    },
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:F383AAF2D9C8",
+      "input_tokens": 4133,
+      "output_tokens": 811,
+      "elapsed_seconds": 15.7
+    },
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:EA7AA161E315",
+      "input_tokens": 3969,
+      "output_tokens": 938,
+      "elapsed_seconds": 17.0
+    },
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:4B6B808009BE",
+      "input_tokens": 3788,
+      "output_tokens": 686,
+      "elapsed_seconds": 13.99
+    },
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:2FB750F6DC42",
+      "input_tokens": 4436,
+      "output_tokens": 953,
+      "elapsed_seconds": 16.99
+    },
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:0647BFACA729",
+      "input_tokens": 4710,
+      "output_tokens": 1160,
+      "elapsed_seconds": 20.25
+    },
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:4EE60B35277A",
+      "input_tokens": 3702,
+      "output_tokens": 781,
+      "elapsed_seconds": 14.12
+    },
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:9B993FC003FA",
+      "input_tokens": 3849,
+      "output_tokens": 1085,
+      "elapsed_seconds": 19.73
+    },
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:8F1919A560A4",
+      "input_tokens": 4385,
+      "output_tokens": 1001,
+      "elapsed_seconds": 18.21
+    },
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:574F9D766255",
+      "input_tokens": 3455,
+      "output_tokens": 803,
+      "elapsed_seconds": 14.12
+    },
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:DBF39730EECC",
+      "input_tokens": 3273,
+      "output_tokens": 842,
+      "elapsed_seconds": 15.6
+    },
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:DE9706E77A3C",
+      "input_tokens": 3351,
+      "output_tokens": 855,
+      "elapsed_seconds": 15.26
+    },
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:258F224C1556",
+      "input_tokens": 3730,
+      "output_tokens": 940,
+      "elapsed_seconds": 17.86
+    },
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:9C556312AA06",
+      "input_tokens": 3258,
+      "output_tokens": 855,
+      "elapsed_seconds": 16.87
+    },
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:03FB6686FE89",
+      "input_tokens": 4389,
+      "output_tokens": 998,
+      "elapsed_seconds": 19.07
+    },
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:2D82A93D3D12",
+      "input_tokens": 3812,
+      "output_tokens": 930,
+      "elapsed_seconds": 16.57
+    },
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:D80B030F985D",
+      "input_tokens": 1854,
+      "output_tokens": 821,
+      "elapsed_seconds": 17.36
+    },
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:2A956C890C93",
+      "input_tokens": 5038,
+      "output_tokens": 1003,
+      "elapsed_seconds": 18.43
+    },
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:8613E1B4CEB3",
+      "input_tokens": 3569,
+      "output_tokens": 842,
+      "elapsed_seconds": 16.01
+    },
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:4E02B5B6E6B7",
+      "input_tokens": 4111,
+      "output_tokens": 815,
+      "elapsed_seconds": 15.17
+    },
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:D9F982457632",
+      "input_tokens": 4257,
+      "output_tokens": 937,
+      "elapsed_seconds": 17.5
+    },
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:E427AF85C37D",
+      "input_tokens": 2452,
+      "output_tokens": 787,
+      "elapsed_seconds": 14.04
+    },
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:7491F1D683B2",
+      "input_tokens": 3785,
+      "output_tokens": 919,
+      "elapsed_seconds": 17.16
+    },
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:4EB4DEC74F35",
+      "input_tokens": 4229,
+      "output_tokens": 998,
+      "elapsed_seconds": 18.44
+    },
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:0A61A085F8E3",
+      "input_tokens": 4204,
+      "output_tokens": 1025,
+      "elapsed_seconds": 19.07
+    },
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:23CD58731E80",
+      "input_tokens": 3912,
+      "output_tokens": 744,
+      "elapsed_seconds": 13.43
+    },
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:203BF5F7D3BE",
+      "input_tokens": 4299,
+      "output_tokens": 893,
+      "elapsed_seconds": 16.49
+    },
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:C8FB544B54D1",
+      "input_tokens": 3074,
+      "output_tokens": 900,
+      "elapsed_seconds": 16.66
+    },
+    {
+      "task_bundle_id": "TB:BU:EUAUTO:79EBDAF6B695",
+      "input_tokens": 3570,
+      "output_tokens": 866,
+      "elapsed_seconds": 15.84
+    }
+  ]
+}

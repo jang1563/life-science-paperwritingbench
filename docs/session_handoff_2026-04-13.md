@@ -337,22 +337,73 @@ or between genuine grounding and fluent plausibility. Judge-layer
 scoring is still required before any cross-model claim.
 
 This is the start of Phase 2 (actual model evaluation) after the Phase 1
-governance/taxonomy work. Remaining substantive targets:
+governance/taxonomy work.
 
-1. **Add a second provider** (Gemini 2.5 Flash and/or Claude Haiku 4.5)
-   so we can measure cross-model score deltas before judge validation.
-   With 30 bundles the cost is still pennies per model; the point is
-   to establish that our prompt is not silently over-conditioning one
-   provider's style.
-2. **Wire the LLM submissions into the `judge_v*` scaffolding** so the
-   rubric axes (`writing_structure_compliance`, `results_grounding`,
-   etc.) actually get scored — currently deterministic-checks-only,
-   which is necessary but nowhere near sufficient. A frontier model
-   (Claude Sonnet 4.6 or GPT-5) should be the judge, and it should
-   compare LLM outputs against the source evidence, not the deterministic
-   tokens.
-3. **Only then revisit `leaderboard_gate_passed`** — the release
-   summary will still show `false` until judge-validated scores exist.
+## First judge pass (Claude Sonnet 4.6)
+
+`scripts/llm_judge_eval.py` runs a frontier model against the DeepSeek
+V3 submissions with a 5-axis rubric: `writing_structure_compliance`,
+`evidence_grounding`, `factual_fidelity`, `traceability`,
+`hallucination_absence`. Pass threshold 0.6 per axis, overall pass iff
+all axes pass.
+
+Full 30-bundle pass with Claude Sonnet 4.6 (temperature 0.0) on the
+DeepSeek public-slice submissions: **judge passed 7 / 30** — versus
+30 / 30 on deterministic checks. Per-family: `abstract_from_evidence
+0 / 12`, `methods_to_text 5 / 12`, `results_to_text 2 / 6`.
+
+Per-axis means: `writing_structure_compliance 0.665`,
+`evidence_grounding 0.693`, `factual_fidelity 0.683`,
+`traceability 0.467` (worst), `hallucination_absence 0.689`. 139
+grounding issues were flagged across 30 submissions.
+
+Cost: 114,726 input + 26,891 output tokens ≈ $0.75 (plus $0.05 dev).
+
+### Diagnostic findings
+
+- **Deterministic checks were gameable.** The current submission prompt
+  instructs DeepSeek to cite the task bundle's internal pointers
+  (`methods_section`, `abstract_section`, `section_text`) as
+  "evidence identifiers". This passes the traceability heuristic
+  (which looks for those exact tokens in the output) but the judge
+  correctly flags them as placeholder-style references with no
+  correspondence to real figures, tables, or accessions in the source.
+  This is the single biggest source of the 139 grounding issues.
+- **Real factual errors slipped past deterministic checks.** The judge
+  caught: a "nurse-monitored" vs "researcher-monitored" misattribution;
+  a "BLU9931 dosing not provided" claim when Fig. 7 explicitly states
+  "30 mg/kg b.i.d."; an incomplete microarray-comparison statement
+  (YTN16 vs YTN2 only, when the source compared 4 sublines); and a
+  comparative-statistics claim not supported by the evidence snippet.
+- **Abstracts scored worst** (0 / 12 pass) because abstracts by
+  convention do not cite figures/tables, but our prompt demanded
+  traceability "evidence identifiers", producing awkward
+  self-referential meta-commentary (`the abstract_section of this
+  paper synthesizes...`).
+
+Artifacts: `calibration/llm_public_slice_v1_judged/{judgments.jsonl,
+summary.{json,md}}` plus 30 per-bundle judge prompts for auditing.
+
+Remaining substantive targets after this:
+
+1. **Fix the submission prompt** so it does not instruct the model to
+   cite internal pointer tokens. The model should cite real figures,
+   tables, quantitative values, and accessions actually present in
+   the evidence (or explicitly state that a given detail is not
+   available). This is upstream of everything else and will also
+   require the deterministic `traceability_coverage` check to stop
+   rewarding the pointer tokens — the two changes need to land
+   together so the benchmark stays internally consistent.
+2. **Cross-model cost-effective run** (Gemini 2.5 Flash or Claude
+   Haiku 4.5) to measure whether the above diagnostic is model-
+   specific or task-specific. Still pennies per run.
+3. **Second judge** (Gemini 2.5 Pro or DeepSeek Reasoner) on the same
+   submissions to measure judge-to-judge agreement. If Sonnet 4.6's
+   0.467 traceability mean is reproducible across judges, we know the
+   diagnostic is real.
+4. **Only then revisit `leaderboard_gate_passed`** — the release
+   summary will still show `false` until judge-validated scores exist
+   and the submission-prompt design is understood to be honest.
 
 ## Follow-up tasks on the governance side
 
