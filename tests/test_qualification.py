@@ -6791,6 +6791,64 @@ class PaperQualificationFlowTests(unittest.TestCase):
             self.assertIn("trial_registry_reference_snippets", enrichment.provenance_fields)
             self.assertIn("data_availability_section_used_for_identifier_scan", enrichment.notes)
 
+    def test_build_auto_review_evidence_enrichments_extracts_repository_urls_as_resource_identifiers(self):
+        paper = make_source_paper(
+            paper_id="PMID:auto-enrich-repo-urls",
+            study_class=StudyClass.METHODS_RESOURCE,
+            claim_mode=ClaimMode.RESOURCE_RELEASE,
+            metadata={"abstract": "x", "pmcid": "PMC repo-urls"},
+        )
+        xml_payload = b"""
+<article>
+  <body>
+    <sec><title>Methods</title><p>We describe a tool written in Python.</p></sec>
+    <sec><title>Results</title><p>It outperforms baselines.</p></sec>
+    <sec><title>Data Availability</title>
+      <p>Source code is available at https://github.rpi.edu/RPIBioinformatics/SpecDB and the archive lives at https://zenodo.org/record/12345 . A companion mirror is hosted at https://github.com/example/project. Supplementary data: https://osf.io/ab12c.</p>
+    </sec>
+  </body>
+</article>
+"""
+
+        def fetcher(url, headers=None):
+            return xml_payload
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            _, enrichments = build_auto_review_evidence_enrichments(
+                (paper,),
+                raw_dir=tmpdir,
+                fetcher=fetcher,
+            )
+            identifiers = set(enrichments[0].resource_identifiers)
+            self.assertIn("https://github.rpi.edu/RPIBioinformatics/SpecDB", identifiers)
+            self.assertIn("https://zenodo.org/record/12345", identifiers)
+            self.assertIn("https://github.com/example/project", identifiers)
+            self.assertIn("https://osf.io/ab12c", identifiers)
+
+    def test_build_auto_review_evidence_enrichments_does_not_extract_unrelated_urls(self):
+        paper = make_source_paper(
+            paper_id="PMID:auto-enrich-orcid-only",
+            study_class=StudyClass.METHODS_RESOURCE,
+            claim_mode=ClaimMode.RESOURCE_RELEASE,
+            metadata={"abstract": "x", "pmcid": "PMC orcid-only"},
+        )
+        xml_payload = b"""
+<article>
+  <body>
+    <sec><title>Methods</title><p>See http://orcid.org/0000-0002-8930-6510 and https://example.com/page.</p></sec>
+    <sec><title>Results</title><p>Nothing else to find.</p></sec>
+  </body>
+</article>
+"""
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            _, enrichments = build_auto_review_evidence_enrichments(
+                (paper,),
+                raw_dir=tmpdir,
+                fetcher=lambda url, headers=None: xml_payload,
+            )
+            self.assertEqual(enrichments[0].resource_identifiers, ())
+
     def test_build_auto_review_evidence_enrichments_falls_back_to_ncbi_on_http_404(self):
         paper = make_source_paper(
             paper_id="PMID:auto-enrich-ncbi-fallback",

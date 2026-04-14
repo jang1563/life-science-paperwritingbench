@@ -113,7 +113,44 @@ The latest code change was in:
 - `src/life_science_paperwritingbench/inspection.py`
 - `tests/test_qualification.py`
 
-Evidence enrichment now has an NCBI PMC efetch fallback:
+Evidence enrichment now extracts repository URLs as `resource_identifiers`:
+
+- new `_REPOSITORY_URL_PATTERN` in `evidence_enrichment.py` catches
+  code-hosting URLs (`github.com/u/r`, enterprise `github.*.edu/u/r`,
+  `gitlab.com/u/r`, `bitbucket.org/u/r`, `codeberg.org/u/r`,
+  `sourceforge.net/projects/p`) and data-archive URLs
+  (`zenodo.org/record/N`, `zenodo.org/doi/10.5281/…`, `osf.io/<id>`,
+  `figshare.com/articles/…`, `datadryad.org/stash/…`)
+- `_identifier_hits` now unions matches from `_ACCESSION_PATTERN` and
+  `_REPOSITORY_URL_PATTERN`; trailing punctuation is stripped so
+  sentence-final URLs are captured cleanly
+- consistent with existing `_ACCESSION_PATTERN` semantics, the URL
+  regex enriches the raw signal and does not try to disambiguate
+  "released by this paper" vs "used by this paper". The downstream
+  `resource_release_grounded` logic still only fires on papers whose
+  `claim_mode` is `resource_release`
+- two new unit tests cover the positive arms (GitHub / enterprise
+  GitHub / Zenodo / OSF all extracted) and the negative arm (ORCID
+  and generic `example.com` URLs do NOT match)
+
+Verified on the three NCBI-recovered papers:
+
+- `DOI:10.1016/j.jmr.2022.107268` (SpecDB): now gains
+  `https://github.rpi.edu/RPIBioinformatics/SpecDB` as a
+  `resource_identifier`, picks up `resource_ids` and
+  `resource_release_grounded` focus tags, and leaves
+  `identifier_sparse_low_confidence`
+- `DOI:10.1002/cpz1.1028` (Copz1 protocol): remains identifier-sparse
+  because its data-availability statement says *"Data sharing is not
+  applicable"* — genuine sparsity, not a parser gap
+- `DOI:10.1002/jpen.70069` (retrospective observational): remains
+  identifier-sparse because the study reports patient-level clinical
+  data that is typically not shared — genuine sparsity
+
+`v10 → v11` delta: `identifier_sparse_low_confidence -1`,
+`resource_ids +1`.
+
+Prior change: evidence enrichment has an NCBI PMC efetch fallback:
 
 - when the Europe PMC `fullTextXML` fetch returns an HTTP 4xx (i.e. the
   paper is non-OA or not in the Europe PMC redistribution set), the
@@ -234,11 +271,11 @@ branch end-to-end:
   papers have full text but still lack resource/trial-registry
   identifiers
 
-Current `v10` slice buckets:
+Current `v11` slice buckets (after regex extension for repo URLs):
 
 - `stable_shadow_controls = 23`
-- `identifier_sparse_low_confidence = 3`
 - `low_confidence_shadow = 3`
+- `identifier_sparse_low_confidence = 2`
 - `hybrid_overlay_complexity = 3`
 - `writing_quality_risk = 2`
 - `figure_table_grounding = 1`

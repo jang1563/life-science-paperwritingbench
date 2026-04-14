@@ -31,6 +31,22 @@ _ACCESSION_PATTERN = re.compile(
     r")\b",
     re.IGNORECASE,
 )
+_REPOSITORY_URL_PATTERN = re.compile(
+    r"(?:https?://)?(?:"
+    r"github\.com/[\w\-]+/[\w\-.]+|"
+    r"github(?:\.[\w\-]+)+\.edu/[\w\-]+/[\w\-.]+|"
+    r"gitlab\.com/[\w\-]+/[\w\-./]+|"
+    r"bitbucket\.org/[\w\-]+/[\w\-.]+|"
+    r"codeberg\.org/[\w\-]+/[\w\-.]+|"
+    r"sourceforge\.net/projects/[\w\-]+|"
+    r"zenodo\.org/record/\d+|"
+    r"zenodo\.org/doi/10\.5281/[\w\-./]+|"
+    r"osf\.io/[a-zA-Z0-9]+(?:/[\w\-]+)*|"
+    r"figshare\.com/articles/[^\s<>\"']+|"
+    r"datadryad\.org/stash/[\w\-/:.]+"
+    r")",
+    re.IGNORECASE,
+)
 _TRIAL_REGISTRY_PATTERN = re.compile(
     r"\b(?:NCT\d{8}|ISRCTN\d+|CRD420\d+|ACTRN\d+|ChiCTR[-A-Za-z0-9]+|CTRI/\d{4}/\d{2}/\d+|UMIN\d+)\b",
     re.IGNORECASE,
@@ -206,6 +222,10 @@ def _identifier_hits(*texts: str) -> Tuple[str, ...]:
     hits: List[str] = []
     for text in texts:
         hits.extend(match.group(0).replace(" ", "") for match in _ACCESSION_PATTERN.finditer(text))
+        hits.extend(
+            match.group(0).rstrip(".,;:)]}")
+            for match in _REPOSITORY_URL_PATTERN.finditer(text)
+        )
     return _dedupe(hits)
 
 
