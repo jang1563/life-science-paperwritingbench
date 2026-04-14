@@ -2,11 +2,16 @@ from __future__ import annotations
 
 import hashlib
 import json
-from typing import Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
+from typing import Dict, Iterable, List, Literal, Mapping, Optional, Sequence, Tuple
 
 from .models import BaselineRunSpec, EvaluationRecord, SubmissionRecord, TaskBundle
 from .policy import BaselineKind, EvaluationLayer, TaskFamily
 from .program import LEAN_BASELINES
+from .scoring import citation_specificity
+
+
+SubmissionScoringVersion = Literal["v1", "v2"]
+DEFAULT_SCORING_VERSION: SubmissionScoringVersion = "v2"
 
 
 def _canonical_payload(payload: Mapping[str, object]) -> str:
@@ -220,7 +225,42 @@ def run_baseline(
     return run_spec, tuple(submissions)
 
 
-def evaluate_submission(task_bundle: TaskBundle, submission: SubmissionRecord) -> EvaluationRecord:
+_STRUCTURE_MARKERS: Mapping[TaskFamily, Tuple[str, ...]] = {
+    TaskFamily.RESULTS_TO_TEXT: ("results", "evidence"),
+    TaskFamily.METHODS_TO_TEXT: ("methods", "evidence"),
+    TaskFamily.ABSTRACT_FROM_EVIDENCE: ("abstract", "evidence"),
+    TaskFamily.REVIEW_REVISION_RESPONSE: ("response", "evidence"),
+    TaskFamily.LITERATURE_QA: ("answer", "question"),
+    TaskFamily.TRIAL_QA: ("answer", "question"),
+    TaskFamily.FIGURE_QA: ("answer", "question"),
+    TaskFamily.TABLE_QA: ("answer", "question"),
+    TaskFamily.SOURCE_QUALITY_QA: ("assessment", "question"),
+}
+
+
+def _answer_support_score(task_bundle: TaskBundle, normalized_output: str) -> float:
+    expected_answer_texts = tuple(
+        str(item) for item in task_bundle.input_artifacts.get("expected_answer_texts", ())
+    )
+    if not expected_answer_texts:
+        return 1.0
+    return 1.0 if any(
+        _normalize_text(answer_text) in normalized_output
+        for answer_text in expected_answer_texts
+        if _normalize_text(answer_text)
+    ) else 0.0
+
+
+def evaluate_submission_v1(task_bundle: TaskBundle, submission: SubmissionRecord) -> EvaluationRecord:
+    """Original deterministic scoring (v1).
+
+    Traceability is computed as the fraction of the task bundle's internal
+    pointer tokens (``evidence_pointers`` / ``evidence_items`` /
+    ``evidence_types``) that appear in the output. This preserves
+    reproducibility of pre-v2 release artifacts; it is not the recommended
+    check for new evaluations. See :func:`evaluate_submission_v2` and
+    ``docs/strategic_review_2026-04-13.md`` for why.
+    """
     if submission.task_bundle_id != task_bundle.task_bundle_id:
         raise ValueError("submission and task bundle must share the same task_bundle_id")
 
@@ -236,32 +276,12 @@ def evaluate_submission(task_bundle: TaskBundle, submission: SubmissionRecord) -
     )
 
     section_marker = _section_title(task_bundle.task_family).lower()
-    structure_markers = {
-        TaskFamily.RESULTS_TO_TEXT: ("results", "evidence"),
-        TaskFamily.METHODS_TO_TEXT: ("methods", "evidence"),
-        TaskFamily.ABSTRACT_FROM_EVIDENCE: ("abstract", "evidence"),
-        TaskFamily.REVIEW_REVISION_RESPONSE: ("response", "evidence"),
-        TaskFamily.LITERATURE_QA: ("answer", "question"),
-        TaskFamily.TRIAL_QA: ("answer", "question"),
-        TaskFamily.FIGURE_QA: ("answer", "question"),
-        TaskFamily.TABLE_QA: ("answer", "question"),
-        TaskFamily.SOURCE_QUALITY_QA: ("assessment", "question"),
-    }[task_bundle.task_family]
+    structure_markers = _STRUCTURE_MARKERS[task_bundle.task_family]
     structure_score = 1.0 if all(marker in normalized_output for marker in structure_markers) else 0.0
     non_empty_score = 1.0 if submission.output_text.strip() else 0.0
     word_count = len(submission.output_text.split())
     length_floor_score = 1.0 if word_count >= 12 else 0.0
-    expected_answer_texts = tuple(
-        str(item) for item in task_bundle.input_artifacts.get("expected_answer_texts", ())
-    )
-    if expected_answer_texts:
-        answer_support_score = 1.0 if any(
-            _normalize_text(answer_text) in normalized_output
-            for answer_text in expected_answer_texts
-            if _normalize_text(answer_text)
-        ) else 0.0
-    else:
-        answer_support_score = 1.0
+    answer_support_score = _answer_support_score(task_bundle, normalized_output)
     deterministic_checks_passed = (
         non_empty_score == 1.0
         and structure_score == 1.0
@@ -285,6 +305,7 @@ def evaluate_submission(task_bundle: TaskBundle, submission: SubmissionRecord) -
             {
                 "submission_id": submission.submission_id,
                 "task_bundle_id": task_bundle.task_bundle_id,
+                "scoring_version": "v1",
             },
         ),
         submission_id=submission.submission_id,
@@ -302,16 +323,121 @@ def evaluate_submission(task_bundle: TaskBundle, submission: SubmissionRecord) -
     )
 
 
+def evaluate_submission_v2(task_bundle: TaskBundle, submission: SubmissionRecord) -> EvaluationRecord:
+    """Citation-specificity-aware deterministic scoring (v2).
+
+    Replaces v1's pointer-token traceability heuristic with the content-
+    aware citation-specificity score from
+    :mod:`life_science_paperwritingbench.scoring`. Rewards real figure /
+    table / accession / p-value / repository-URL citations in the output
+    and penalizes forbidden placeholder pointers (``methods_section``,
+    ``abstract_section``, ...).
+
+    Threshold semantics:
+      - ``citation_specificity_score >= 0.5`` passes the traceability axis
+        (equivalent to "at least 2 distinct real citation tokens").
+      - Any forbidden pointer token immediately zeros the score and fails
+        the axis, regardless of other content.
+    """
+    if submission.task_bundle_id != task_bundle.task_bundle_id:
+        raise ValueError("submission and task bundle must share the same task_bundle_id")
+
+    output_text = submission.output_text
+    normalized_output = " ".join(output_text.lower().split())
+
+    citation_report = citation_specificity(output_text)
+    citation_score = float(citation_report["citation_specificity_score"])
+
+    section_marker = _section_title(task_bundle.task_family).lower()
+    structure_markers = _STRUCTURE_MARKERS[task_bundle.task_family]
+    structure_score = 1.0 if all(marker in normalized_output for marker in structure_markers) else 0.0
+    non_empty_score = 1.0 if output_text.strip() else 0.0
+    word_count = len(output_text.split())
+    length_floor_score = 1.0 if word_count >= 12 else 0.0
+    answer_support_score = _answer_support_score(task_bundle, normalized_output)
+
+    deterministic_checks_passed = (
+        non_empty_score == 1.0
+        and structure_score == 1.0
+        and length_floor_score == 1.0
+        and citation_score >= 0.5
+        and answer_support_score == 1.0
+    )
+    notes: List[str] = []
+    if section_marker not in normalized_output:
+        notes.append(f"missing expected section marker: {section_marker}")
+    if citation_report["forbidden_pointer_hits"]:
+        notes.append(
+            "forbidden pointer tokens present: "
+            + ", ".join(citation_report["forbidden_pointer_hits"])
+        )
+    if citation_score < 0.5:
+        notes.append("citation specificity below threshold")
+    if word_count < 12:
+        notes.append("output is shorter than the deterministic length floor")
+    if answer_support_score < 1.0:
+        notes.append("output does not sufficiently match expected supported answer text")
+
+    return EvaluationRecord(
+        evaluation_id=_stable_id(
+            "EVAL",
+            {
+                "submission_id": submission.submission_id,
+                "task_bundle_id": task_bundle.task_bundle_id,
+                "scoring_version": "v2",
+            },
+        ),
+        submission_id=submission.submission_id,
+        task_bundle_id=task_bundle.task_bundle_id,
+        evaluation_layers=(EvaluationLayer.DETERMINISTIC_CHECKS,),
+        deterministic_checks_passed=deterministic_checks_passed,
+        scores={
+            "citation_specificity_score": round(citation_score, 4),
+            "citation_count": float(citation_report["citation_count"]),
+            "structure_compliance": structure_score,
+            "non_empty_output": non_empty_score,
+            "length_floor": length_floor_score,
+            "answer_support": answer_support_score,
+        },
+        notes=tuple(notes),
+    )
+
+
+def evaluate_submission(
+    task_bundle: TaskBundle,
+    submission: SubmissionRecord,
+    *,
+    version: SubmissionScoringVersion = DEFAULT_SCORING_VERSION,
+) -> EvaluationRecord:
+    """Evaluate a single submission under the selected deterministic scoring version.
+
+    Defaults to v2 (citation-specificity). Pass ``version="v1"`` to
+    reproduce pre-v2 release-artifact scoring.
+    """
+    if version == "v1":
+        return evaluate_submission_v1(task_bundle, submission)
+    if version == "v2":
+        return evaluate_submission_v2(task_bundle, submission)
+    raise ValueError(f"unsupported scoring version: {version!r}; choose 'v1' or 'v2'")
+
+
 def evaluate_submissions(
     task_bundles: Sequence[TaskBundle],
     submissions: Sequence[SubmissionRecord],
+    *,
+    version: SubmissionScoringVersion = DEFAULT_SCORING_VERSION,
 ) -> Tuple[EvaluationRecord, ...]:
+    """Evaluate a batch of submissions under the selected scoring version."""
     task_bundle_map = {bundle.task_bundle_id: bundle for bundle in task_bundles}
     evaluations: List[EvaluationRecord] = []
     for submission in submissions:
         if submission.task_bundle_id not in task_bundle_map:
             raise KeyError(f"missing task bundle for submission {submission.submission_id}")
         evaluations.append(
-            evaluate_submission(task_bundle_map[submission.task_bundle_id], submission)
+            evaluate_submission(
+                task_bundle_map[submission.task_bundle_id],
+                submission,
+                version=version,
+            )
         )
     return tuple(evaluations)

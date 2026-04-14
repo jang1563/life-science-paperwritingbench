@@ -29,7 +29,23 @@ from .evidence_enrichment import (
     build_auto_review_evidence_enrichments,
     materialize_enriched_source_papers,
 )
-from .baselines import evaluate_submission, evaluate_submissions, render_baseline_output, run_baseline
+from .baselines import (
+    DEFAULT_SCORING_VERSION,
+    SubmissionScoringVersion,
+    evaluate_submission,
+    evaluate_submission_v1,
+    evaluate_submission_v2,
+    evaluate_submissions,
+    render_baseline_output,
+    run_baseline,
+)
+from .scoring import (
+    CITATION_SATURATION_COUNT,
+    CitationSpecificityReport,
+    FORBIDDEN_POINTER_TOKENS,
+    citation_specificity,
+    citation_specificity_score,
+)
 from .io import (
     adjudication_queue_entry_from_dict,
     adjudicated_paper_review_record_from_dict,
@@ -632,7 +648,16 @@ __all__ = [
     "default_execution_profile",
     "enrich_candidates_with_crossref",
     "enrich_candidates_with_europepmc",
+    "DEFAULT_SCORING_VERSION",
+    "SubmissionScoringVersion",
+    "CITATION_SATURATION_COUNT",
+    "CitationSpecificityReport",
+    "FORBIDDEN_POINTER_TOKENS",
+    "citation_specificity",
+    "citation_specificity_score",
     "evaluate_submission",
+    "evaluate_submission_v1",
+    "evaluate_submission_v2",
     "evaluate_submissions",
     "evaluation_extraction_audit_report_from_dict",
     "extraction_audit_report_from_dict",

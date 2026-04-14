@@ -162,6 +162,11 @@ from life_science_paperwritingbench import (  # noqa: E402
     audit_judge_validation_slice,
     answer_record_from_dict,
     compute_agreement_against_adjudication,
+    SubmissionRecord,
+    citation_specificity,
+    citation_specificity_score,
+    evaluate_submission_v1,
+    evaluate_submission_v2,
     evaluation_extraction_audit_report_from_dict,
     extraction_audit_report_from_dict,
     evaluate_submissions,
@@ -1339,6 +1344,113 @@ class QualificationTests(unittest.TestCase):
         self.assertEqual(len(evaluations), 1)
         self.assertTrue(evaluations[0].deterministic_checks_passed)
         self.assertEqual(evaluations[0].scores["answer_support"], 1.0)
+
+    def test_citation_specificity_credits_real_citations(self):
+        output = (
+            "Results\nWe present evidence from Fig. 1 and Table 2. "
+            "The effect was significant (p < 0.05) in the GSE12345 dataset."
+        )
+        report = citation_specificity(output)
+        self.assertGreaterEqual(report["citation_count"], 3)
+        self.assertTrue(report["forbidden_pointer_free"])
+        self.assertEqual(report["citation_specificity_score"], 1.0)
+        self.assertAlmostEqual(citation_specificity_score(output), 1.0)
+
+    def test_citation_specificity_zeros_on_forbidden_pointer_tokens(self):
+        output = (
+            "Results\nThis output cites Fig. 1 and Table 2 and p < 0.05 but also the "
+            "internal pointer methods_section which should trigger the forbidden-hit rule."
+        )
+        report = citation_specificity(output)
+        self.assertIn("methods_section", report["forbidden_pointer_hits"])
+        self.assertEqual(report["citation_specificity_score"], 0.0)
+        self.assertFalse(report["forbidden_pointer_free"])
+
+    def test_citation_specificity_zero_when_no_real_citations(self):
+        output = "Results\nEvidence basis: provided evidence items. This paragraph cites nothing concrete."
+        report = citation_specificity(output)
+        self.assertEqual(report["citation_count"], 0)
+        self.assertEqual(report["citation_specificity_score"], 0.0)
+        self.assertTrue(report["forbidden_pointer_free"])
+
+    def test_evaluate_submission_v2_rejects_pointer_token_output(self):
+        paper = make_source_paper()
+        evidence_unit = make_evidence_unit(
+            paper,
+            unit_id="EU:v2-pointer-only",
+            unit_type=EvidenceUnitType.FIGURE_TABLE_RESULT,
+            evidence_pointers=("Fig 1", "Table 2"),
+        )
+        task_bundle = build_task_bundle(
+            benchmark_unit=BenchmarkUnit(
+                benchmark_unit_id="BU:v2-pointer-only",
+                paper_id=paper.paper_id,
+                evidence_unit_ids=("EU:v2-pointer-only",),
+                split="test",
+            ),
+            source_paper=paper,
+            evidence_units=(evidence_unit,),
+            truth_manifest=make_truth_manifest(paper),
+            release_tier=ReleaseTier.PUBLIC_GOLD,
+        )
+        # An output that games v1 by citing placeholder pointers but has
+        # no real figures, tables, p-values, or accessions.
+        pointer_only_submission = SubmissionRecord(
+            submission_id="SUB:v2-pointer-only",
+            task_bundle_id=task_bundle.task_bundle_id,
+            source="synthetic",
+            producer_id="test:pointer-only",
+            output_text=(
+                "Results\nEvidence basis: methods_section, results_section, section_text. "
+                "This output is structurally long enough to clear the word-count floor, yet "
+                "contains no real figure, table, or accession citation."
+            ),
+            config_fingerprint_sha256="0" * 64,
+        )
+        evaluation_v2 = evaluate_submission_v2(task_bundle, pointer_only_submission)
+        self.assertFalse(evaluation_v2.deterministic_checks_passed)
+        self.assertEqual(evaluation_v2.scores["citation_specificity_score"], 0.0)
+        self.assertIn(
+            "forbidden pointer tokens present",
+            " | ".join(evaluation_v2.notes),
+        )
+        # v1 scoring still accepts the same output because the placeholder
+        # tokens happen to match the bundle's evidence_tokens -- this
+        # contrast is exactly why v2 exists.
+        evaluation_v1 = evaluate_submission_v1(task_bundle, pointer_only_submission)
+        self.assertIn("citation_specificity_score", evaluation_v2.scores)
+        self.assertIn("traceability_coverage", evaluation_v1.scores)
+
+    def test_evaluate_submissions_respects_explicit_scoring_version(self):
+        paper = make_source_paper()
+        evidence_unit = make_evidence_unit(
+            paper,
+            unit_id="EU:version-switch",
+            unit_type=EvidenceUnitType.FIGURE_TABLE_RESULT,
+            evidence_pointers=("Fig 1", "Table 1"),
+        )
+        task_bundle = build_task_bundle(
+            benchmark_unit=BenchmarkUnit(
+                benchmark_unit_id="BU:version-switch",
+                paper_id=paper.paper_id,
+                evidence_unit_ids=("EU:version-switch",),
+                split="test",
+            ),
+            source_paper=paper,
+            evidence_units=(evidence_unit,),
+            truth_manifest=make_truth_manifest(paper),
+            release_tier=ReleaseTier.PUBLIC_GOLD,
+        )
+        _, submissions = run_baseline(
+            task_bundles=(task_bundle,),
+            baseline_kind=BaselineKind.SECTION_WISE_PIPELINE,
+        )
+        evaluations_v1 = evaluate_submissions((task_bundle,), submissions, version="v1")
+        evaluations_v2_default = evaluate_submissions((task_bundle,), submissions)
+        self.assertEqual(len(evaluations_v1), 1)
+        self.assertEqual(len(evaluations_v2_default), 1)
+        self.assertIn("traceability_coverage", evaluations_v1[0].scores)
+        self.assertIn("citation_specificity_score", evaluations_v2_default[0].scores)
 
     def test_holdout_and_canary_helpers_are_stable(self):
         bucket_one = assign_holdout_bucket("BU:alpha", salt="stable-salt")
@@ -3944,11 +4056,14 @@ class QualificationTests(unittest.TestCase):
             run_spec_path = os.path.join(tmpdir, "baseline_run.jsonl")
             evaluations_path = os.path.join(tmpdir, "evaluations.jsonl")
             paper = make_source_paper()
+            # Evidence pointers use v2-compatible citation-style labels
+            # (Fig 1 / Table 1) so the reference-template baseline output
+            # contains real citation tokens recognised by the v2 scoring.
             evidence_unit = make_evidence_unit(
                 paper,
                 unit_id="EU:cli-baseline",
                 unit_type=EvidenceUnitType.METHODS_PROTOCOL_BLOCK,
-                evidence_pointers=("Methods1", "ProtocolA"),
+                evidence_pointers=("Fig 1", "Table 1"),
             )
             task_bundle = build_task_bundle(
                 benchmark_unit=BenchmarkUnit(

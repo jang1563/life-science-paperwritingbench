@@ -448,25 +448,40 @@ abstract pass rate without changing the model.
 
 ## Remaining substantive targets
 
-1. **Adapt the judge rubric per task family** so abstracts are not
-   penalized for following the genre convention of not citing
-   figures/tables. Swap the traceability axis for a `quantitative_
-   specificity` axis on abstracts (p-values, sample sizes, named
-   accessions). Other families keep the current rubric.
-2. **Refresh `evaluate_submission` / `_evidence_tokens`** in
-   `src/life_science_paperwritingbench/baselines.py` so the
-   deterministic layer agrees with the v2 semantics (real citation
-   patterns, not pointer tokens). Currently the deterministic layer
-   is stale and fails all v2 outputs. Once this is fixed, the
-   v2 deterministic and v2 judge pass rates should move in the same
-   direction, restoring internal consistency. This is a breaking
-   change to the release-submissions contract and must be rev-labeled.
-3. **Cross-model cost-effective run** (Gemini 2.5 Flash or Claude
-   Haiku 4.5) on prompt v2 to measure whether the improvements are
-   DeepSeek-specific or prompt-specific.
-4. **Second judge** (Gemini 2.5 Pro or DeepSeek Reasoner) on the v2
-   submissions to measure judge-to-judge agreement.
-5. **Only then revisit `leaderboard_gate_passed`**.
+The next-step ordering is now governed by the strategic direction doc
+[`docs/strategic_review_2026-04-13.md`](./strategic_review_2026-04-13.md),
+which replaces and extends the per-item list that previously lived in
+this section. Summary of the direction it sets:
+
+- **Tier A — v0.1 research preview** (~4 weeks half-time, ~$13 API,
+  $0 cash). Four sessions, each gated by a numeric success criterion:
+  1. Scoring-layer refresh: hoist `citation_specificity` into a new
+     `src/life_science_paperwritingbench/scoring.py` module; add
+     `evaluate_submission_v2` in `baselines.py` while preserving the
+     v1 behavior as an alias for release-artifact reproducibility.
+     Gate A1: v2 deterministic pass rate ≥ v2 judge pass rate.
+  2. Judge rubric v3: switch `scripts/llm_judge_eval.py:RUBRIC_AXES`
+     to 4-point anchored ordinal with behavioral anchors; family-aware
+     abstract axis (swap `traceability` → `quantitative_specificity`).
+     Gate A2: abstract pass rate ≥ 5/12 on the 30-bundle slice.
+  3. Cross-model breadth: add Gemini 2.5 Flash and Claude Haiku 4.5
+     as submitters; Gemini 2.5 Pro and GPT-5 mini as additional
+     judges; 3-judge jury with family-bias exclusion. Gate A3:
+     ≥ 30 pp spread between strongest and weakest model.
+  4. Canary probe + README refresh + workshop-paper draft.
+- **Tier B — v1.0 citable launch** (~3 months on top of Tier A,
+  $0–$2k cash), conditional on Tier A exit criteria + at least one
+  biomedical colleague committed as co-author annotator. 60-bundle
+  human validation, κ / ICC / α reporting, jury-vs-human calibration,
+  Inspect-evals integration, and only then `leaderboard_gate_passed`.
+
+See the strategic review doc for the competitive-landscape analysis
+(LAB-Bench / PaperBench / DeepScholar-Bench / MedHELM / WritingBench),
+judge-validation methodology (Cohen κ / ICC(2,1) / Krippendorff α with
+publishable bars), the sample-size reconciliation between
+`research/04_judge_design_and_validation.md` (floor of 30 units) and
+statistical theory (60 units for CI half-width ≈ 0.15), and per-session
+verification commands.
 
 ## Follow-up tasks on the governance side
 

@@ -2246,13 +2246,14 @@ def command_run_baseline(args: argparse.Namespace) -> int:
 def command_score_submissions(args: argparse.Namespace) -> int:
     task_bundles = load_jsonl(args.task_bundles, loader=task_bundle_from_dict)
     submissions = load_jsonl(args.submissions, loader=submission_record_from_dict)
-    evaluations = evaluate_submissions(task_bundles, submissions)
+    evaluations = evaluate_submissions(task_bundles, submissions, version=args.scoring_version)
     write_jsonl(args.output, evaluations)
     payload = {
         "task_bundles_loaded": len(task_bundles),
         "submissions_loaded": len(submissions),
         "evaluations_written": len(evaluations),
         "output": args.output,
+        "scoring_version": args.scoring_version,
         "passed_deterministic_checks": sum(1 for evaluation in evaluations if evaluation.deterministic_checks_passed),
     }
     _print_json(payload)
@@ -3308,6 +3309,12 @@ def build_parser() -> argparse.ArgumentParser:
     score_submissions_parser.add_argument("--task-bundles", required=True)
     score_submissions_parser.add_argument("--submissions", required=True)
     score_submissions_parser.add_argument("--output", required=True)
+    score_submissions_parser.add_argument(
+        "--scoring-version",
+        choices=("v1", "v2"),
+        default="v2",
+        help="v2 (default) uses citation-specificity. v1 preserves the pre-2026-04 pointer-token scoring for reproducibility of legacy release artifacts.",
+    )
     score_submissions_parser.set_defaults(func=command_score_submissions)
 
     baseline_inventory = subparsers.add_parser(
