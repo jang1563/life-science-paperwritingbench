@@ -14,10 +14,51 @@
 - public/private holdout split
 - canary string policy for sensitive evaluation artifacts
 
+## Judge Rubric Snapshot
+
+- `scripts/llm_judge_eval.py` now supports a 4-point anchored ordinal rubric (`0`-`3`) as rubric `v3`
+- rubric `v3` uses a mean-axis pass rule: `mean(axis_scores) >= 2.0`
+- `abstract_from_evidence` swaps `traceability` for `quantitative_specificity`
+- abstract judging explicitly rewards p-values, sample sizes, effect sizes, accessions, and organism names without requiring figure/table citations
+
+## Current Matrix Checkpoint
+
+- current matrix artifact: `calibration/llm_public_slice_matrix_v1/summary.md`
+- matrix summarizer: `scripts/llm_matrix_summary.py`
+- current declared matrix coverage: `3` submitters x `3` judges with `5 / 9`
+  cells complete, `3` family-bias exclusions, and `1` diagnostic missing cell
+- current official coverage in the matrix artifact: `4` completed official cells
+  across `3` submitters and `2` official judges
+- current release-readiness gap: the registry requires Gemini submitter
+  coverage (`gemini-2.5-flash`) and Gemini official judge coverage
+  (`gemini-2.5-pro`) before the hosted official matrix can pass
+- current common-judge submitter spread: `n/a` because no official judge covers
+  all compared submitters
+- current strongest same-judge spread: `23.3` percentage points under
+  `claude-sonnet-4-6`
+- current caveat: `gpt-5-mini` is diagnostic-only and has one completed
+  diagnostic cell with `7` parse failures
+
+## Current Canary Checkpoint
+
+- canary probe script: `scripts/canary_probe.py`
+- current report: `docs/canary_probe_report.md`
+- current live hosted-working-set artifact: `calibration/canary_probe_v1_live_hosted_working_set/summary.md`
+- current live result on `deepseek-chat`, `gpt-4o-mini`, `gpt-5.4-mini`,
+  `claude-haiku-4-5`, and `claude-sonnet-4-6`:
+  - exact public-canary matches: `0 / 5`
+  - exact random-control matches: `0 / 5`
+- current caveat:
+  - this is a partial `5-model` contamination check, not yet the full
+    registry-declared production probe
+  - Gemini remains missing from the current hosted-working-set run
+
 ## Known Current Limitations
 
 - no network-backed ingestion connector yet
-- no populated judge validation slice yet; current repo provides template construction and readiness auditing only
+- no human-adjudicated judge validation slice yet; the publication-validation
+  batch is populated and packet-complete, but agreement/adjudication metrics are
+  still pending
 - no reviewer-facing calibration UI yet; current calibration ops are file + CLI based
 - no scheduler launcher yet for large-scale replay
 - no full-text PDF parser yet; current extraction is metadata-driven parser-assisted drafting plus semi-structured reviewed specs

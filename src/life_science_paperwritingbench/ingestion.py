@@ -79,9 +79,9 @@ def _parse_bool(value: Any) -> Optional[bool]:
     if isinstance(value, bool):
         return value
     lowered = str(value).strip().lower()
-    if lowered in {"true", "1", "yes", "y"}:
+    if lowered in {"true", "1", "yes", "y", "on"}:
         return True
-    if lowered in {"false", "0", "no", "n"}:
+    if lowered in {"false", "0", "no", "n", "off"}:
         return False
     return None
 
@@ -113,7 +113,10 @@ def _parse_enum(enum_cls: Any, value: Any) -> Optional[Any]:
 def _parse_enum_list(enum_cls: Any, value: Any) -> Tuple[Any, ...]:
     if value is None or value == "":
         return ()
-    values = value if isinstance(value, (list, tuple)) else [value]
+    if isinstance(value, str):
+        values = [item.strip() for item in re.split(r"[,;|]", value) if item.strip()]
+    else:
+        values = value if isinstance(value, (list, tuple)) else [value]
     parsed = []
     for item in values:
         parsed_item = _parse_enum(enum_cls, item)
@@ -318,9 +321,13 @@ def ingest_metadata_records(
                 lineage=lineage,
                 crossmark_updates=crossmark_updates,
                 integrity_flags=integrity_flags,
-                explicit_pre2018_exception=bool(raw.get("explicit_pre2018_exception", False)),
-                controlled_access_human_data=bool(raw.get("controlled_access_human_data", False)),
-                small_cell_risk=bool(raw.get("small_cell_risk", False)),
+                explicit_pre2018_exception=(
+                    _parse_bool(raw.get("explicit_pre2018_exception")) or False
+                ),
+                controlled_access_human_data=(
+                    _parse_bool(raw.get("controlled_access_human_data")) or False
+                ),
+                small_cell_risk=_parse_bool(raw.get("small_cell_risk")) or False,
                 metadata=metadata,
             )
         )

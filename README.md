@@ -1,6 +1,14 @@
 # Life-Science PaperWritingBench
 
-This repository is building the governance core for a life-science paper-writing benchmark. The current milestone is not model scoring yet. It is the benchmark-control layer that decides:
+This repository is building a life-science paper-writing benchmark with two
+coupled layers:
+
+- benchmark governance: which papers and evidence units are safe and strong
+  enough to curate and release
+- benchmark evaluation: how LLM-generated Methods, Results, and Abstract
+  sections are scored, judged, audited, and stress-tested for contamination
+
+The governance layer is still the foundation of the project. It decides:
 
 - whether a source paper is strong enough to curate,
 - whether its evidence units can be extracted,
@@ -8,13 +16,39 @@ This repository is building the governance core for a life-science paper-writing
 
 ## Current Focus
 
-The repository now implements a `v5 qualification core` with three explicit stages:
+The repository now implements a qualification-and-evaluation stack with three
+governance stages and an early model-evaluation lane.
+
+Governance stages:
 
 1. `paper review`
 2. `evidence-unit extraction + truth-manifest freeze`
 3. `unit release-tier assignment`
 
 This separation is intentional. In an AI-for-Science benchmark, paper-level eligibility, unit-level eligibility, and public release eligibility should not collapse into one boolean.
+
+Current evaluation lane:
+
+1. deterministic submission scoring
+2. API-backed LLM baseline generation
+3. rubric-based LLM judging
+4. cross-model matrix summaries
+5. canary-style contamination probes
+
+## Current Evaluation Status
+
+The current repo state is best thought of as a `v0.1 research preview`.
+
+Current evaluation anchors:
+
+- best judged agentic artifact:
+  `calibration/llm_agentic_public_slice_v1_rerun5_judged_v3/`
+- best deterministic / citation-specificity artifact:
+  `calibration/llm_agentic_public_slice_v1_rerun2/`
+- current partial cross-model matrix:
+  `calibration/llm_public_slice_matrix_v1/summary.md`
+- current canary probe report:
+  `docs/canary_probe_report.md`
 
 ## What Exists
 
@@ -56,6 +90,17 @@ This separation is intentional. In an AI-for-Science benchmark, paper-level elig
 - truth-manifest build / freeze / verify CLI flow
 - TaskBundle / TruthManifestBundle construction helpers
 - deterministic lean-baseline replay and submission scoring for released TaskBundles
+- deterministic v2 submission scoring and deterministic-vs-judge alignment audits
+- API-backed single-pass and agentic `writer -> critic -> reviser` evaluation scripts
+- shared frontier-model registry and backend runtime for submitters, judges, canary probes, and matrix summaries
+- shared single-pass writing prompt builder for external runner reuse
+- rubric `v3` LLM judging with a 4-point anchored ordinal scale
+- family-aware abstract judging that swaps `traceability` for `quantitative_specificity`
+- partial cross-model matrix aggregation and reporting
+- completion-style canary probe artifacts with redacted outputs only
+- Inspect-compatible task adapter plus artifact-backed submission / judge replay helpers
+- publication-validation slice builders and readiness-gate summaries
+- publication-validation study-class stratification auditing with per-family targets and deficits
 - program-progress summaries and maintenance-log scaffolding
 - local and Cayuga execution-profile scaffolding
 - knowledge-base directory initialization helpers
@@ -99,12 +144,151 @@ Auto-only review is intentionally stricter and lower-trust. `build-auto-paper-qu
 - preprints: knowledge-base or shadow use only
 - open peer review: audit evidence only
 
+## Related Work
+
+- [LAB-Bench](https://arxiv.org/abs/2407.10362): a biology-research benchmark
+  with public/private split discipline and a published canary string. This repo
+  borrows more from its contamination-governance pattern than from its task mix.
+- [PaperBench](https://openai.com/index/paperbench/): a frontier benchmark for
+  research replication with structured rubrics and separate judge validation.
+  This repo borrows the judge-audit mindset and rubric decomposition, but our
+  task is evidence-grounded biomedical section writing rather than code
+  replication.
+- [DeepScholar-Bench](https://sky.cs.berkeley.edu/project/deepscholar-bench/):
+  a live benchmark for generating related-work sections from current literature.
+  It is the closest benchmark in spirit, but narrower in task scope than our
+  Methods / Results / Abstract writing focus.
+- [MedHELM](https://www.nature.com/articles/s41591-025-04151-2): a clinical
+  evaluation framework that demonstrates why biomedical benchmark claims need
+  human-agreement statistics, not only LLM-judge scores.
+- [WritingBench](https://arxiv.org/abs/2503.05244): a broad generative-writing
+  benchmark. It is useful as a writing-evaluation reference, but it is not
+  biomedical and not evidence-conditioned.
+
+## Evaluation Methodology
+
+- Released writing families are `methods_to_text`, `results_to_text`, and
+  `abstract_from_evidence`.
+- Deterministic scoring currently uses the `v2` layer for structure,
+  traceability, and citation-specificity style checks before any LLM judge is
+  considered.
+- The current judge configuration is rubric `v3`:
+  - 4-point anchored ordinal scores (`0`-`3`)
+  - pass rule `mean(axis_scores) >= 2.0`
+  - family-aware abstract evaluation where `quantitative_specificity` replaces
+    `traceability`
+- The current agentic baseline uses a `writer -> critic -> reviser` loop plus a
+  non-regressive selector, so a revision is only kept when it does not damage
+  deterministic quality.
+- The intended jury-style evaluation setup is multi-judge rather than
+  single-judge. Current live artifacts already include Claude Sonnet 4.6,
+  GPT-5.4 mini, and GPT-5 mini cells, and the planned full matrix applies
+  family-bias exclusion rather than allowing a same-family judge to score its
+  own submitter family.
+- Contamination controls include:
+  - deterministic `public/private` holdout assignment
+  - per-unit canary strings in the release index
+  - completion-style canary probes that check exact reproduction without
+    writing raw canaries or raw model outputs back into repo artifacts
+
+## Current Limitations
+
+- This is still a `v0.1 research preview`, not a human-validated benchmark
+  release.
+- The repo now has a populated, packet-complete publication-validation batch
+  from real benchmark bundles, but it is still awaiting human review and
+  adjudication; `kappa`, `ICC`, and `alpha` are still pending.
+- The current cross-model matrix and canary probes are meaningful but
+  incomplete; Anthropic coverage is present in current artifacts, while Gemini
+  submitter/judge coverage is still missing from the release-facing gates.
+- `leaderboard_gate_passed` remains `false`, which is intentional.
+- The project is still effectively solo-authored at this stage; co-authored
+  human validation is still the threshold between preview status and a
+  defensible benchmark release.
+
 ## Quick Start
 
 Run tests:
 
 ```bash
 PYTHONPATH=src python3 -m unittest discover -s tests -v
+```
+
+Frontier registry helpers:
+
+```bash
+PYTHONPATH=src python3 - <<'PY'
+from life_science_paperwritingbench import load_frontier_registry, default_frontier_registry_path
+
+registry = load_frontier_registry(default_frontier_registry_path())
+print(sorted(registry))
+PY
+```
+
+Build a publication-validation slice and summarize the readiness gate:
+
+```bash
+PYTHONPATH=src python3 -m life_science_paperwritingbench.cli build-publication-validation-slice \
+  --task-bundles knowledge_base/released/collection_v1_2018_present/auto_review_shadow_v10/shadow_candidate_task_bundles_public.jsonl \
+  --output /tmp/publication_validation.jsonl \
+  --summary-output /tmp/publication_validation_summary.json
+
+PYTHONPATH=src python3 -m life_science_paperwritingbench.cli summarize-publication-readiness \
+  --matrix-summary calibration/llm_public_slice_matrix_v1/summary.json \
+  --canary-summary calibration/canary_probe_v1_live_hosted_working_set/summary.json \
+  --validation-summary /tmp/publication_validation_summary.json \
+  --agreement-metrics calibration/judge_v1/judge_agreement.json \
+  --output /tmp/publication_readiness.json
+```
+
+For human annotation work, prefer the batch helper so the selected bundles,
+judge units, reviewer forms, adjudication shells, reviewer-facing markdown
+packets, and annotation-hold QA summaries all land in one directory:
+
+```bash
+PYTHONPATH=src python3 -m life_science_paperwritingbench.cli build-publication-validation-batch \
+  --task-bundles knowledge_base/released/collection_v1_2018_present/auto_review_shadow_v10/shadow_candidate_task_bundles_public.jsonl \
+  --output-dir calibration/publication_validation_v1 \
+  --adjudicator adjudicator_1 \
+  --reviewers reviewer_a reviewer_b
+```
+
+This batch now also writes:
+
+- `review_packets/packet_manifest.jsonl`
+- `review_packets/reviewer_assignments/*.jsonl`
+- `review_packets/reviewer_indexes/*.md`
+- `review_packets/packets/<reviewer>/*.md`
+- `annotation_hold_audit.json`
+- `annotation_hold_audit.md`
+
+Rebuild packet artifacts or rerun the structural audit independently:
+
+```bash
+PYTHONPATH=src python3 -m life_science_paperwritingbench.cli build-publication-review-packets \
+  --batch-dir calibration/publication_validation_v1
+
+PYTHONPATH=src python3 -m life_science_paperwritingbench.cli audit-publication-annotation-hold \
+  --batch-dir calibration/publication_validation_v1 \
+  --output calibration/publication_validation_v1/annotation_hold_audit.json \
+  --markdown-output calibration/publication_validation_v1/annotation_hold_audit.md
+```
+
+`annotation_hold_audit.json` is intentionally separate from
+`publication_readiness_snapshot.json`: the hold audit answers whether the
+frozen batch is structurally ready and merely waiting on human review, while
+publication readiness stays red until agreement, matrix, and contamination
+gates are satisfied.
+
+Inspect adapter usage:
+
+```bash
+PYTHONPATH=src python3 - <<'PY'
+from inspect_evals.life_science_paperwritingbench import build_inspect_records
+
+records = build_inspect_records(limit=3)
+print([record["id"] for record in records])
+PY
 ```
 
 Validate the pilot calibration scaffold:
@@ -651,6 +835,12 @@ PYTHONPATH=src python3 -m life_science_paperwritingbench.cli summarize-judge-pro
   --adjudications calibration/judge_v1/judge_adjudications.jsonl \
   --reviewers reviewer_a reviewer_b \
   --output calibration/judge_v1/judge_progress.json
+
+PYTHONPATH=src python3 -m life_science_paperwritingbench.cli summarize-judge-agreement \
+  --judge-units calibration/judge_v1/judge_units.jsonl \
+  --forms calibration/judge_v1/judge_review_forms.jsonl \
+  --adjudications calibration/judge_v1/judge_adjudications.jsonl \
+  --output calibration/judge_v1/judge_agreement.json
 ```
 
 `build-judge-batch` now also writes:
@@ -658,6 +848,11 @@ PYTHONPATH=src python3 -m life_science_paperwritingbench.cli summarize-judge-pro
 - `selected_task_bundles.jsonl`
 - `task_bundle_inventory.json`
 - `judge_candidate_selection.json`
+
+`summarize-judge-agreement` writes publication-readiness-compatible
+top-level metrics including `pre_adjudication_kappa`,
+`post_adjudication_kappa`, and `jury_vs_adjudicator_icc`, plus ordinal
+alpha and ICC diagnostics.
 
 Inventory task bundles and select a deterministic candidate set for judge curation:
 

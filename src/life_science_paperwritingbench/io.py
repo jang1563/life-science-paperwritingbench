@@ -43,10 +43,12 @@ from .models import (
     IngestionRecord,
     IngestionVerificationReport,
     JudgeCandidateSelectionReport,
+    JudgeAgreementReport,
     JudgeAdjudicationQueueEntry,
     JudgeAdjudicationRecord,
     JudgeReviewForm,
     JudgeSliceAuditReport,
+    LLMJudgeAlignmentReport,
     JudgeValidationUnit,
     LineageInfo,
     MaintenanceLogEntry,
@@ -79,6 +81,9 @@ from .models import (
     ParserAssistedExtractionReport,
     ProgramProgressReport,
     PmcFullTextFetchRecord,
+    PublicationAnnotationHoldAuditReport,
+    PublicationAnnotationPacket,
+    PublicationAnnotationPacketSummary,
     QuestionRecord,
     ReleaseArtifactChecksum,
     ReleaseProvenanceManifest,
@@ -169,6 +174,20 @@ def _enum_to_optional_outcome_mapping(enum_cls: Any, values: Mapping[str, Any]) 
     }
 
 
+def _bool(value: Any, *, default: bool = False) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"1", "true", "yes", "y", "on"}:
+            return True
+        if normalized in {"0", "false", "no", "n", "off", ""}:
+            return False
+    return bool(value)
+
+
 def _lineage_from_dict(data: Mapping[str, Any]) -> LineageInfo:
     return LineageInfo(
         source_family=data.get("source_family"),
@@ -176,6 +195,10 @@ def _lineage_from_dict(data: Mapping[str, Any]) -> LineageInfo:
         dataset_lineages=tuple(str(item) for item in data.get("dataset_lineages", [])),
         lab_lineages=tuple(str(item) for item in data.get("lab_lineages", [])),
     )
+
+
+def lineage_info_from_dict(data: Dict[str, Any]) -> LineageInfo:
+    return _lineage_from_dict(data)
 
 
 def _serialize_record(record: Any) -> Dict[str, Any]:
@@ -217,22 +240,22 @@ def source_paper_from_dict(data: Dict[str, Any]) -> SourcePaper:
         title=str(data["title"]),
         publication_year=int(data["publication_year"]),
         publication_status=_enum(PublicationStatus, data["publication_status"]),
-        peer_reviewed=bool(data["peer_reviewed"]),
+        peer_reviewed=_bool(data["peer_reviewed"]),
         study_class=_enum(StudyClass, data["study_class"]),
         claim_mode=_enum(ClaimMode, data["claim_mode"]),
         modality_overlays=_enum_tuple(ModalityOverlay, data.get("modality_overlays", [])),
         lineage=_lineage_from_dict(data.get("lineage", {})),
         crossmark_updates=_enum_tuple(CrossmarkUpdateType, data.get("crossmark_updates", [])),
         integrity_flags=_enum_tuple(IntegrityFlag, data.get("integrity_flags", [])),
-        major_correction_affects_interpretation=bool(
+        major_correction_affects_interpretation=_bool(
             data.get("major_correction_affects_interpretation", False)
         ),
-        partial_retraction_invalidates_core_claims=bool(
+        partial_retraction_invalidates_core_claims=_bool(
             data.get("partial_retraction_invalidates_core_claims", False)
         ),
-        explicit_pre2018_exception=bool(data.get("explicit_pre2018_exception", False)),
-        controlled_access_human_data=bool(data.get("controlled_access_human_data", False)),
-        small_cell_risk=bool(data.get("small_cell_risk", False)),
+        explicit_pre2018_exception=_bool(data.get("explicit_pre2018_exception", False)),
+        controlled_access_human_data=_bool(data.get("controlled_access_human_data", False)),
+        small_cell_risk=_bool(data.get("small_cell_risk", False)),
         metadata={str(key): value for key, value in data.get("metadata", {}).items()},
     )
 
@@ -248,7 +271,7 @@ def ingestion_record_from_dict(data: Dict[str, Any]) -> IngestionRecord:
         pmcid=data.get("pmcid"),
         normalized_title=str(data.get("normalized_title", "")),
         publication_year=int(data["publication_year"]) if data.get("publication_year") is not None else None,
-        releaseability_precheck_passed=bool(data.get("releaseability_precheck_passed", False)),
+        releaseability_precheck_passed=_bool(data.get("releaseability_precheck_passed", False)),
         releaseability_flags=tuple(str(item) for item in data.get("releaseability_flags", [])),
         metadata_fingerprint_sha256=str(data.get("metadata_fingerprint_sha256", "")),
     )
@@ -265,16 +288,16 @@ def metadata_source_record_from_dict(data: Dict[str, Any]) -> MetadataSourceReco
         pmid=data.get("pmid"),
         pmcid=data.get("pmcid"),
         publication_status=_enum(PublicationStatus, data.get("publication_status", PublicationStatus.UNKNOWN)),
-        peer_reviewed=bool(data["peer_reviewed"]) if data.get("peer_reviewed") is not None else None,
+        peer_reviewed=_bool(data["peer_reviewed"]) if data.get("peer_reviewed") is not None else None,
         study_class=_enum(StudyClass, data["study_class"]) if data.get("study_class") else None,
         claim_mode=_enum(ClaimMode, data["claim_mode"]) if data.get("claim_mode") else None,
         modality_overlays=_enum_tuple(ModalityOverlay, data.get("modality_overlays", [])),
         lineage=_lineage_from_dict(data.get("lineage", {})),
         crossmark_updates=_enum_tuple(CrossmarkUpdateType, data.get("crossmark_updates", [])),
         integrity_flags=_enum_tuple(IntegrityFlag, data.get("integrity_flags", [])),
-        explicit_pre2018_exception=bool(data.get("explicit_pre2018_exception", False)),
-        controlled_access_human_data=bool(data.get("controlled_access_human_data", False)),
-        small_cell_risk=bool(data.get("small_cell_risk", False)),
+        explicit_pre2018_exception=_bool(data.get("explicit_pre2018_exception", False)),
+        controlled_access_human_data=_bool(data.get("controlled_access_human_data", False)),
+        small_cell_risk=_bool(data.get("small_cell_risk", False)),
         metadata={str(key): value for key, value in data.get("metadata", {}).items()},
     )
 
@@ -307,7 +330,7 @@ def api_fetch_record_from_dict(data: Dict[str, Any]) -> ApiFetchRecord:
         journal=str(data.get("journal", "")),
         abstract=str(data.get("abstract", "")),
         publication_status=_enum(PublicationStatus, data.get("publication_status", PublicationStatus.UNKNOWN)),
-        peer_reviewed=bool(data["peer_reviewed"]) if data.get("peer_reviewed") is not None else None,
+        peer_reviewed=_bool(data["peer_reviewed"]) if data.get("peer_reviewed") is not None else None,
         raw_payload_path=str(data.get("raw_payload_path", "")),
         metadata={str(key): value for key, value in data.get("metadata", {}).items()},
     )
@@ -332,11 +355,11 @@ def collection_candidate_record_from_dict(data: Dict[str, Any]) -> CollectionCan
         journal=str(data.get("journal", "")),
         abstract=str(data.get("abstract", "")),
         publication_status=_enum(PublicationStatus, data.get("publication_status", PublicationStatus.UNKNOWN)),
-        peer_reviewed=bool(data["peer_reviewed"]) if data.get("peer_reviewed") is not None else None,
-        oa_fulltext_available=bool(data.get("oa_fulltext_available", False)),
+        peer_reviewed=_bool(data["peer_reviewed"]) if data.get("peer_reviewed") is not None else None,
+        oa_fulltext_available=_bool(data.get("oa_fulltext_available", False)),
         license=data.get("license"),
         crossmark_updates=_enum_tuple(CrossmarkUpdateType, data.get("crossmark_updates", [])),
-        open_review_signal=bool(data.get("open_review_signal", False)),
+        open_review_signal=_bool(data.get("open_review_signal", False)),
         benchmark_ready_signal_count=int(data.get("benchmark_ready_signal_count", 0)),
         rank_tuple=tuple(data.get("rank_tuple", [])),
         source_names=tuple(str(item) for item in data.get("source_names", [])),
@@ -412,7 +435,7 @@ def ingestion_audit_report_from_dict(data: Dict[str, Any]) -> IngestionAuditRepo
 
 def ingestion_verification_report_from_dict(data: Dict[str, Any]) -> IngestionVerificationReport:
     return IngestionVerificationReport(
-        ok=bool(data.get("ok", False)),
+        ok=_bool(data.get("ok", False)),
         normalized_papers=int(data.get("normalized_papers", 0)),
         ingestion_records=int(data.get("ingestion_records", 0)),
         duplicate_paper_ids=tuple(str(item) for item in data.get("duplicate_paper_ids", [])),
@@ -472,8 +495,8 @@ def pmc_full_text_fetch_record_from_dict(data: Dict[str, Any]) -> PmcFullTextFet
         pmcid=data.get("pmcid"),
         fetch_url=str(data.get("fetch_url", "")),
         raw_payload_path=str(data.get("raw_payload_path", "")),
-        fetch_ok=bool(data.get("fetch_ok", False)),
-        used_cache=bool(data.get("used_cache", False)),
+        fetch_ok=_bool(data.get("fetch_ok", False)),
+        used_cache=_bool(data.get("used_cache", False)),
         content_sha256=str(data.get("content_sha256", "")),
         error=data.get("error"),
     )
@@ -595,7 +618,7 @@ def auto_aggregated_paper_review_record_from_dict(data: Dict[str, Any]) -> AutoA
         writing_review=writing_review_from_dict(dict(data.get("writing_review", {}))),
         review_origin=str(data.get("review_origin", "auto_panel")),
         confidence=_enum(AutoReviewConfidence, data.get("confidence", AutoReviewConfidence.LOW)),
-        skipped_writing_review=bool(data.get("skipped_writing_review", False)),
+        skipped_writing_review=_bool(data.get("skipped_writing_review", False)),
         auto_release_cap_reason=data.get("auto_release_cap_reason"),
         notes=tuple(str(item) for item in data.get("notes", [])),
     )
@@ -613,14 +636,14 @@ def packaging_review_from_dict(data: Dict[str, Any]) -> PackagingReview:
         ),
         artifact_inventory_id=data.get("artifact_inventory_id"),
         restricted_artifact_types=tuple(str(item) for item in data.get("restricted_artifact_types", [])),
-        contains_private_row_level_data=bool(data.get("contains_private_row_level_data", False)),
-        contains_recomputed_sensitive_aggregates=bool(
+        contains_private_row_level_data=_bool(data.get("contains_private_row_level_data", False)),
+        contains_recomputed_sensitive_aggregates=_bool(
             data.get("contains_recomputed_sensitive_aggregates", False)
         ),
-        redistributes_restricted_supplements=bool(
+        redistributes_restricted_supplements=_bool(
             data.get("redistributes_restricted_supplements", False)
         ),
-        controlled_access_rule_satisfied=bool(data.get("controlled_access_rule_satisfied", True)),
+        controlled_access_rule_satisfied=_bool(data.get("controlled_access_rule_satisfied", True)),
         notes=tuple(str(item) for item in data.get("notes", [])),
     )
 
@@ -638,10 +661,10 @@ def evidence_unit_from_dict(data: Dict[str, Any]) -> EvidenceUnit:
         paper_id=str(data["paper_id"]),
         unit_type=_enum(EvidenceUnitType, data["unit_type"]),
         evidence_pointers=tuple(str(item) for item in data.get("evidence_pointers", [])),
-        locally_supported=bool(data["locally_supported"]),
-        internally_coherent=bool(data["internally_coherent"]),
-        depends_on_excluded_narrative=bool(data["depends_on_excluded_narrative"]),
-        releasable=bool(data["releasable"]),
+        locally_supported=_bool(data["locally_supported"]),
+        internally_coherent=_bool(data["internally_coherent"]),
+        depends_on_excluded_narrative=_bool(data["depends_on_excluded_narrative"]),
+        releasable=_bool(data["releasable"]),
         description=str(data.get("description", "")),
         modality_overlays=_enum_tuple(ModalityOverlay, data.get("modality_overlays", [])),
     )
@@ -653,8 +676,8 @@ def assertion_record_from_dict(data: Dict[str, Any]) -> AssertionRecord:
         paper_id=str(data["paper_id"]),
         text=str(data["text"]),
         claim_mode=_enum(ClaimMode, data["claim_mode"]) if data.get("claim_mode") else None,
-        supported=bool(data.get("supported", True)),
-        excluded=bool(data.get("excluded", False)),
+        supported=_bool(data.get("supported", True)),
+        excluded=_bool(data.get("excluded", False)),
         evidence_record_ids=tuple(str(item) for item in data.get("evidence_record_ids", [])),
     )
 
@@ -731,7 +754,7 @@ def source_quality_record_from_dict(data: Dict[str, Any]) -> SourceQualityRecord
         pointer=data.get("pointer"),
         evidence_unit_id=data.get("evidence_unit_id"),
         supporting_observation_ids=tuple(str(item) for item in data.get("supporting_observation_ids", [])),
-        resolved=bool(data.get("resolved", False)),
+        resolved=_bool(data.get("resolved", False)),
     )
 
 
@@ -807,7 +830,7 @@ def truth_manifest_from_dict(data: Dict[str, Any]) -> TruthManifest:
         applied_standards=_enum_tuple(StandardId, data.get("applied_standards", [])),
         study_class=_enum(StudyClass, data["study_class"]) if data.get("study_class") else None,
         modality_overlays=_enum_tuple(ModalityOverlay, data.get("modality_overlays", [])),
-        frozen=bool(data.get("frozen", False)),
+        frozen=_bool(data.get("frozen", False)),
         frozen_at=data.get("frozen_at"),
         version=str(data.get("version", "v5")),
     )
@@ -822,7 +845,7 @@ def truth_manifest_bundle_from_dict(data: Dict[str, Any]) -> TruthManifestBundle
         assertion_ids=tuple(str(item) for item in data.get("assertion_ids", [])),
         evidence_ids=tuple(str(item) for item in data.get("evidence_ids", [])),
         provenance_manifest_id=data.get("provenance_manifest_id"),
-        release_ready=bool(data.get("release_ready", False)),
+        release_ready=_bool(data.get("release_ready", False)),
         frozen_at=data.get("frozen_at"),
     )
 
@@ -831,8 +854,8 @@ def truth_manifest_verification_report_from_dict(data: Dict[str, Any]) -> TruthM
     return TruthManifestVerificationReport(
         manifest_id=str(data["manifest_id"]),
         paper_id=str(data["paper_id"]),
-        ok=bool(data.get("ok", False)),
-        frozen=bool(data.get("frozen", False)),
+        ok=_bool(data.get("ok", False)),
+        frozen=_bool(data.get("frozen", False)),
         missing_assertion_ids=tuple(str(item) for item in data.get("missing_assertion_ids", [])),
         missing_evidence_ids=tuple(str(item) for item in data.get("missing_evidence_ids", [])),
         missing_extraction_ids=tuple(str(item) for item in data.get("missing_extraction_ids", [])),
@@ -846,10 +869,10 @@ def paper_qualification_decision_from_dict(data: Dict[str, Any]) -> PaperQualifi
         scientific=_enum(PaperScientificQualification, data["scientific"]),
         packaging=_enum(PaperPackagingQualification, data["packaging"]),
         candidate_tier=_enum(CandidateTier, data["candidate_tier"]),
-        eligible_for_unit_extraction=bool(data["eligible_for_unit_extraction"]),
+        eligible_for_unit_extraction=_bool(data["eligible_for_unit_extraction"]),
         required_standards=_enum_tuple(StandardId, data.get("required_standards", [])),
         writing=_enum(PaperWritingQualification, data.get("writing", PaperWritingQualification.W2)),
-        public_writing_eligible=bool(data.get("public_writing_eligible", False)),
+        public_writing_eligible=_bool(data.get("public_writing_eligible", False)),
         missing_standards=_enum_tuple(StandardId, data.get("missing_standards", [])),
         integrity_disposition=_enum(IntegrityDisposition, data.get("integrity_disposition", IntegrityDisposition.CLEAR)),
         reasons=tuple(str(item) for item in data.get("reasons", [])),
@@ -870,7 +893,7 @@ def auto_qualification_record_from_dict(data: Dict[str, Any]) -> AutoQualificati
         review_origin=str(data.get("review_origin", "auto_panel")),
         confidence=_enum(AutoReviewConfidence, data.get("confidence", AutoReviewConfidence.LOW)),
         auto_release_cap_reason=data.get("auto_release_cap_reason"),
-        judge_validation_ready=bool(data.get("judge_validation_ready", False)),
+        judge_validation_ready=_bool(data.get("judge_validation_ready", False)),
         notes=tuple(str(item) for item in data.get("notes", [])),
     )
 
@@ -932,7 +955,7 @@ def auto_review_recovery_batch_entry_from_dict(data: Dict[str, Any]) -> AutoRevi
         bundle_completeness=_enum(AutoReviewBundleCompleteness, data["bundle_completeness"]),
         confidence=_enum(AutoReviewConfidence, data["confidence"]),
         auto_release_cap_reason=data.get("auto_release_cap_reason"),
-        selected=bool(data.get("selected", False)),
+        selected=_bool(data.get("selected", False)),
         selection_rank=int(data["selection_rank"]) if data.get("selection_rank") is not None else None,
         selection_reason=str(data["selection_reason"]) if data.get("selection_reason") else None,
         notes=tuple(str(item) for item in data.get("notes", [])),
@@ -997,7 +1020,7 @@ def paper_review_batch_entry_from_dict(data: Dict[str, Any]) -> PaperReviewBatch
         title=str(data["title"]),
         publication_year=int(data["publication_year"]) if data.get("publication_year") is not None else None,
         publication_status=_enum(PublicationStatus, data["publication_status"]),
-        peer_reviewed=bool(data["peer_reviewed"]) if data.get("peer_reviewed") is not None else None,
+        peer_reviewed=_bool(data["peer_reviewed"]) if data.get("peer_reviewed") is not None else None,
         candidate_study_class=_enum(StudyClass, data["candidate_study_class"])
         if data.get("candidate_study_class")
         else None,
@@ -1028,7 +1051,7 @@ def paper_review_packet_from_dict(data: Dict[str, Any]) -> PaperReviewPacket:
         title=str(data["title"]),
         publication_year=int(data["publication_year"]) if data.get("publication_year") is not None else None,
         publication_status=_enum(PublicationStatus, data["publication_status"]),
-        peer_reviewed=bool(data["peer_reviewed"]) if data.get("peer_reviewed") is not None else None,
+        peer_reviewed=_bool(data["peer_reviewed"]) if data.get("peer_reviewed") is not None else None,
         candidate_study_class=_enum(StudyClass, data["candidate_study_class"])
         if data.get("candidate_study_class")
         else None,
@@ -1050,9 +1073,9 @@ def paper_review_packet_from_dict(data: Dict[str, Any]) -> PaperReviewPacket:
         pmcid=data.get("pmcid"),
         journal=str(data.get("journal", "")),
         abstract=str(data.get("abstract", "")),
-        oa_fulltext_available=bool(data.get("oa_fulltext_available", False)),
+        oa_fulltext_available=_bool(data.get("oa_fulltext_available", False)),
         license=data.get("license"),
-        open_review_signal=bool(data.get("open_review_signal", False)),
+        open_review_signal=_bool(data.get("open_review_signal", False)),
         benchmark_ready_signal_count=int(data.get("benchmark_ready_signal_count", 0)),
         packaging_domain_outcomes=_enum_to_outcome_mapping(
             PackagingDomain,
@@ -1159,7 +1182,7 @@ def paper_scientific_review_form_from_dict(data: Dict[str, Any]) -> PaperScienti
             StandardId,
             data.get("standard_outcomes", {}),
         ),
-        completed=bool(data.get("completed", False)),
+        completed=_bool(data.get("completed", False)),
         confidence=int(data["confidence"]) if data.get("confidence") is not None else None,
         notes=tuple(str(item) for item in data.get("notes", [])),
     )
@@ -1178,7 +1201,7 @@ def paper_writing_review_form_from_dict(data: Dict[str, Any]) -> PaperWritingRev
             WritingSupportingDomain,
             data.get("supporting_domains", {}),
         ),
-        completed=bool(data.get("completed", False)),
+        completed=_bool(data.get("completed", False)),
         confidence=int(data["confidence"]) if data.get("confidence") is not None else None,
         notes=tuple(str(item) for item in data.get("notes", [])),
     )
@@ -1229,7 +1252,7 @@ def paper_review_adjudication_record_from_dict(data: Dict[str, Any]) -> PaperRev
             WritingSupportingDomain,
             data.get("writing_supporting_domains", {}),
         ),
-        finalized=bool(data.get("finalized", False)),
+        finalized=_bool(data.get("finalized", False)),
         rationale=tuple(str(item) for item in data.get("rationale", [])),
         source_reviewer_ids=tuple(str(item) for item in data.get("source_reviewer_ids", [])),
     )
@@ -1245,7 +1268,7 @@ def paper_review_queue_entry_from_dict(data: Dict[str, Any]) -> PaperReviewQueue
         pending_scientific_reviewer_ids=tuple(str(item) for item in data.get("pending_scientific_reviewer_ids", [])),
         pending_writing_reviewer_ids=tuple(str(item) for item in data.get("pending_writing_reviewer_ids", [])),
         disagreement_fields=tuple(str(item) for item in data.get("disagreement_fields", [])),
-        has_final_adjudication=bool(data.get("has_final_adjudication", False)),
+        has_final_adjudication=_bool(data.get("has_final_adjudication", False)),
         notes=tuple(str(item) for item in data.get("notes", [])),
     )
 
@@ -1277,7 +1300,7 @@ def adjudicated_paper_review_record_from_dict(data: Dict[str, Any]) -> Adjudicat
         else None,
         final_modality_overlays=_enum_tuple(ModalityOverlay, data.get("final_modality_overlays", [])),
         adjudicator_id=str(data["adjudicator_id"]) if data.get("adjudicator_id") else None,
-        finalized=bool(data.get("finalized", False)),
+        finalized=_bool(data.get("finalized", False)),
         rationale=tuple(str(item) for item in data.get("rationale", [])),
     )
 
@@ -1286,7 +1309,7 @@ def benchmark_unit_decision_record_from_dict(data: Dict[str, Any]) -> BenchmarkU
     return BenchmarkUnitDecisionRecord(
         benchmark_unit_id=str(data["benchmark_unit_id"]),
         release_tier=_enum(ReleaseTier, data["release_tier"]),
-        gold_eligible=bool(data["gold_eligible"]),
+        gold_eligible=_bool(data["gold_eligible"]),
         reasons=tuple(str(item) for item in data.get("reasons", [])),
     )
 
@@ -1313,7 +1336,7 @@ def task_bundle_from_dict(data: Dict[str, Any]) -> TaskBundle:
 def unit_qualification_decision_from_dict(data: Dict[str, Any]) -> UnitQualificationDecision:
     return UnitQualificationDecision(
         release_tier=_enum(ReleaseTier, data["release_tier"]),
-        gold_eligible=bool(data["gold_eligible"]),
+        gold_eligible=_bool(data["gold_eligible"]),
         reasons=tuple(str(item) for item in data.get("reasons", [])),
     )
 
@@ -1379,12 +1402,12 @@ def bundle_verification_report_from_dict(data: Dict[str, Any]) -> BundleVerifica
     return BundleVerificationReport(
         bundle_dir=str(data["bundle_dir"]),
         release_bundle_id=data.get("release_bundle_id"),
-        ok=bool(data.get("ok", False)),
+        ok=_bool(data.get("ok", False)),
         verified_artifacts=tuple(str(item) for item in data.get("verified_artifacts", [])),
         missing_artifacts=tuple(str(item) for item in data.get("missing_artifacts", [])),
         checksum_mismatches=tuple(str(item) for item in data.get("checksum_mismatches", [])),
-        summary_consistent=bool(data.get("summary_consistent", False)),
-        provenance_consistent=bool(data.get("provenance_consistent", False)),
+        summary_consistent=_bool(data.get("summary_consistent", False)),
+        provenance_consistent=_bool(data.get("provenance_consistent", False)),
         notes=tuple(str(item) for item in data.get("notes", [])),
     )
 
@@ -1395,7 +1418,7 @@ def baseline_run_spec_from_dict(data: Dict[str, Any]) -> BaselineRunSpec:
         baseline_kind=_enum(BaselineKind, data["baseline_kind"]),
         task_bundle_ids=tuple(str(item) for item in data.get("task_bundle_ids", [])),
         config_fingerprint_sha256=str(data.get("config_fingerprint_sha256", "")),
-        replay_verified=bool(data.get("replay_verified", False)),
+        replay_verified=_bool(data.get("replay_verified", False)),
         notes=tuple(str(item) for item in data.get("notes", [])),
     )
 
@@ -1417,7 +1440,7 @@ def evaluation_record_from_dict(data: Dict[str, Any]) -> EvaluationRecord:
         submission_id=str(data["submission_id"]),
         task_bundle_id=str(data["task_bundle_id"]),
         evaluation_layers=_enum_tuple(EvaluationLayer, data.get("evaluation_layers", [])),
-        deterministic_checks_passed=bool(data.get("deterministic_checks_passed", False)),
+        deterministic_checks_passed=_bool(data.get("deterministic_checks_passed", False)),
         scores={str(key): float(value) for key, value in data.get("scores", {}).items()},
         notes=tuple(str(item) for item in data.get("notes", [])),
     )
@@ -1427,9 +1450,9 @@ def judge_validation_unit_from_dict(data: Dict[str, Any]) -> JudgeValidationUnit
     return JudgeValidationUnit(
         validation_unit_id=str(data["validation_unit_id"]),
         task_bundle_id=str(data["task_bundle_id"]),
-        human_adjudicated=bool(data["human_adjudicated"]),
+        human_adjudicated=_bool(data["human_adjudicated"]),
         rubric_labels=dict(data.get("rubric_labels", {})),
-        frozen=bool(data.get("frozen", False)),
+        frozen=_bool(data.get("frozen", False)),
         rubric_version=str(data.get("rubric_version", "judge-rubric-v1")),
         adjudicator_id=data.get("adjudicator_id"),
         notes=tuple(str(item) for item in data.get("notes", [])),
@@ -1573,7 +1596,100 @@ def judge_slice_audit_report_from_dict(data: Dict[str, Any]) -> JudgeSliceAuditR
             for key, value in data.get("missing_rubric_axes", {}).items()
         },
         issues=tuple(str(item) for item in data.get("issues", [])),
-        ok=bool(data.get("ok", False)),
+        ok=_bool(data.get("ok", False)),
+    )
+
+
+def llm_judge_alignment_report_from_dict(data: Dict[str, Any]) -> LLMJudgeAlignmentReport:
+    return LLMJudgeAlignmentReport(
+        generated_at=str(data["generated_at"]),
+        total_task_bundles=int(data["total_task_bundles"]),
+        evaluated_bundles=int(data["evaluated_bundles"]),
+        judged_bundles=int(data["judged_bundles"]),
+        comparable_bundles=int(data["comparable_bundles"]),
+        deterministic_pass_count=int(data["deterministic_pass_count"]),
+        judge_pass_count=int(data["judge_pass_count"]),
+        overlap_pass_count=int(data["overlap_pass_count"]),
+        deterministic_only_count=int(data["deterministic_only_count"]),
+        judge_only_count=int(data["judge_only_count"]),
+        agreement_count=int(data["agreement_count"]),
+        disagreement_count=int(data["disagreement_count"]),
+        agreement_rate=float(data["agreement_rate"]),
+        gate_a1_count_ok=_bool(data.get("gate_a1_count_ok", False)),
+        judge_pass_subset_ok=_bool(data.get("judge_pass_subset_ok", False)),
+        exact_pass_set_match=_bool(data.get("exact_pass_set_match", False)),
+        duplicate_evaluation_task_bundle_ids=tuple(
+            str(item) for item in data.get("duplicate_evaluation_task_bundle_ids", [])
+        ),
+        duplicate_judgment_task_bundle_ids=tuple(
+            str(item) for item in data.get("duplicate_judgment_task_bundle_ids", [])
+        ),
+        missing_evaluation_task_bundle_ids=tuple(
+            str(item) for item in data.get("missing_evaluation_task_bundle_ids", [])
+        ),
+        missing_judgment_task_bundle_ids=tuple(
+            str(item) for item in data.get("missing_judgment_task_bundle_ids", [])
+        ),
+        extra_evaluation_task_bundle_ids=tuple(
+            str(item) for item in data.get("extra_evaluation_task_bundle_ids", [])
+        ),
+        extra_judgment_task_bundle_ids=tuple(
+            str(item) for item in data.get("extra_judgment_task_bundle_ids", [])
+        ),
+        deterministic_only_task_bundle_ids=tuple(
+            str(item) for item in data.get("deterministic_only_task_bundle_ids", [])
+        ),
+        judge_only_task_bundle_ids=tuple(str(item) for item in data.get("judge_only_task_bundle_ids", [])),
+        per_task_family={
+            str(family): {str(key): int(value) for key, value in metrics.items()}
+            for family, metrics in data.get("per_task_family", {}).items()
+        },
+        issues=tuple(str(item) for item in data.get("issues", [])),
+        ok=_bool(data.get("ok", False)),
+    )
+
+
+def judge_agreement_report_from_dict(data: Dict[str, Any]) -> JudgeAgreementReport:
+    return JudgeAgreementReport(
+        total_judge_units=int(data["total_judge_units"]),
+        merged_review_forms=int(data["merged_review_forms"]),
+        finalized_adjudications=int(data["finalized_adjudications"]),
+        reviewer_ids=tuple(str(item) for item in data.get("reviewer_ids", [])),
+        axis_labels=tuple(str(item) for item in data.get("axis_labels", [])),
+        pass_threshold=float(data.get("pass_threshold", 2.0)),
+        minimum_reviewers=int(data.get("minimum_reviewers", 2)),
+        unexpected_form_validation_unit_ids=tuple(
+            str(item) for item in data.get("unexpected_form_validation_unit_ids", [])
+        ),
+        unexpected_adjudication_validation_unit_ids=tuple(
+            str(item) for item in data.get("unexpected_adjudication_validation_unit_ids", [])
+        ),
+        comparable_pre_adjudication_units=int(data.get("comparable_pre_adjudication_units", 0)),
+        comparable_post_adjudication_units=int(data.get("comparable_post_adjudication_units", 0)),
+        comparable_pre_adjudication_pairs=int(data.get("comparable_pre_adjudication_pairs", 0)),
+        comparable_ordinal_items_pre=int(data.get("comparable_ordinal_items_pre", 0)),
+        comparable_ordinal_items_post=int(data.get("comparable_ordinal_items_post", 0)),
+        pre_adjudication_kappa=float(data.get("pre_adjudication_kappa", 0.0)),
+        post_adjudication_kappa=float(data.get("post_adjudication_kappa", 0.0)),
+        pre_adjudication_ordinal_alpha=float(data.get("pre_adjudication_ordinal_alpha", 0.0)),
+        post_adjudication_ordinal_alpha=float(data.get("post_adjudication_ordinal_alpha", 0.0)),
+        pre_adjudication_icc=float(data.get("pre_adjudication_icc", 0.0)),
+        post_adjudication_icc=float(data.get("post_adjudication_icc", 0.0)),
+        jury_vs_adjudicator_icc=float(data.get("jury_vs_adjudicator_icc", 0.0)),
+        reviewer_pairwise_kappa={
+            str(key): float(value)
+            for key, value in data.get("reviewer_pairwise_kappa", {}).items()
+        },
+        reviewer_pairwise_icc={
+            str(key): float(value)
+            for key, value in data.get("reviewer_pairwise_icc", {}).items()
+        },
+        reviewer_vs_adjudicator_icc={
+            str(key): float(value)
+            for key, value in data.get("reviewer_vs_adjudicator_icc", {}).items()
+        },
+        issues=tuple(str(item) for item in data.get("issues", [])),
+        ok=_bool(data.get("ok", False)),
     )
 
 
@@ -1581,7 +1697,7 @@ def judge_review_form_from_dict(data: Dict[str, Any]) -> JudgeReviewForm:
     return JudgeReviewForm(
         validation_unit_id=str(data["validation_unit_id"]),
         reviewer_id=str(data["reviewer_id"]),
-        completed=bool(data.get("completed", False)),
+        completed=_bool(data.get("completed", False)),
         rubric_labels=dict(data.get("rubric_labels", {})),
         confidence=int(data["confidence"]) if data.get("confidence") is not None else None,
         notes=tuple(str(item) for item in data.get("notes", [])),
@@ -1593,7 +1709,7 @@ def judge_adjudication_record_from_dict(data: Dict[str, Any]) -> JudgeAdjudicati
         validation_unit_id=str(data["validation_unit_id"]),
         adjudicator_id=str(data["adjudicator_id"]),
         final_rubric_labels=dict(data.get("final_rubric_labels", {})),
-        finalized=bool(data.get("finalized", False)),
+        finalized=_bool(data.get("finalized", False)),
         rationale=tuple(str(item) for item in data.get("rationale", [])),
         source_reviewer_ids=tuple(str(item) for item in data.get("source_reviewer_ids", [])),
     )
@@ -1607,8 +1723,111 @@ def judge_adjudication_queue_entry_from_dict(data: Dict[str, Any]) -> JudgeAdjud
         completed_reviewer_ids=tuple(str(item) for item in data.get("completed_reviewer_ids", [])),
         pending_reviewer_ids=tuple(str(item) for item in data.get("pending_reviewer_ids", [])),
         disagreement_axes=tuple(str(item) for item in data.get("disagreement_axes", [])),
-        has_final_adjudication=bool(data.get("has_final_adjudication", False)),
+        has_final_adjudication=_bool(data.get("has_final_adjudication", False)),
         notes=tuple(str(item) for item in data.get("notes", [])),
+    )
+
+
+def publication_annotation_packet_from_dict(data: Dict[str, Any]) -> PublicationAnnotationPacket:
+    return PublicationAnnotationPacket(
+        packet_id=str(data["packet_id"]),
+        reviewer_id=str(data["reviewer_id"]),
+        validation_unit_id=str(data["validation_unit_id"]),
+        task_bundle_id=str(data["task_bundle_id"]),
+        task_family=_enum(TaskFamily, data["task_family"]),
+        study_class=_enum(StudyClass, data["study_class"]),
+        claim_mode=_enum(ClaimMode, data["claim_mode"]),
+        release_tier=_enum(ReleaseTier, data["release_tier"]),
+        paper_id=data.get("paper_id"),
+        holdout_bucket=data.get("holdout_bucket"),
+        rubric_version=str(data.get("rubric_version", "judge-rubric-v1")),
+        authoritative_form_present=_bool(data.get("authoritative_form_present", False)),
+        authoritative_form_path=str(data.get("authoritative_form_path", "")),
+        packet_markdown_path=str(data.get("packet_markdown_path", "")),
+        evidence_unit_ids=tuple(str(item) for item in data.get("evidence_unit_ids", [])),
+        evidence_pointers=tuple(str(item) for item in data.get("evidence_pointers", [])),
+        evidence_items=tuple(str(item) for item in data.get("evidence_items", [])),
+        evidence_types=tuple(str(item) for item in data.get("evidence_types", [])),
+        assertion_ids=tuple(str(item) for item in data.get("assertion_ids", [])),
+        authoring_constraints=dict(data.get("authoring_constraints", {})),
+        scoring_profile=dict(data.get("scoring_profile", {})),
+        notes=tuple(str(item) for item in data.get("notes", [])),
+    )
+
+
+def publication_annotation_packet_summary_from_dict(
+    data: Dict[str, Any],
+) -> PublicationAnnotationPacketSummary:
+    return PublicationAnnotationPacketSummary(
+        generated_at=str(data["generated_at"]),
+        total_packets=int(data["total_packets"]),
+        expected_packets=int(data["expected_packets"]),
+        total_judge_units=int(data["total_judge_units"]),
+        reviewer_ids=tuple(str(item) for item in data.get("reviewer_ids", [])),
+        reviewer_assignment_counts={
+            str(key): int(value) for key, value in data.get("reviewer_assignment_counts", {}).items()
+        },
+        task_family_counts={str(key): int(value) for key, value in data.get("task_family_counts", {}).items()},
+        study_class_counts={str(key): int(value) for key, value in data.get("study_class_counts", {}).items()},
+        rubric_versions=tuple(str(item) for item in data.get("rubric_versions", [])),
+        packet_coverage_complete=_bool(data.get("packet_coverage_complete", False)),
+        authoritative_form_coverage_complete=_bool(data.get("authoritative_form_coverage_complete", False)),
+        duplicate_packet_ids=tuple(str(item) for item in data.get("duplicate_packet_ids", [])),
+        duplicate_packet_pairs=tuple(str(item) for item in data.get("duplicate_packet_pairs", [])),
+        missing_packet_pairs=tuple(str(item) for item in data.get("missing_packet_pairs", [])),
+        unexpected_packet_pairs=tuple(str(item) for item in data.get("unexpected_packet_pairs", [])),
+        missing_authoritative_form_pairs=tuple(
+            str(item) for item in data.get("missing_authoritative_form_pairs", [])
+        ),
+        issues=tuple(str(item) for item in data.get("issues", [])),
+        ok=_bool(data.get("ok", False)),
+    )
+
+
+def publication_annotation_hold_audit_report_from_dict(
+    data: Dict[str, Any],
+) -> PublicationAnnotationHoldAuditReport:
+    return PublicationAnnotationHoldAuditReport(
+        generated_at=str(data["generated_at"]),
+        batch_dir=str(data["batch_dir"]),
+        total_judge_units=int(data["total_judge_units"]),
+        reviewer_ids=tuple(str(item) for item in data.get("reviewer_ids", [])),
+        adjudicator_ids=tuple(str(item) for item in data.get("adjudicator_ids", [])),
+        rubric_versions=tuple(str(item) for item in data.get("rubric_versions", [])),
+        selection_locked=_bool(data.get("selection_locked", False)),
+        rubric_locked=_bool(data.get("rubric_locked", False)),
+        reviewer_assignments_complete=_bool(data.get("reviewer_assignments_complete", False)),
+        packet_coverage_complete=_bool(data.get("packet_coverage_complete", False)),
+        authoritative_sidecars_present=_bool(data.get("authoritative_sidecars_present", False)),
+        structurally_ready=_bool(data.get("structurally_ready", False)),
+        awaiting_human_review=_bool(data.get("awaiting_human_review", False)),
+        review_completion_rate=float(data.get("review_completion_rate", 0.0)),
+        finalized_adjudications=int(data.get("finalized_adjudications", 0)),
+        queue_status_counts={str(key): int(value) for key, value in data.get("queue_status_counts", {}).items()},
+        reviewer_assignment_counts={
+            str(key): int(value) for key, value in data.get("reviewer_assignment_counts", {}).items()
+        },
+        duplicate_validation_unit_ids=tuple(str(item) for item in data.get("duplicate_validation_unit_ids", [])),
+        duplicate_task_bundle_ids=tuple(str(item) for item in data.get("duplicate_task_bundle_ids", [])),
+        duplicate_packet_ids=tuple(str(item) for item in data.get("duplicate_packet_ids", [])),
+        missing_selected_task_bundle_ids=tuple(
+            str(item) for item in data.get("missing_selected_task_bundle_ids", [])
+        ),
+        unexpected_selected_task_bundle_ids=tuple(
+            str(item) for item in data.get("unexpected_selected_task_bundle_ids", [])
+        ),
+        missing_form_pairs=tuple(str(item) for item in data.get("missing_form_pairs", [])),
+        unexpected_form_pairs=tuple(str(item) for item in data.get("unexpected_form_pairs", [])),
+        missing_packet_pairs=tuple(str(item) for item in data.get("missing_packet_pairs", [])),
+        unexpected_packet_pairs=tuple(str(item) for item in data.get("unexpected_packet_pairs", [])),
+        missing_adjudication_validation_unit_ids=tuple(
+            str(item) for item in data.get("missing_adjudication_validation_unit_ids", [])
+        ),
+        unexpected_adjudication_validation_unit_ids=tuple(
+            str(item) for item in data.get("unexpected_adjudication_validation_unit_ids", [])
+        ),
+        issues=tuple(str(item) for item in data.get("issues", [])),
+        ok=_bool(data.get("ok", False)),
     )
 
 
@@ -1639,8 +1858,8 @@ def program_progress_report_from_dict(data: Dict[str, Any]) -> ProgramProgressRe
         study_class_counts={str(key): int(value) for key, value in data.get("study_class_counts", {}).items()},
         task_family_counts={str(key): int(value) for key, value in data.get("task_family_counts", {}).items()},
         claim_mode_counts={str(key): int(value) for key, value in data.get("claim_mode_counts", {}).items()},
-        v1_core_gate_passed=bool(data.get("v1_core_gate_passed", False)),
-        leaderboard_gate_passed=bool(data.get("leaderboard_gate_passed", False)),
+        v1_core_gate_passed=_bool(data.get("v1_core_gate_passed", False)),
+        leaderboard_gate_passed=_bool(data.get("leaderboard_gate_passed", False)),
         notes=tuple(str(item) for item in data.get("notes", [])),
     )
 
@@ -1708,7 +1927,7 @@ def adjudication_queue_entry_from_dict(data: Dict[str, Any]) -> AdjudicationQueu
         completed_reviewer_ids=tuple(str(item) for item in data.get("completed_reviewer_ids", [])),
         pending_reviewer_ids=tuple(str(item) for item in data.get("pending_reviewer_ids", [])),
         disagreement_fields=tuple(str(item) for item in data.get("disagreement_fields", [])),
-        has_final_adjudication=bool(data.get("has_final_adjudication", False)),
+        has_final_adjudication=_bool(data.get("has_final_adjudication", False)),
         notes=tuple(str(item) for item in data.get("notes", [])),
     )
 
@@ -1723,7 +1942,7 @@ def pilot_review_form_from_dict(data: Dict[str, Any]) -> PilotReviewForm:
         unit_release_tier=_enum(ReleaseTier, data["unit_release_tier"])
         if data.get("unit_release_tier")
         else None,
-        completed=bool(data.get("completed", False)),
+        completed=_bool(data.get("completed", False)),
         confidence=int(data["confidence"]) if data.get("confidence") is not None else None,
         notes=tuple(str(item) for item in data.get("notes", [])),
     )
@@ -1745,7 +1964,7 @@ def pilot_adjudication_record_from_dict(data: Dict[str, Any]) -> PilotAdjudicati
         final_unit_release_tier=_enum(ReleaseTier, data["final_unit_release_tier"])
         if data.get("final_unit_release_tier")
         else None,
-        finalized=bool(data.get("finalized", False)),
+        finalized=_bool(data.get("finalized", False)),
         rationale=tuple(str(item) for item in data.get("rationale", [])),
         source_reviewer_ids=tuple(str(item) for item in data.get("source_reviewer_ids", [])),
     )
@@ -1806,12 +2025,18 @@ MODEL_LOADERS: Dict[str, Callable[[Dict[str, Any]], Any]] = {
     "ingestion_audit_report": ingestion_audit_report_from_dict,
     "ingestion_record": ingestion_record_from_dict,
     "ingestion_verification_report": ingestion_verification_report_from_dict,
+    "judge_agreement_report": judge_agreement_report_from_dict,
     "judge_candidate_selection_report": judge_candidate_selection_report_from_dict,
     "judge_slice_audit_report": judge_slice_audit_report_from_dict,
+    "lineage_info": lineage_info_from_dict,
+    "llm_judge_alignment_report": llm_judge_alignment_report_from_dict,
     "judge_review_form": judge_review_form_from_dict,
     "judge_adjudication_record": judge_adjudication_record_from_dict,
     "judge_adjudication_queue_entry": judge_adjudication_queue_entry_from_dict,
     "judge_validation_unit": judge_validation_unit_from_dict,
+    "publication_annotation_packet": publication_annotation_packet_from_dict,
+    "publication_annotation_packet_summary": publication_annotation_packet_summary_from_dict,
+    "publication_annotation_hold_audit_report": publication_annotation_hold_audit_report_from_dict,
     "maintenance_log_entry": maintenance_log_entry_from_dict,
     "metadata_source_record": metadata_source_record_from_dict,
     "metadata_governance_hint": metadata_governance_hint_from_dict,

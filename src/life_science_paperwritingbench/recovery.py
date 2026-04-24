@@ -27,6 +27,20 @@ def _utc_timestamp() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
+def _bool(value: object, *, default: bool = False) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"1", "true", "yes", "y", "on"}:
+            return True
+        if normalized in {"0", "false", "no", "n", "off", ""}:
+            return False
+    return bool(value)
+
+
 def auto_review_recovery_batch_entry_from_queue_record(
     data: Mapping[str, object],
 ) -> AutoReviewRecoveryBatchEntry:
@@ -46,7 +60,7 @@ def auto_review_recovery_batch_entry_from_queue_record(
         auto_release_cap_reason=str(data["auto_release_cap_reason"])
         if data.get("auto_release_cap_reason") is not None
         else None,
-        selected=bool(data.get("selected", False)),
+        selected=_bool(data.get("selected", False)),
         selection_rank=int(data["selection_rank"]) if data.get("selection_rank") is not None else None,
         selection_reason=str(data["selection_reason"]) if data.get("selection_reason") else None,
         notes=tuple(str(item) for item in data.get("notes", [])),

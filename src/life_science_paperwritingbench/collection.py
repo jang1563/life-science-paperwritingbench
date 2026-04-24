@@ -586,7 +586,8 @@ def enrich_candidates_with_europepmc(
         raw_payload_path = raw_path / f"europepmc__{candidate.candidate_id}.json"
         try:
             payload = _load_or_fetch_bytes(raw_payload_path, url, refresh=refresh, fetcher=fetcher)
-        except (urllib.error.HTTPError, urllib.error.URLError, json.JSONDecodeError) as exc:
+            response = json.loads(payload.decode("utf-8"))
+        except (urllib.error.HTTPError, urllib.error.URLError, UnicodeDecodeError, json.JSONDecodeError) as exc:
             enriched_candidates.append(
                 CollectionCandidateRecord(
                     candidate_id=candidate.candidate_id,
@@ -615,7 +616,6 @@ def enrich_candidates_with_europepmc(
                 )
             )
             continue
-        response = json.loads(payload.decode("utf-8"))
         result = (response.get("resultList", {}) or {}).get("result", []) or []
         record_payload = result[0] if result else {}
         fetch_records.append(
@@ -722,7 +722,8 @@ def enrich_candidates_with_crossref(
                 headers={"User-Agent": "life-science-paperwritingbench/0.1 (mailto:local@example.com)"},
                 fetcher=fetcher,
             )
-        except (urllib.error.HTTPError, urllib.error.URLError, json.JSONDecodeError) as exc:
+            response = json.loads(payload.decode("utf-8"))
+        except (urllib.error.HTTPError, urllib.error.URLError, UnicodeDecodeError, json.JSONDecodeError) as exc:
             enriched_candidates.append(
                 CollectionCandidateRecord(
                     candidate_id=candidate.candidate_id,
@@ -751,7 +752,6 @@ def enrich_candidates_with_crossref(
                 )
             )
             continue
-        response = json.loads(payload.decode("utf-8"))
         message = response.get("message", {}) or {}
         license_urls = [
             str(item.get("URL", "")).strip()

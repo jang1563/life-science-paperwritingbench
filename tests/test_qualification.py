@@ -4,7 +4,10 @@ import tempfile
 import unittest
 import json
 import hashlib
+import importlib.util
+import socket
 import urllib.error
+from unittest import mock
 from pathlib import Path
 
 
@@ -12,6 +15,66 @@ ROOT = os.path.dirname(os.path.dirname(__file__))
 SRC = os.path.join(ROOT, "src")
 if SRC not in sys.path:
     sys.path.insert(0, SRC)
+
+LLM_JUDGE_EVAL_PATH = Path(ROOT) / "scripts" / "llm_judge_eval.py"
+LLM_JUDGE_EVAL_SPEC = importlib.util.spec_from_file_location(
+    "life_science_paperwritingbench_llm_judge_eval",
+    LLM_JUDGE_EVAL_PATH,
+)
+assert LLM_JUDGE_EVAL_SPEC is not None and LLM_JUDGE_EVAL_SPEC.loader is not None
+llm_judge_eval = importlib.util.module_from_spec(LLM_JUDGE_EVAL_SPEC)
+sys.modules[LLM_JUDGE_EVAL_SPEC.name] = llm_judge_eval
+LLM_JUDGE_EVAL_SPEC.loader.exec_module(llm_judge_eval)
+
+LLM_AGENTIC_EVAL_PATH = Path(ROOT) / "scripts" / "llm_agentic_eval.py"
+LLM_AGENTIC_EVAL_SPEC = importlib.util.spec_from_file_location(
+    "life_science_paperwritingbench_llm_agentic_eval",
+    LLM_AGENTIC_EVAL_PATH,
+)
+assert LLM_AGENTIC_EVAL_SPEC is not None and LLM_AGENTIC_EVAL_SPEC.loader is not None
+llm_agentic_eval = importlib.util.module_from_spec(LLM_AGENTIC_EVAL_SPEC)
+sys.modules[LLM_AGENTIC_EVAL_SPEC.name] = llm_agentic_eval
+LLM_AGENTIC_EVAL_SPEC.loader.exec_module(llm_agentic_eval)
+
+LLM_SMOKE_EVAL_PATH = Path(ROOT) / "scripts" / "llm_smoke_eval.py"
+LLM_SMOKE_EVAL_SPEC = importlib.util.spec_from_file_location(
+    "life_science_paperwritingbench_llm_smoke_eval",
+    LLM_SMOKE_EVAL_PATH,
+)
+assert LLM_SMOKE_EVAL_SPEC is not None and LLM_SMOKE_EVAL_SPEC.loader is not None
+llm_smoke_eval = importlib.util.module_from_spec(LLM_SMOKE_EVAL_SPEC)
+sys.modules[LLM_SMOKE_EVAL_SPEC.name] = llm_smoke_eval
+LLM_SMOKE_EVAL_SPEC.loader.exec_module(llm_smoke_eval)
+
+LLM_MATRIX_SUMMARY_PATH = Path(ROOT) / "scripts" / "llm_matrix_summary.py"
+LLM_MATRIX_SUMMARY_SPEC = importlib.util.spec_from_file_location(
+    "life_science_paperwritingbench_llm_matrix_summary",
+    LLM_MATRIX_SUMMARY_PATH,
+)
+assert LLM_MATRIX_SUMMARY_SPEC is not None and LLM_MATRIX_SUMMARY_SPEC.loader is not None
+llm_matrix_summary = importlib.util.module_from_spec(LLM_MATRIX_SUMMARY_SPEC)
+sys.modules[LLM_MATRIX_SUMMARY_SPEC.name] = llm_matrix_summary
+LLM_MATRIX_SUMMARY_SPEC.loader.exec_module(llm_matrix_summary)
+
+CANARY_PROBE_PATH = Path(ROOT) / "scripts" / "canary_probe.py"
+CANARY_PROBE_SPEC = importlib.util.spec_from_file_location(
+    "life_science_paperwritingbench_canary_probe",
+    CANARY_PROBE_PATH,
+)
+assert CANARY_PROBE_SPEC is not None and CANARY_PROBE_SPEC.loader is not None
+canary_probe = importlib.util.module_from_spec(CANARY_PROBE_SPEC)
+sys.modules[CANARY_PROBE_SPEC.name] = canary_probe
+CANARY_PROBE_SPEC.loader.exec_module(canary_probe)
+
+INSPECT_ADAPTER_PATH = Path(ROOT) / "inspect_evals" / "life_science_paperwritingbench.py"
+INSPECT_ADAPTER_SPEC = importlib.util.spec_from_file_location(
+    "life_science_paperwritingbench_inspect_adapter",
+    INSPECT_ADAPTER_PATH,
+)
+assert INSPECT_ADAPTER_SPEC is not None and INSPECT_ADAPTER_SPEC.loader is not None
+inspect_adapter = importlib.util.module_from_spec(INSPECT_ADAPTER_SPEC)
+sys.modules[INSPECT_ADAPTER_SPEC.name] = inspect_adapter
+INSPECT_ADAPTER_SPEC.loader.exec_module(inspect_adapter)
 
 
 from life_science_paperwritingbench import (  # noqa: E402
@@ -34,6 +97,7 @@ from life_science_paperwritingbench import (  # noqa: E402
     auto_review_batch_report_from_dict,
     AutoReviewRecoveryBatchEntry,
     auto_review_recovery_batch_entry_from_dict,
+    auto_review_recovery_batch_entry_from_queue_record,
     auto_review_recovery_batch_report_from_dict,
     AutoReviewBundleCompleteness,
     AutoReviewConfidence,
@@ -54,6 +118,7 @@ from life_science_paperwritingbench import (  # noqa: E402
     build_auto_review_recovery_batch,
     build_auto_review_recovery_batch_report,
     build_auto_review_recovery_job_spec,
+    build_frontier_submitter_job_spec,
     build_auto_review_evidence_enrichments,
     build_auto_review_source_bundles,
     build_benchmark_unit_decisions_from_auto_qualifications,
@@ -61,6 +126,8 @@ from life_science_paperwritingbench import (  # noqa: E402
     build_judge_adjudication_queue,
     build_judge_adjudication_shells,
     build_judge_review_forms,
+    build_publication_annotation_packets,
+    build_publication_validation_slice,
     build_judge_validation_slice,
     build_packaging_review_priors,
     build_paper_qualification_batch_report,
@@ -91,8 +158,15 @@ from life_science_paperwritingbench import (  # noqa: E402
     ExtractionAuditReport,
     IngestionAuditReport,
     IngestionRecord,
+    evaluation_record_from_dict,
     IntegrityDisposition,
+    IntegrityFlag,
+    JudgeAdjudicationRecord,
+    JudgeReviewForm,
     JudgeValidationUnit,
+    PublicationAnnotationHoldAuditReport,
+    PublicationAnnotationPacket,
+    PublicationAnnotationPacketSummary,
     LineageInfo,
     MetadataSourceRecord,
     ModalityOverlay,
@@ -122,6 +196,8 @@ from life_science_paperwritingbench import (  # noqa: E402
     PilotCalibrationSpec,
     PilotReviewForm,
     PublicationStatus,
+    PUBLICATION_RUBRIC_LOCK_NOTE,
+    PUBLICATION_SELECTION_LOCK_NOTE,
     PUBLIC_HOLDOUT_BUCKET,
     QuestionRecord,
     ReleaseTier,
@@ -159,12 +235,15 @@ from life_science_paperwritingbench import (  # noqa: E402
     audit_ingestion_artifacts,
     audit_collection_batch,
     audit_calibration_drift,
+    audit_llm_judge_alignment,
     audit_judge_validation_slice,
     answer_record_from_dict,
     compute_agreement_against_adjudication,
+    compute_judge_agreement,
     SubmissionRecord,
     citation_specificity,
     citation_specificity_score,
+    EvaluationRecord,
     evaluate_submission_v1,
     evaluate_submission_v2,
     evaluation_extraction_audit_report_from_dict,
@@ -175,15 +254,20 @@ from life_science_paperwritingbench import (  # noqa: E402
     fetch_pubmed_batch,
     freeze_truth_manifest,
     generate_canary_string,
+    ingestion_record_from_dict,
     ingest_metadata_records,
     initialize_knowledge_base_layout,
+    judge_agreement_report_from_dict,
     judge_adjudication_queue_entry_from_dict,
     judge_adjudication_record_from_dict,
     judge_review_form_from_dict,
     judge_slice_audit_report_from_dict,
     judge_validation_unit_from_dict,
     judge_validation_unit_ready,
+    JudgeAgreementReport,
+    llm_judge_alignment_report_from_dict,
     load_jsonl,
+    lock_publication_annotation_units,
     merge_collection_candidates,
     merge_judge_review_forms,
     merge_paper_scientific_review_forms,
@@ -212,11 +296,15 @@ from life_science_paperwritingbench import (  # noqa: E402
     pilot_calibration_spec_from_dict,
     pilot_coverage_summary,
     pilot_review_form_from_dict,
+    publication_annotation_hold_audit_report_from_dict,
+    publication_annotation_packet_from_dict,
+    publication_annotation_packet_summary_from_dict,
     question_record_from_dict,
     qualify_paper,
     qualify_unit,
     qualify_writing,
     rank_collection_candidates,
+    render_llm_judge_alignment_markdown,
     render_baseline_output,
     render_execution_job_script,
     render_shadow_inspection_markdown,
@@ -239,8 +327,12 @@ from life_science_paperwritingbench import (  # noqa: E402
     build_paper_review_batch_report,
     build_paper_scientific_review_forms,
     build_paper_writing_review_forms,
+    audit_publication_annotation_hold,
     summarize_judge_candidate_selection,
     summarize_auto_review_batch,
+    summarize_publication_annotation_packets,
+    summarize_publication_readiness,
+    summarize_publication_validation_slice,
     summarize_shadow_inspection_batch,
     summarize_shadow_inspection_taxonomy,
     summarize_paper_review_progress,
@@ -250,6 +342,7 @@ from life_science_paperwritingbench import (  # noqa: E402
     truth_manifest_from_dict,
     truth_manifest_verification_report_from_dict,
     UnitQualificationDecision,
+    validate_judge_agreement_thresholds,
     validate_pilot_agreement_thresholds,
     validate_full_calibration_set,
     validate_pilot_calibration_set,
@@ -267,6 +360,17 @@ from life_science_paperwritingbench import (  # noqa: E402
     enrich_candidates_with_europepmc,
     api_fetch_record_from_dict,
     auto_review_evidence_enrichment_record_from_dict,
+)
+from life_science_paperwritingbench.frontier_runtime import (  # noqa: E402
+    build_anthropic_payload,
+    build_openai_compatible_payload,
+    default_canary_models,
+    default_model_label_for_role,
+    default_frontier_registry_path,
+    load_api_keys,
+    load_frontier_model,
+    load_frontier_registry,
+    registry_entry_provenance,
 )
 from life_science_paperwritingbench.cli import main as cli_main  # noqa: E402
 
@@ -745,6 +849,56 @@ class QualificationTests(unittest.TestCase):
         self.assertIn(first[0].holdout_bucket, {PUBLIC_HOLDOUT_BUCKET, "private"})
         self.assertTrue(first[0].canary_string.startswith("LS-PWB-CANARY-BU_1-"))
         self.assertEqual(first[0].benchmark_split, "test")
+
+    def test_release_inputs_reject_duplicate_unknown_and_mismatched_decisions(self):
+        unit = BenchmarkUnit(
+            benchmark_unit_id="BU:release-input",
+            paper_id="PMID:release-input",
+            evidence_unit_ids=("EU:release-input",),
+            split="test",
+            lineage=LineageInfo(source_family="release-input-family"),
+        )
+        duplicate_unit = BenchmarkUnit(
+            benchmark_unit_id="BU:release-input",
+            paper_id="PMID:release-input-duplicate",
+            evidence_unit_ids=("EU:release-input-duplicate",),
+            split="test",
+            lineage=LineageInfo(source_family="release-input-family"),
+        )
+        decision = BenchmarkUnitDecisionRecord(
+            benchmark_unit_id="BU:release-input",
+            release_tier=ReleaseTier.PUBLIC_GOLD,
+            gold_eligible=True,
+            reasons=(),
+        )
+
+        with self.assertRaises(ValueError):
+            build_release_index([unit, duplicate_unit], {"BU:release-input": decision})
+        with self.assertRaises(ValueError):
+            build_release_manifest_bundle(
+                [unit],
+                {
+                    "BU:release-input": decision,
+                    "BU:unknown": BenchmarkUnitDecisionRecord(
+                        benchmark_unit_id="BU:unknown",
+                        release_tier=ReleaseTier.PUBLIC_GOLD,
+                        gold_eligible=True,
+                        reasons=(),
+                    ),
+                },
+            )
+        with self.assertRaises(ValueError):
+            build_release_index(
+                [unit],
+                {
+                    "BU:release-input": BenchmarkUnitDecisionRecord(
+                        benchmark_unit_id="BU:mismatched",
+                        release_tier=ReleaseTier.PUBLIC_GOLD,
+                        gold_eligible=True,
+                        reasons=(),
+                    )
+                },
+            )
 
     def test_release_index_enforces_split_safety_on_holdout_buckets(self):
         public_family = None
@@ -1347,7 +1501,7 @@ class QualificationTests(unittest.TestCase):
 
     def test_citation_specificity_credits_real_citations(self):
         output = (
-            "Results\nWe present evidence from Fig. 1 and Table 2. "
+            "Results\nWe present evidence from fig. 1 and Table 2. "
             "The effect was significant (p < 0.05) in the GSE12345 dataset."
         )
         report = citation_specificity(output)
@@ -1355,16 +1509,21 @@ class QualificationTests(unittest.TestCase):
         self.assertTrue(report["forbidden_pointer_free"])
         self.assertEqual(report["citation_specificity_score"], 1.0)
         self.assertAlmostEqual(citation_specificity_score(output), 1.0)
+        smoke_report = llm_smoke_eval.citation_specificity(output)
+        self.assertIn("fig. 1", smoke_report["figure_refs"])
 
     def test_citation_specificity_zeros_on_forbidden_pointer_tokens(self):
         output = (
             "Results\nThis output cites Fig. 1 and Table 2 and p < 0.05 but also the "
-            "internal pointer methods_section which should trigger the forbidden-hit rule."
+            "internal pointer Methods_Section which should trigger the forbidden-hit rule."
         )
         report = citation_specificity(output)
         self.assertIn("methods_section", report["forbidden_pointer_hits"])
         self.assertEqual(report["citation_specificity_score"], 0.0)
         self.assertFalse(report["forbidden_pointer_free"])
+        smoke_report = llm_smoke_eval.citation_specificity(output)
+        self.assertIn("methods_section", smoke_report["forbidden_pointer_hits"])
+        self.assertEqual(smoke_report["citation_specificity_score"], 0.0)
 
     def test_citation_specificity_zero_when_no_real_citations(self):
         output = "Results\nEvidence basis: provided evidence items. This paragraph cites nothing concrete."
@@ -1420,6 +1579,120 @@ class QualificationTests(unittest.TestCase):
         evaluation_v1 = evaluate_submission_v1(task_bundle, pointer_only_submission)
         self.assertIn("citation_specificity_score", evaluation_v2.scores)
         self.assertIn("traceability_coverage", evaluation_v1.scores)
+
+    def test_evaluate_submission_section_heading_no_longer_requires_evidence_token(self):
+        paper = make_source_paper()
+        evidence_unit = make_evidence_unit(
+            paper,
+            unit_id="EU:heading-only",
+            unit_type=EvidenceUnitType.FIGURE_TABLE_RESULT,
+            evidence_pointers=("Fig 1", "Table 2"),
+        )
+        task_bundle = build_task_bundle(
+            benchmark_unit=BenchmarkUnit(
+                benchmark_unit_id="BU:heading-only",
+                paper_id=paper.paper_id,
+                evidence_unit_ids=("EU:heading-only",),
+                split="test",
+            ),
+            source_paper=paper,
+            evidence_units=(evidence_unit,),
+            truth_manifest=make_truth_manifest(paper),
+            release_tier=ReleaseTier.PUBLIC_GOLD,
+        )
+        submission = SubmissionRecord(
+            submission_id="SUB:heading-only",
+            task_bundle_id=task_bundle.task_bundle_id,
+            source="synthetic",
+            producer_id="test:heading-only",
+            output_text=(
+                "Results\n"
+                "Fig. 1 shows increased marker expression, while Table 2 reports matching "
+                "effect sizes and p < 0.05 across the supported comparisons."
+            ),
+            config_fingerprint_sha256="1" * 64,
+        )
+
+        evaluation_v1 = evaluate_submission_v1(task_bundle, submission)
+        evaluation_v2 = evaluate_submission_v2(task_bundle, submission)
+
+        self.assertEqual(evaluation_v1.scores["structure_compliance"], 1.0)
+        self.assertEqual(evaluation_v2.scores["structure_compliance"], 1.0)
+        self.assertNotIn(
+            "missing expected section heading on first line: results",
+            evaluation_v2.notes,
+        )
+
+    def test_evaluate_submission_section_heading_must_be_first_non_empty_line(self):
+        paper = make_source_paper()
+        evidence_unit = make_evidence_unit(
+            paper,
+            unit_id="EU:heading-missing",
+            unit_type=EvidenceUnitType.FIGURE_TABLE_RESULT,
+            evidence_pointers=("Fig 1", "Table 2"),
+        )
+        task_bundle = build_task_bundle(
+            benchmark_unit=BenchmarkUnit(
+                benchmark_unit_id="BU:heading-missing",
+                paper_id=paper.paper_id,
+                evidence_unit_ids=("EU:heading-missing",),
+                split="test",
+            ),
+            source_paper=paper,
+            evidence_units=(evidence_unit,),
+            truth_manifest=make_truth_manifest(paper),
+            release_tier=ReleaseTier.PUBLIC_GOLD,
+        )
+        submission = SubmissionRecord(
+            submission_id="SUB:heading-missing",
+            task_bundle_id=task_bundle.task_bundle_id,
+            source="synthetic",
+            producer_id="test:heading-missing",
+            output_text=(
+                "Grounded in Fig. 1 and Table 2, the results paragraph is well cited and long "
+                "enough to pass every other deterministic check, but it never starts with the "
+                "required heading line."
+            ),
+            config_fingerprint_sha256="2" * 64,
+        )
+
+        evaluation_v2 = evaluate_submission_v2(task_bundle, submission)
+
+        self.assertEqual(evaluation_v2.scores["structure_compliance"], 0.0)
+        self.assertIn(
+            "missing expected section heading on first line: results",
+            evaluation_v2.notes,
+        )
+
+    def test_evaluate_submission_v2_qa_structure_still_requires_question_marker(self):
+        task_bundle = make_task_bundle(
+            index=77,
+            task_family=TaskFamily.FIGURE_QA,
+            input_artifacts={
+                "question_prompt": "What does Fig. 1 show?",
+                "expected_answer_texts": ("cell growth increases",),
+            },
+        )
+        submission = SubmissionRecord(
+            submission_id="SUB:qa-structure",
+            task_bundle_id=task_bundle.task_bundle_id,
+            source="synthetic",
+            producer_id="test:qa-structure",
+            output_text=(
+                "Answer\n"
+                "Cell growth increases in the treated condition, matching the supported answer "
+                "text but omitting the prompt label entirely."
+            ),
+            config_fingerprint_sha256="3" * 64,
+        )
+
+        evaluation_v2 = evaluate_submission_v2(task_bundle, submission)
+
+        self.assertEqual(evaluation_v2.scores["structure_compliance"], 0.0)
+        self.assertIn(
+            "missing expected structure markers: question",
+            evaluation_v2.notes,
+        )
 
     def test_evaluate_submissions_respects_explicit_scoring_version(self):
         paper = make_source_paper()
@@ -2951,6 +3224,2842 @@ class QualificationTests(unittest.TestCase):
             self.assertTrue(payload["ok"])
             self.assertEqual(payload["ready_units"], 30)
 
+    def test_audit_llm_judge_alignment_distinguishes_count_gate_from_subset_gate(self):
+        task_bundles = [
+            make_task_bundle(index=1, task_family=TaskFamily.ABSTRACT_FROM_EVIDENCE),
+            make_task_bundle(index=2, task_family=TaskFamily.METHODS_TO_TEXT),
+            make_task_bundle(index=3, task_family=TaskFamily.RESULTS_TO_TEXT),
+            make_task_bundle(index=4, task_family=TaskFamily.METHODS_TO_TEXT),
+        ]
+        evaluations = [
+            EvaluationRecord(
+                evaluation_id="EVAL:1",
+                submission_id="SUB:1",
+                task_bundle_id="TB:1",
+                evaluation_layers=(EvaluationLayer.DETERMINISTIC_CHECKS,),
+                deterministic_checks_passed=True,
+            ),
+            EvaluationRecord(
+                evaluation_id="EVAL:2",
+                submission_id="SUB:2",
+                task_bundle_id="TB:2",
+                evaluation_layers=(EvaluationLayer.DETERMINISTIC_CHECKS,),
+                deterministic_checks_passed=True,
+            ),
+            EvaluationRecord(
+                evaluation_id="EVAL:3",
+                submission_id="SUB:3",
+                task_bundle_id="TB:3",
+                evaluation_layers=(EvaluationLayer.DETERMINISTIC_CHECKS,),
+                deterministic_checks_passed=False,
+            ),
+            EvaluationRecord(
+                evaluation_id="EVAL:4",
+                submission_id="SUB:4",
+                task_bundle_id="TB:4",
+                evaluation_layers=(EvaluationLayer.DETERMINISTIC_CHECKS,),
+                deterministic_checks_passed=False,
+            ),
+        ]
+        judgments = [
+            {"task_bundle_id": "TB:1", "overall_pass": True},
+            {"task_bundle_id": "TB:2", "overall_pass": False},
+            {"task_bundle_id": "TB:3", "overall_pass": True},
+            {"task_bundle_id": "TB:4", "overall_pass": False},
+        ]
+
+        report = audit_llm_judge_alignment(task_bundles, evaluations, judgments)
+
+        self.assertEqual(report.total_task_bundles, 4)
+        self.assertEqual(report.comparable_bundles, 4)
+        self.assertEqual(report.deterministic_pass_count, 2)
+        self.assertEqual(report.judge_pass_count, 2)
+        self.assertEqual(report.overlap_pass_count, 1)
+        self.assertEqual(report.deterministic_only_count, 1)
+        self.assertEqual(report.judge_only_count, 1)
+        self.assertTrue(report.gate_a1_count_ok)
+        self.assertFalse(report.judge_pass_subset_ok)
+        self.assertFalse(report.exact_pass_set_match)
+        self.assertFalse(report.ok)
+        self.assertEqual(report.per_task_family["methods_to_text"]["deterministic_only"], 1)
+        self.assertEqual(report.per_task_family["results_to_text"]["judge_only"], 1)
+        self.assertIn(
+            "judge-pass set is not a subset of the deterministic-pass set",
+            report.issues,
+        )
+        markdown = render_llm_judge_alignment_markdown(report)
+        self.assertIn("Judge-Only Passes", markdown)
+        self.assertIn("`False`", markdown)
+
+    def test_audit_llm_judge_alignment_passes_when_judge_set_is_subset(self):
+        task_bundles = [
+            make_task_bundle(index=1, task_family=TaskFamily.RESULTS_TO_TEXT),
+            make_task_bundle(index=2, task_family=TaskFamily.METHODS_TO_TEXT),
+            make_task_bundle(index=3, task_family=TaskFamily.ABSTRACT_FROM_EVIDENCE),
+        ]
+        evaluations = [
+            EvaluationRecord(
+                evaluation_id="EVAL:1",
+                submission_id="SUB:1",
+                task_bundle_id="TB:1",
+                evaluation_layers=(EvaluationLayer.DETERMINISTIC_CHECKS,),
+                deterministic_checks_passed=True,
+            ),
+            EvaluationRecord(
+                evaluation_id="EVAL:2",
+                submission_id="SUB:2",
+                task_bundle_id="TB:2",
+                evaluation_layers=(EvaluationLayer.DETERMINISTIC_CHECKS,),
+                deterministic_checks_passed=True,
+            ),
+            EvaluationRecord(
+                evaluation_id="EVAL:3",
+                submission_id="SUB:3",
+                task_bundle_id="TB:3",
+                evaluation_layers=(EvaluationLayer.DETERMINISTIC_CHECKS,),
+                deterministic_checks_passed=False,
+            ),
+        ]
+        judgments = [
+            {"task_bundle_id": "TB:1", "overall_pass": True},
+            {"task_bundle_id": "TB:2", "overall_pass": False},
+            {"task_bundle_id": "TB:3", "overall_pass": False},
+        ]
+
+        report = audit_llm_judge_alignment(task_bundles, evaluations, judgments)
+
+        self.assertTrue(report.gate_a1_count_ok)
+        self.assertTrue(report.judge_pass_subset_ok)
+        self.assertFalse(report.exact_pass_set_match)
+        self.assertTrue(report.ok)
+        self.assertEqual(report.deterministic_only_count, 1)
+        self.assertEqual(report.judge_only_count, 0)
+
+    def test_cli_audit_llm_eval_alignment(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            task_bundles_path = os.path.join(tmpdir, "task_bundles.jsonl")
+            evaluations_path = os.path.join(tmpdir, "evaluations.jsonl")
+            judgments_path = os.path.join(tmpdir, "judgments.jsonl")
+            output_path = os.path.join(tmpdir, "alignment_audit.json")
+            markdown_path = os.path.join(tmpdir, "alignment_audit.md")
+
+            task_bundles = [
+                make_task_bundle(index=1, task_family=TaskFamily.RESULTS_TO_TEXT),
+                make_task_bundle(index=2, task_family=TaskFamily.METHODS_TO_TEXT),
+            ]
+            evaluations = [
+                EvaluationRecord(
+                    evaluation_id="EVAL:1",
+                    submission_id="SUB:1",
+                    task_bundle_id="TB:1",
+                    evaluation_layers=(EvaluationLayer.DETERMINISTIC_CHECKS,),
+                    deterministic_checks_passed=True,
+                ),
+                EvaluationRecord(
+                    evaluation_id="EVAL:2",
+                    submission_id="SUB:2",
+                    task_bundle_id="TB:2",
+                    evaluation_layers=(EvaluationLayer.DETERMINISTIC_CHECKS,),
+                    deterministic_checks_passed=False,
+                ),
+            ]
+            judgments = [
+                {"task_bundle_id": "TB:1", "overall_pass": False},
+                {"task_bundle_id": "TB:2", "overall_pass": True},
+            ]
+
+            write_jsonl(task_bundles_path, task_bundles)
+            write_jsonl(evaluations_path, evaluations)
+            with open(judgments_path, "w", encoding="utf-8") as handle:
+                for row in judgments:
+                    handle.write(json.dumps(row) + "\n")
+
+            exit_code = cli_main(
+                [
+                    "audit-llm-eval-alignment",
+                    "--task-bundles",
+                    task_bundles_path,
+                    "--evaluations",
+                    evaluations_path,
+                    "--judgments",
+                    judgments_path,
+                    "--output",
+                    output_path,
+                    "--markdown-output",
+                    markdown_path,
+                ]
+            )
+            self.assertEqual(exit_code, 1)
+            with open(output_path, "r", encoding="utf-8") as handle:
+                payload = json.load(handle)
+            self.assertTrue(payload["gate_a1_count_ok"])
+            self.assertFalse(payload["judge_pass_subset_ok"])
+            self.assertEqual(payload["judge_only_count"], 1)
+            markdown = Path(markdown_path).read_text(encoding="utf-8")
+            self.assertIn("Judge-pass subset check", markdown)
+
+    def test_llm_judge_v3_abstract_prompt_swaps_in_quantitative_specificity(self):
+        task_bundle = make_task_bundle(index=1, task_family=TaskFamily.ABSTRACT_FROM_EVIDENCE)
+        source_bundle = AutoReviewSourceBundle(
+            paper_id=task_bundle.paper_id,
+            bundle_completeness=AutoReviewBundleCompleteness.REVIEW_READY,
+            methods_text="Methods text with sample sizes and assay details.",
+            results_text="Results text with effect sizes and p-values.",
+            figure_captions=("Figure 1 shows the primary effect.",),
+            table_snippets=("Table 1 reports cohort characteristics.",),
+        )
+
+        config = llm_judge_eval.rubric_config_for_task_family(
+            task_bundle.task_family.value,
+            "v3",
+        )
+        prompt = llm_judge_eval.build_judge_prompt(
+            task_bundle,
+            source_bundle,
+            "## Abstract\nA concise abstract.",
+            rubric_version="v3",
+        )
+
+        self.assertEqual(
+            config.axes,
+            (
+                "writing_structure_compliance",
+                "evidence_grounding",
+                "factual_fidelity",
+                "quantitative_specificity",
+                "hallucination_absence",
+            ),
+        )
+        self.assertIn('"quantitative_specificity": <integer 0-3>', prompt)
+        self.assertIn("Do not require figure or table citations for abstracts.", prompt)
+        self.assertNotIn('"traceability": <integer 0-3>', prompt)
+
+    def test_llm_judge_v3_methods_prompt_keeps_traceability(self):
+        task_bundle = make_task_bundle(index=1, task_family=TaskFamily.METHODS_TO_TEXT)
+        source_bundle = AutoReviewSourceBundle(
+            paper_id=task_bundle.paper_id,
+            bundle_completeness=AutoReviewBundleCompleteness.REVIEW_READY,
+            abstract_text="Abstract overview.",
+            results_text="Results text with figure references.",
+            figure_captions=("Figure 2 describes the protocol.",),
+            table_snippets=("Table 2 lists reagents.",),
+        )
+
+        config = llm_judge_eval.rubric_config_for_task_family(
+            task_bundle.task_family.value,
+            "v3",
+        )
+        prompt = llm_judge_eval.build_judge_prompt(
+            task_bundle,
+            source_bundle,
+            "## Methods\nDetailed methods.",
+            rubric_version="v3",
+        )
+
+        self.assertEqual(config.axes, llm_judge_eval.LEGACY_RUBRIC_AXES)
+        self.assertIn('"traceability": <integer 0-3>', prompt)
+        self.assertNotIn('"quantitative_specificity": <integer 0-3>', prompt)
+
+    def test_llm_judge_v3_threshold_rule_uses_mean_axis_score(self):
+        config = llm_judge_eval.rubric_config_for_task_family("abstract_from_evidence", "v3")
+
+        shape = llm_judge_eval._score_record_shape(
+            {
+                "axis_scores": {
+                    "writing_structure_compliance": 2,
+                    "evidence_grounding": 2,
+                    "factual_fidelity": 2,
+                    "quantitative_specificity": 1,
+                    "hallucination_absence": 3,
+                },
+                "axis_rationales": {
+                    axis: "Rationale."
+                    for axis in config.axes
+                },
+                "grounding_issues": [],
+                "overall_pass": True,
+            },
+            config,
+        )
+
+        self.assertEqual(shape["axis_scores"]["quantitative_specificity"], 1)
+        self.assertEqual(shape["mean_axis_score"], 2.0)
+        self.assertTrue(shape["passes_threshold_rule"])
+        self.assertFalse(shape["all_axes_above_threshold"])
+        self.assertTrue(shape["judge_reported_pass_matches_rule"])
+
+    def test_llm_judge_v2_threshold_rule_remains_all_axes(self):
+        config = llm_judge_eval.rubric_config_for_task_family("methods_to_text", "v2")
+
+        shape = llm_judge_eval._score_record_shape(
+            {
+                "axis_scores": {
+                    "writing_structure_compliance": 1.0,
+                    "evidence_grounding": 1.0,
+                    "factual_fidelity": 1.0,
+                    "traceability": 0.59,
+                    "hallucination_absence": 1.0,
+                },
+                "axis_rationales": {
+                    axis: "Rationale."
+                    for axis in config.axes
+                },
+                "grounding_issues": [],
+                "overall_pass": False,
+            },
+            config,
+        )
+
+        self.assertAlmostEqual(shape["mean_axis_score"], 0.918)
+        self.assertFalse(shape["passes_threshold_rule"])
+        self.assertFalse(shape["all_axes_above_threshold"])
+        self.assertTrue(shape["judge_reported_pass_matches_rule"])
+
+    def test_llm_judge_retry_catches_socket_timeout(self):
+        responses = [
+            socket.timeout("timed out"),
+            {
+                "output_text": "{}",
+                "usage": {"input_tokens": 1, "output_tokens": 1},
+                "raw": {},
+            },
+        ]
+
+        def flaky_call(*args, **kwargs):
+            result = responses.pop(0)
+            if isinstance(result, BaseException):
+                raise result
+            return result
+
+        with mock.patch.object(llm_judge_eval, "call_anthropic", side_effect=flaky_call):
+            response = llm_judge_eval.call_judge_with_retry(
+                "prompt",
+                provider={"flavor": "anthropic", "request_model": "test-model"},
+                api_key="key",
+                temperature=0.0,
+                max_tokens=100,
+                attempts=2,
+                backoff_seconds=0.0,
+            )
+
+        self.assertEqual(response["output_text"], "{}")
+
+    def test_llm_judge_providers_include_openai_mini_options(self):
+        self.assertIn("gpt-5-mini", llm_judge_eval.PROVIDERS)
+        self.assertIn("gpt-5.4-mini", llm_judge_eval.PROVIDERS)
+        self.assertEqual(llm_judge_eval.PROVIDERS["gpt-5-mini"]["flavor"], "openai")
+        self.assertEqual(llm_judge_eval.PROVIDERS["gpt-5.4-mini"]["flavor"], "openai")
+        self.assertEqual(
+            llm_judge_eval.PROVIDERS["gpt-5-mini"]["token_param"],
+            "max_completion_tokens",
+        )
+        self.assertEqual(
+            llm_judge_eval.PROVIDERS["gpt-5.4-mini"]["token_param"],
+            "max_completion_tokens",
+        )
+        self.assertTrue(llm_judge_eval.PROVIDERS["gpt-5-mini"]["omit_temperature"])
+
+    def test_llm_submitter_providers_include_claude_haiku(self):
+        self.assertIn("claude-haiku-4-5", llm_smoke_eval.PROVIDERS)
+        self.assertIn("claude-haiku-4-5", llm_agentic_eval.PROVIDERS)
+        self.assertEqual(
+            llm_smoke_eval.PROVIDERS["claude-haiku-4-5"]["flavor"],
+            "anthropic",
+        )
+        self.assertEqual(
+            llm_agentic_eval.PROVIDERS["claude-haiku-4-5"]["flavor"],
+            "anthropic",
+        )
+
+    def test_frontier_registry_loads_roles_and_vllm_slot(self):
+        registry_path = default_frontier_registry_path()
+        submitters = load_frontier_registry(registry_path, role="submitter")
+        judges = load_frontier_registry(registry_path, role="judge")
+
+        self.assertIn("deepseek-chat", submitters)
+        self.assertIn("openweight-vllm-submitter", submitters)
+        self.assertIn("claude-sonnet-4-6", judges)
+        self.assertEqual(submitters["openweight-vllm-submitter"]["backend_type"], "vllm_http")
+        self.assertEqual(judges["gpt-5-mini"]["judge_policy"], "diagnostic_only")
+
+    def test_frontier_registry_runtime_overrides_vllm_slot(self):
+        registry_path = default_frontier_registry_path()
+        provider = load_frontier_model(
+            "openweight-vllm-submitter",
+            registry_path=registry_path,
+            role="submitter",
+            env={
+                "LSPWB_VLLM_ENDPOINT_URL": "http://vllm.local:8000/v1/chat/completions",
+                "LSPWB_VLLM_SERVED_MODEL_NAME": "meta-llama/Llama-3.3-70B-Instruct",
+                "LSPWB_VLLM_MODEL_VERSION_NOTE": "fp8-tp4",
+            },
+        )
+
+        self.assertEqual(provider["endpoint"], "http://vllm.local:8000/v1/chat/completions")
+        self.assertEqual(provider["request_model"], "meta-llama/Llama-3.3-70B-Instruct")
+        self.assertEqual(provider["model_version_note"], "fp8-tp4")
+
+    def test_frontier_runtime_default_model_selection_respects_registry_path(self):
+        registry_payload = {
+            "models": [
+                {
+                    "model_label": "custom-submitter",
+                    "backend_type": "openai_compatible_api",
+                    "request_model": "custom-submitter",
+                    "role_eligibility": "submitter",
+                    "judge_policy": "not_applicable",
+                    "family_bias_group": "custom_submitter",
+                    "provider_name": "custom",
+                    "execution_target": "hosted_api",
+                    "model_version_note": "v1",
+                    "omit_temperature": "false",
+                },
+                {
+                    "model_label": "custom-judge",
+                    "backend_type": "anthropic_api",
+                    "request_model": "custom-judge",
+                    "role_eligibility": "judge",
+                    "judge_policy": "official",
+                    "family_bias_group": "custom_judge",
+                    "provider_name": "custom",
+                    "execution_target": "hosted_api",
+                    "model_version_note": "v1",
+                    "omit_temperature": "true",
+                },
+            ]
+        }
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            registry_path = Path(tmpdir) / "registry.json"
+            registry_path.write_text(json.dumps(registry_payload) + "\n", encoding="utf-8")
+
+            self.assertEqual(
+                default_model_label_for_role(
+                    "submitter",
+                    preferred_label="deepseek-chat",
+                    registry_path=registry_path,
+                ),
+                "custom-submitter",
+            )
+            self.assertEqual(
+                default_model_label_for_role(
+                    "judge",
+                    preferred_label="claude-sonnet-4-6",
+                    registry_path=registry_path,
+                ),
+                "custom-judge",
+            )
+            registry = load_frontier_registry(registry_path)
+            self.assertEqual(registry["custom-submitter"]["submitter_track"], "hosted_frontier")
+            self.assertEqual(registry["custom-judge"]["submitter_track"], "not_applicable")
+            self.assertFalse(registry["custom-submitter"]["omit_temperature"])
+            self.assertTrue(registry["custom-judge"]["omit_temperature"])
+
+    def test_frontier_runtime_default_canary_models_respect_registry_path(self):
+        registry_payload = {
+            "models": [
+                {
+                    "model_label": "custom-submitter",
+                    "backend_type": "openai_compatible_api",
+                    "request_model": "custom-submitter",
+                    "role_eligibility": "submitter",
+                    "judge_policy": "not_applicable",
+                    "family_bias_group": "custom_submitter",
+                    "provider_name": "custom",
+                    "execution_target": "hosted_api",
+                    "model_version_note": "v1",
+                },
+                {
+                    "model_label": "custom-vllm",
+                    "backend_type": "vllm_http",
+                    "request_model": "custom-vllm",
+                    "role_eligibility": "submitter",
+                    "judge_policy": "not_applicable",
+                    "family_bias_group": "custom_open_weight",
+                    "provider_name": "custom",
+                    "execution_target": "cayuga_vllm",
+                    "model_version_note": "v1",
+                },
+                {
+                    "model_label": "custom-official-judge",
+                    "backend_type": "anthropic_api",
+                    "request_model": "custom-official-judge",
+                    "role_eligibility": "judge",
+                    "judge_policy": "official",
+                    "family_bias_group": "custom_judge",
+                    "provider_name": "custom",
+                    "execution_target": "hosted_api",
+                    "model_version_note": "v1",
+                },
+                {
+                    "model_label": "custom-diagnostic-judge",
+                    "backend_type": "openai_compatible_api",
+                    "request_model": "custom-diagnostic-judge",
+                    "role_eligibility": "judge",
+                    "judge_policy": "diagnostic_only",
+                    "family_bias_group": "custom_judge",
+                    "provider_name": "custom",
+                    "execution_target": "hosted_api",
+                    "model_version_note": "v1",
+                },
+            ]
+        }
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            registry_path = Path(tmpdir) / "registry.json"
+            registry_path.write_text(json.dumps(registry_payload) + "\n", encoding="utf-8")
+
+            self.assertEqual(
+                default_canary_models(registry_path=registry_path),
+                ("custom-official-judge", "custom-submitter"),
+            )
+
+    def test_frontier_runtime_builds_backend_payloads(self):
+        openai_payload = build_openai_compatible_payload(
+            "hello",
+            provider={
+                "request_model": "gpt-5.4-mini",
+                "token_param": "max_completion_tokens",
+                "omit_temperature": False,
+            },
+            temperature=0.1,
+            max_tokens=256,
+        )
+        anthropic_payload = build_anthropic_payload(
+            "hello",
+            provider={"request_model": "claude-sonnet-4-6"},
+            temperature=0.0,
+            max_tokens=512,
+        )
+
+        self.assertEqual(openai_payload["model"], "gpt-5.4-mini")
+        self.assertEqual(openai_payload["max_completion_tokens"], 256)
+        self.assertEqual(openai_payload["temperature"], 0.1)
+        self.assertEqual(anthropic_payload["model"], "claude-sonnet-4-6")
+        self.assertEqual(anthropic_payload["max_tokens"], 512)
+        self.assertEqual(anthropic_payload["messages"][0]["content"], "hello")
+
+    def test_frontier_runtime_load_api_keys_strips_inline_shell_comments(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "api_keys.env"
+            path.write_text(
+                "\n".join(
+                    [
+                        "export GEMINI_API_KEY=EXAMPLE_GEMINI_VALUE # local comment",
+                        "ANTHROPIC_API_KEY='EXAMPLE_ANTHROPIC_VALUE#kept'",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            keys = load_api_keys(path)
+
+            self.assertEqual(keys["GEMINI_API_KEY"], "EXAMPLE_GEMINI_VALUE")
+            self.assertEqual(keys["ANTHROPIC_API_KEY"], "EXAMPLE_ANTHROPIC_VALUE#kept")
+
+    def test_llm_agentic_response_helpers_support_normalized_anthropic_shape(self):
+        response = {
+            "output_text": "Methods\n\nA revised section.",
+            "usage": {
+                "prompt_tokens": 12,
+                "completion_tokens": 34,
+                "total_tokens": 46,
+            },
+        }
+
+        self.assertEqual(
+            llm_agentic_eval._response_text(response),
+            "Methods\n\nA revised section.",
+        )
+        self.assertEqual(
+            llm_agentic_eval._stage_usage(response, 1.25),
+            {
+                "prompt_tokens": 12,
+                "completion_tokens": 34,
+                "total_tokens": 46,
+                "elapsed_seconds": 1.25,
+            },
+        )
+
+    def test_llm_smoke_call_llm_dispatches_to_anthropic(self):
+        with mock.patch.object(
+            llm_smoke_eval,
+            "call_anthropic",
+            return_value={"output_text": "ok", "usage": {}, "raw": {}},
+        ) as anthropic_mock:
+            response = llm_smoke_eval.call_llm(
+                "prompt",
+                provider={
+                    "flavor": "anthropic",
+                    "request_model": "claude-haiku-4-5-20251001",
+                    "endpoint": "https://api.anthropic.com/v1/messages",
+                },
+                api_key="key",
+            )
+
+        anthropic_mock.assert_called_once()
+        self.assertEqual(response["output_text"], "ok")
+
+    def test_llm_agentic_critic_prompt_for_abstract_avoids_figure_table_citations(self):
+        task_bundle = make_task_bundle(index=1, task_family=TaskFamily.ABSTRACT_FROM_EVIDENCE)
+        source_bundle = AutoReviewSourceBundle(
+            paper_id=task_bundle.paper_id,
+            bundle_completeness=AutoReviewBundleCompleteness.REVIEW_READY,
+            methods_text="Methods include 24 mice and sequencing of 16S amplicons.",
+            results_text="Results report p < 0.05 and effect sizes across groups.",
+            figure_captions=("Figure 1 shows the group-level trend.",),
+            table_snippets=("Table 1 reports cohort sizes.",),
+        )
+
+        prompt = llm_agentic_eval.build_critic_prompt(
+            task_bundle,
+            source_bundle,
+            "Test Paper",
+            "Abstract\nA concise abstract draft.",
+        )
+
+        self.assertIn("quantitative specificity", prompt)
+        self.assertIn("Never ask for figure or table citations in the abstract.", prompt)
+        self.assertIn("Reject exact medians, cutoffs, calipers, matching ratios", prompt)
+        self.assertIn("If an exact detail is not explicitly visible in the evidence", prompt)
+        self.assertIn("Preserve supported quantitative anchors", prompt)
+        self.assertIn("Return at most 3 short items per list", prompt)
+        self.assertNotIn("exact figure/table labels", prompt)
+
+    def test_llm_agentic_critic_prompt_for_methods_requests_citation_specificity(self):
+        task_bundle = make_task_bundle(index=1, task_family=TaskFamily.METHODS_TO_TEXT)
+        source_bundle = AutoReviewSourceBundle(
+            paper_id=task_bundle.paper_id,
+            bundle_completeness=AutoReviewBundleCompleteness.REVIEW_READY,
+            abstract_text="Abstract overview.",
+            results_text="Results mention Figure 2 and accession GSE12345.",
+            figure_captions=("Figure 2 shows assay flow.",),
+            table_snippets=("Table 3 lists cohort metadata.",),
+        )
+
+        prompt = llm_agentic_eval.build_critic_prompt(
+            task_bundle,
+            source_bundle,
+            "Test Paper",
+            "Methods\nA methods draft.",
+        )
+
+        self.assertIn("citation specificity", prompt)
+        self.assertIn("exact figure/table labels", prompt)
+        self.assertIn("accession identifiers", prompt)
+        self.assertIn("Reject results leakage", prompt)
+        self.assertIn("Reject invented procedural embellishments", prompt)
+        self.assertIn("Preserve grounded figure/table labels", prompt)
+        self.assertIn("Prefer reframing grounded citations into procedural sentences", prompt)
+        self.assertNotIn("Never ask for figure or table citations in the abstract.", prompt)
+
+    def test_llm_agentic_writer_and_reviser_prompts_forbid_evidence_basis_preamble(self):
+        task_bundle = make_task_bundle(index=1, task_family=TaskFamily.RESULTS_TO_TEXT)
+        source_bundle = AutoReviewSourceBundle(
+            paper_id=task_bundle.paper_id,
+            bundle_completeness=AutoReviewBundleCompleteness.REVIEW_READY,
+            abstract_text="Abstract overview.",
+            methods_text="Methods evidence.",
+            figure_captions=("Figure 2 shows assay flow.",),
+            table_snippets=("Table 3 lists cohort metadata.",),
+        )
+
+        writer_prompt = llm_agentic_eval.build_writer_prompt(
+            task_bundle,
+            source_bundle,
+            "Test Paper",
+        )
+        reviser_prompt = llm_agentic_eval.build_reviser_prompt(
+            task_bundle,
+            source_bundle,
+            "Test Paper",
+            "Results\nA draft.",
+            llm_agentic_eval.blank_critique_payload("placeholder"),
+        )
+
+        self.assertIn("Do not add labels or preambles such as `Evidence basis:`", writer_prompt)
+        self.assertIn("Remove any preamble or meta-commentary such as `Evidence basis:`", reviser_prompt)
+        self.assertIn("Do not use process-language phrases such as `evidence-supported findings`", writer_prompt)
+        self.assertIn("Remove process-language phrases such as `evidence-supported findings`", reviser_prompt)
+        self.assertIn("If an exact detail is only implied by a cited table, figure, or caption", writer_prompt)
+        self.assertIn("never swap in a different unsupported exact detail", reviser_prompt)
+        self.assertIn("Preserve grounded traceability anchors", writer_prompt)
+
+    def test_llm_agentic_writer_prompt_for_methods_forbids_result_leakage(self):
+        task_bundle = make_task_bundle(index=1, task_family=TaskFamily.METHODS_TO_TEXT)
+        source_bundle = AutoReviewSourceBundle(
+            paper_id=task_bundle.paper_id,
+            bundle_completeness=AutoReviewBundleCompleteness.REVIEW_READY,
+            abstract_text="Abstract overview.",
+            results_text="Results with p-values and odds ratios.",
+            figure_captions=("Figure 2 shows assay flow.",),
+            table_snippets=("Table 3 lists cohort metadata.",),
+        )
+
+        writer_prompt = llm_agentic_eval.build_writer_prompt(
+            task_bundle,
+            source_bundle,
+            "Test Paper",
+        )
+
+        self.assertIn("Write a true Methods section", writer_prompt)
+        self.assertIn("Do NOT include observed outcomes, comparative findings, response rates", writer_prompt)
+        self.assertIn("odds ratios, hazard ratios, effect sizes", writer_prompt)
+        self.assertIn("Preserve grounded traceability anchors", writer_prompt)
+
+    def test_llm_agentic_reviser_prompt_for_methods_salvages_grounded_citations(self):
+        task_bundle = make_task_bundle(index=1, task_family=TaskFamily.METHODS_TO_TEXT)
+        source_bundle = AutoReviewSourceBundle(
+            paper_id=task_bundle.paper_id,
+            bundle_completeness=AutoReviewBundleCompleteness.REVIEW_READY,
+            abstract_text="Abstract overview.",
+            results_text="Results with Figure 2 and Table 3.",
+            figure_captions=("Figure 2 shows assay flow.",),
+            table_snippets=("Table 3 lists cohort metadata.",),
+        )
+
+        reviser_prompt = llm_agentic_eval.build_reviser_prompt(
+            task_bundle,
+            source_bundle,
+            "Test Paper",
+            "Methods\nA methods draft.",
+            llm_agentic_eval.blank_critique_payload("placeholder"),
+        )
+
+        self.assertIn("salvage the supported label", reviser_prompt)
+        self.assertIn("procedural sentence", reviser_prompt)
+
+    def test_llm_agentic_normalize_section_output_strips_preamble_and_process_language(self):
+        normalized = llm_agentic_eval.normalize_section_output(
+            "abstract_from_evidence",
+            (
+                "Abstract\n"
+                "Evidence basis: This abstract is based on evidence from a randomized trial.\n\n"
+                "These evidence-supported findings demonstrate improved outcomes."
+            ),
+        )
+
+        self.assertTrue(normalized.startswith("Abstract\n\n"))
+        self.assertNotIn("Evidence basis:", normalized)
+        self.assertIn("These findings demonstrate", normalized)
+        self.assertNotIn("evidence-supported", normalized)
+
+    def test_llm_agentic_normalize_methods_output_removes_process_language(self):
+        normalized = llm_agentic_eval.normalize_section_output(
+            "methods_to_text",
+            "Methods\nIn this evidence-guided workflow, a randomized trial was conducted with Fig. 1 and Table 1 support.",
+        )
+
+        self.assertEqual(
+            normalized,
+            "Methods\n\nA randomized trial was conducted with Fig. 1 and Table 1 support.",
+        )
+
+    def test_llm_agentic_parse_critique_output_fails_closed_on_invalid_shape(self):
+        critique_payload, error = llm_agentic_eval.parse_critique_output(
+            '{"structure_issues":"not-a-list"}'
+        )
+
+        self.assertIsNotNone(error)
+        self.assertEqual(set(critique_payload.keys()), set(llm_agentic_eval.CRITIQUE_KEYS))
+        self.assertTrue(all(isinstance(value, list) for value in critique_payload.values()))
+        self.assertTrue(critique_payload["revision_instructions"])
+
+    def test_llm_agentic_select_output_stage_blocks_deterministic_regression(self):
+        selected_text, selected_stage, selected_reason = llm_agentic_eval.select_output_stage(
+            "Methods\n\nDraft text with Fig. 1.",
+            "Methods\n\nRevised text without citations.",
+            draft_passed=True,
+            reviser_passed=False,
+            draft_citation_score=1.0,
+            reviser_citation_score=0.0,
+        )
+
+        self.assertEqual(selected_text, "Methods\n\nDraft text with Fig. 1.")
+        self.assertEqual(selected_stage, "draft")
+        self.assertEqual(selected_reason, "deterministic_regression_blocked")
+
+    def test_llm_agentic_select_output_stage_allows_pass_improvement(self):
+        selected_text, selected_stage, selected_reason = llm_agentic_eval.select_output_stage(
+            "Methods\n\nDraft text.",
+            "Methods\n\nRevised text with Table 1.",
+            draft_passed=False,
+            reviser_passed=True,
+            draft_citation_score=0.0,
+            reviser_citation_score=0.333,
+        )
+
+        self.assertEqual(selected_text, "Methods\n\nRevised text with Table 1.")
+        self.assertEqual(selected_stage, "reviser")
+        self.assertEqual(selected_reason, "deterministic_pass_improved")
+
+    def test_llm_agentic_final_submissions_round_trip_through_score_submissions(self):
+        paper = make_source_paper()
+        evidence_unit = make_evidence_unit(
+            paper,
+            unit_id="EU:agentic",
+            unit_type=EvidenceUnitType.FIGURE_TABLE_RESULT,
+            evidence_pointers=("Fig1", "Table1"),
+        )
+        benchmark_unit = BenchmarkUnit(
+            benchmark_unit_id="BU:agentic",
+            paper_id=paper.paper_id,
+            evidence_unit_ids=("EU:agentic",),
+            split="test",
+        )
+        task_bundle = build_task_bundle(
+            benchmark_unit=benchmark_unit,
+            source_paper=paper,
+            evidence_units=(evidence_unit,),
+            truth_manifest=make_truth_manifest(paper),
+            release_tier=ReleaseTier.PUBLIC_GOLD,
+        )
+
+        submission = llm_agentic_eval.build_submission_record(
+            task_bundle_id=task_bundle.task_bundle_id,
+            producer_id="llm-agentic:test",
+            output_text=(
+                "Results\n\nThese results preserve concrete values from Fig1 and Table1 with p < 0.05."
+            ),
+            config_fingerprint_sha256="fp-agentic",
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            task_bundles_path = os.path.join(tmpdir, "task_bundles.jsonl")
+            submissions_path = os.path.join(tmpdir, "submissions.jsonl")
+            evaluations_path = os.path.join(tmpdir, "evaluations.jsonl")
+
+            write_jsonl(task_bundles_path, [task_bundle])
+            write_jsonl(submissions_path, [submission])
+
+            exit_code = cli_main(
+                [
+                    "score-submissions",
+                    "--task-bundles",
+                    task_bundles_path,
+                    "--submissions",
+                    submissions_path,
+                    "--output",
+                    evaluations_path,
+                    "--scoring-version",
+                    "v2",
+                ]
+            )
+            self.assertEqual(exit_code, 0)
+            payload = load_jsonl(evaluations_path)
+            self.assertEqual(len(payload), 1)
+            self.assertTrue(payload[0]["deterministic_checks_passed"])
+
+    def test_llm_agentic_build_baseline_run_spec_uses_multi_agent_orchestration(self):
+        run_spec = llm_agentic_eval.build_baseline_run_spec(
+            task_bundle_ids=("TB:1", "TB:2"),
+            producer_id="llm-agentic:test",
+            model="deepseek-chat",
+            request_model="deepseek-chat",
+            temperature=0.2,
+            task_source="smoke",
+            replay_verified=False,
+        )
+
+        self.assertEqual(run_spec.baseline_kind, BaselineKind.MULTI_AGENT_ORCHESTRATION)
+        self.assertFalse(run_spec.replay_verified)
+        self.assertIn("api-backed multi-agent orchestration run", run_spec.notes)
+        self.assertIn(
+            f"selection_policy={llm_agentic_eval.SELECTION_POLICY_VERSION}",
+            run_spec.notes,
+        )
+
+    def test_llm_agentic_mark_replay_verified_only_toggles_run_spec_flag(self):
+        run_spec_false = llm_agentic_eval.build_baseline_run_spec(
+            task_bundle_ids=("TB:1",),
+            producer_id="llm-agentic:test",
+            model="deepseek-chat",
+            request_model="deepseek-chat",
+            temperature=0.2,
+            task_source="smoke",
+            replay_verified=False,
+        )
+        run_spec_true = llm_agentic_eval.build_baseline_run_spec(
+            task_bundle_ids=("TB:1",),
+            producer_id="llm-agentic:test",
+            model="deepseek-chat",
+            request_model="deepseek-chat",
+            temperature=0.2,
+            task_source="smoke",
+            replay_verified=True,
+        )
+        submission = llm_agentic_eval.build_submission_record(
+            task_bundle_id="TB:1",
+            producer_id="llm-agentic:test",
+            output_text="Results\n\nThese results cite Fig1 and Table1 with p < 0.05.",
+            config_fingerprint_sha256="fp-agentic",
+        )
+
+        self.assertEqual(run_spec_false.baseline_id, run_spec_true.baseline_id)
+        self.assertEqual(
+            run_spec_false.config_fingerprint_sha256,
+            run_spec_true.config_fingerprint_sha256,
+        )
+        self.assertFalse(run_spec_false.replay_verified)
+        self.assertTrue(run_spec_true.replay_verified)
+        self.assertEqual(
+            set(submission.to_dict().keys()),
+            {
+                "submission_id",
+                "task_bundle_id",
+                "source",
+                "producer_id",
+                "output_text",
+                "config_fingerprint_sha256",
+            },
+        )
+
+    def test_llm_matrix_summary_builds_partial_report_with_spread_and_blocked_cell(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            deepseek_dir = root / "deepseek_run"
+            gemini_dir = root / "gemini_run"
+            deepseek_dir.mkdir()
+            gemini_dir.mkdir()
+            registry = load_frontier_registry(default_frontier_registry_path())
+
+            (deepseek_dir / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "model": "deepseek-chat",
+                        "request_model": "deepseek-chat",
+                        "num_tasks": 30,
+                        "final_pass_count": 26,
+                        "final_mean_citation_specificity_score": 0.844,
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            (gemini_dir / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "model": "gemini-2.5-flash",
+                        "request_model": "gemini-2.5-flash",
+                        "num_tasks": 30,
+                        "final_pass_count": 22,
+                        "final_mean_citation_specificity_score": 0.756,
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            def write_judge_summary(path: Path, judge: str, pass_count: int, mean_axis: float) -> None:
+                path.mkdir()
+                (path / "summary.json").write_text(
+                    json.dumps(
+                        {
+                            "judge": judge,
+                            "judge_model": judge,
+                            "rubric_version": "v3",
+                            "total_submissions_judged": 30,
+                            "judge_overall_pass": pass_count,
+                            "passes_threshold_rule": pass_count + 1,
+                            "mean_axis_score": mean_axis,
+                            "all_axes_above_threshold": pass_count - 2,
+                            "total_grounding_issues": 40,
+                            "parse_failures": 0,
+                            "per_axis_mean": {
+                                "writing_structure_compliance": 3.0,
+                                "evidence_grounding": 2.4,
+                                "factual_fidelity": 2.2,
+                                "traceability": 2.0,
+                                "quantitative_specificity": 2.3,
+                                "hallucination_absence": 2.1,
+                            },
+                        }
+                    )
+                    + "\n",
+                    encoding="utf-8",
+                )
+
+            deepseek_gpt54_dir = root / "deepseek_gpt54"
+            deepseek_gpt5_dir = root / "deepseek_gpt5"
+            gemini_gpt54_dir = root / "gemini_gpt54"
+            write_judge_summary(deepseek_gpt54_dir, "gpt-5.4-mini", 25, 2.420)
+            write_judge_summary(deepseek_gpt5_dir, "gpt-5-mini", 22, 2.120)
+            write_judge_summary(gemini_gpt54_dir, "gpt-5.4-mini", 14, 2.093)
+
+            report = llm_matrix_summary.build_matrix_report(
+                submitter_runs={
+                    "deepseek-chat-agentic-rerun5": llm_matrix_summary.load_submitter_run(
+                        "deepseek-chat-agentic-rerun5",
+                        deepseek_dir,
+                        registry=registry,
+                    ),
+                    "gemini-2.5-flash-agentic-v1": llm_matrix_summary.load_submitter_run(
+                        "gemini-2.5-flash-agentic-v1",
+                        gemini_dir,
+                        registry=registry,
+                    ),
+                },
+                judge_labels=("claude-sonnet-4-6", "gpt-5.4-mini", "gpt-5-mini"),
+                judge_cells=(
+                    llm_matrix_summary.load_judge_cell(
+                        "deepseek-chat-agentic-rerun5",
+                        "gpt-5.4-mini",
+                        deepseek_gpt54_dir,
+                        registry=registry,
+                    ),
+                    llm_matrix_summary.load_judge_cell(
+                        "deepseek-chat-agentic-rerun5",
+                        "gpt-5-mini",
+                        deepseek_gpt5_dir,
+                        registry=registry,
+                    ),
+                    llm_matrix_summary.load_judge_cell(
+                        "gemini-2.5-flash-agentic-v1",
+                        "gpt-5.4-mini",
+                        gemini_gpt54_dir,
+                        registry=registry,
+                    ),
+                ),
+                blocked_cells={
+                    (
+                        "deepseek-chat-agentic-rerun5",
+                        "claude-sonnet-4-6",
+                    ): "provider credential unavailable",
+                },
+                registry=registry,
+            )
+
+            self.assertEqual(report["coverage"]["expected_cells"], 6)
+            self.assertEqual(report["coverage"]["completed_cells"], 3)
+            self.assertEqual(report["coverage"]["blocked_cells"], 1)
+            self.assertEqual(report["coverage"]["missing_cells"], 2)
+            self.assertEqual(report["coverage"]["excluded_family_bias_cells"], 0)
+            self.assertEqual(report["coverage"]["official"]["completed_cells"], 2)
+            self.assertEqual(report["coverage"]["official"]["blocked_cells"], 1)
+            self.assertEqual(report["coverage"]["official"]["missing_cells"], 1)
+            self.assertEqual(report["coverage"]["diagnostic"]["completed_cells"], 1)
+            self.assertEqual(report["common_judges"], ["gpt-5.4-mini"])
+            self.assertTrue(report["common_submitter_spread_gate_30pp"])
+            self.assertAlmostEqual(report["common_submitter_spread_pp"], 36.666, places=3)
+            self.assertEqual(report["official_judge_labels"], ["claude-sonnet-4-6", "gpt-5.4-mini"])
+            self.assertEqual(report["diagnostic_judge_labels"], ["gpt-5-mini"])
+
+            deepseek_row = next(
+                row
+                for row in report["aggregated_submitters"]
+                if row["submitter_label"] == "deepseek-chat-agentic-rerun5"
+            )
+            self.assertEqual(deepseek_row["num_completed_judges"], 1)
+            self.assertEqual(deepseek_row["num_completed_judges_all"], 2)
+            self.assertAlmostEqual(deepseek_row["mean_judge_overall_pass_rate_pct"], 83.333)
+            self.assertAlmostEqual(deepseek_row["common_judge_overall_pass_rate_pct"], 83.333, places=3)
+            completed_cell = next(
+                row
+                for row in report["matrix_cells"]
+                if row["submitter_label"] == "deepseek-chat-agentic-rerun5"
+                and row["judge_label"] == "gpt-5.4-mini"
+            )
+            self.assertEqual(completed_cell["submitter_backend_type"], "openai_compatible_api")
+            self.assertEqual(completed_cell["judge_backend_type"], "openai_compatible_api")
+            self.assertEqual(completed_cell["submitter_execution_target"], "hosted_api")
+            self.assertEqual(completed_cell["judge_execution_target"], "hosted_api")
+
+            gpt54_spread = next(
+                row for row in report["judge_spread"] if row["judge_label"] == "gpt-5.4-mini"
+            )
+            self.assertAlmostEqual(gpt54_spread["spread_pp"], 36.666, places=3)
+
+    def test_llm_matrix_summary_excludes_same_family_bias_cells(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            submitter_dir = root / "submitter"
+            judge_dir = root / "judge"
+            submitter_dir.mkdir()
+            judge_dir.mkdir()
+            registry = load_frontier_registry(default_frontier_registry_path())
+
+            (submitter_dir / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "model": "gpt-4o-mini",
+                        "request_model": "gpt-4o-mini",
+                        "num_tasks": 30,
+                        "final_pass_count": 22,
+                        "final_mean_citation_specificity_score": 0.756,
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            (judge_dir / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "judge": "gpt-5.4-mini",
+                        "judge_model": "gpt-5.4-mini",
+                        "rubric_version": "v3",
+                        "total_submissions_judged": 30,
+                        "judge_overall_pass": 14,
+                        "passes_threshold_rule": 15,
+                        "mean_axis_score": 2.093,
+                        "all_axes_above_threshold": 12,
+                        "total_grounding_issues": 48,
+                        "parse_failures": 0,
+                        "per_axis_mean": {
+                            "writing_structure_compliance": 3.0,
+                            "evidence_grounding": 2.2,
+                            "factual_fidelity": 2.0,
+                            "traceability": 2.0,
+                            "quantitative_specificity": 2.1,
+                            "hallucination_absence": 2.1,
+                        },
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            report = llm_matrix_summary.build_matrix_report(
+                submitter_runs={
+                    "gpt-4o-mini-agentic-v1": llm_matrix_summary.load_submitter_run(
+                        "gpt-4o-mini-agentic-v1",
+                        submitter_dir,
+                        registry=registry,
+                    )
+                },
+                judge_labels=("gpt-5.4-mini",),
+                judge_cells=(
+                    llm_matrix_summary.load_judge_cell(
+                        "gpt-4o-mini-agentic-v1",
+                        "gpt-5.4-mini",
+                        judge_dir,
+                        registry=registry,
+                    ),
+                ),
+                blocked_cells={},
+                registry=registry,
+            )
+
+            self.assertEqual(report["coverage"]["excluded_family_bias_cells"], 1)
+            self.assertEqual(report["matrix_cells"][0]["status"], "excluded_family_bias")
+
+    def test_llm_matrix_summary_matches_registry_by_request_model_alias(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            submitter_dir = root / "submitter"
+            judge_dir = root / "judge"
+            submitter_dir.mkdir()
+            judge_dir.mkdir()
+            registry_path = root / "registry.json"
+            registry_path.write_text(
+                json.dumps(
+                    {
+                        "models": [
+                            {
+                                "model_label": "custom-submit-label",
+                                "backend_type": "openai_compatible_api",
+                                "request_model": "provider/custom-submit-v1",
+                                "role_eligibility": "submitter",
+                                "judge_policy": "not_applicable",
+                                "family_bias_group": "custom_submit",
+                                "provider_name": "Custom Submitter",
+                                "execution_target": "hosted_api",
+                                "model_version_note": "v1",
+                            },
+                            {
+                                "model_label": "custom-judge-label",
+                                "backend_type": "openai_compatible_api",
+                                "request_model": "provider/custom-judge-v1",
+                                "role_eligibility": "judge",
+                                "judge_policy": "official",
+                                "family_bias_group": "custom_judge",
+                                "provider_name": "Custom Judge",
+                                "execution_target": "hosted_api",
+                                "model_version_note": "v1",
+                            },
+                        ]
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            registry = load_frontier_registry(registry_path)
+
+            (submitter_dir / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "model": "provider/custom-submit-v1",
+                        "request_model": "provider/custom-submit-v1",
+                        "num_tasks": 30,
+                        "final_pass_count": 20,
+                        "final_mean_citation_specificity_score": 0.7,
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            (judge_dir / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "judge": "provider/custom-judge-v1",
+                        "judge_model": "provider/custom-judge-v1",
+                        "rubric_version": "v3",
+                        "total_submissions_judged": 30,
+                        "judge_overall_pass": 18,
+                        "passes_threshold_rule": 19,
+                        "mean_axis_score": 2.1,
+                        "all_axes_above_threshold": 17,
+                        "total_grounding_issues": 5,
+                        "parse_failures": 0,
+                        "per_axis_mean": {
+                            "writing_structure_compliance": 2.1,
+                            "evidence_grounding": 2.1,
+                            "factual_fidelity": 2.1,
+                            "traceability": 2.1,
+                            "quantitative_specificity": 2.1,
+                            "hallucination_absence": 2.1,
+                        },
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            submitter = llm_matrix_summary.load_submitter_run(
+                "custom-submit-run",
+                submitter_dir,
+                registry=registry,
+            )
+            judge_cell = llm_matrix_summary.load_judge_cell(
+                "custom-submit-run",
+                "custom-judge-label",
+                judge_dir,
+                registry=registry,
+            )
+
+            self.assertEqual(submitter["family_bias_group"], "custom_submit")
+            self.assertEqual(submitter["submitter_track"], "hosted_frontier")
+            self.assertEqual(judge_cell["judge_policy"], "official")
+            self.assertEqual(judge_cell["judge_provider_name"], "Custom Judge")
+
+    def test_llm_matrix_summary_main_writes_summary_files(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            submitter_dir = root / "submitter"
+            judge_dir = root / "judge"
+            output_dir = root / "output"
+            submitter_dir.mkdir()
+            judge_dir.mkdir()
+            registry = default_frontier_registry_path()
+
+            (submitter_dir / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "model": "deepseek-chat",
+                        "request_model": "deepseek-chat",
+                        "num_tasks": 30,
+                        "final_pass_count": 26,
+                        "final_mean_citation_specificity_score": 0.844,
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            (judge_dir / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "judge": "gpt-5.4-mini",
+                        "judge_model": "gpt-5.4-mini",
+                        "rubric_version": "v3",
+                        "total_submissions_judged": 30,
+                        "judge_overall_pass": 25,
+                        "passes_threshold_rule": 26,
+                        "mean_axis_score": 2.420,
+                        "all_axes_above_threshold": 20,
+                        "total_grounding_issues": 48,
+                        "parse_failures": 0,
+                        "per_axis_mean": {
+                            "writing_structure_compliance": 3.0,
+                            "evidence_grounding": 2.467,
+                            "factual_fidelity": 2.267,
+                            "traceability": 2.111,
+                            "quantitative_specificity": 2.333,
+                            "hallucination_absence": 2.167,
+                        },
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            exit_code = llm_matrix_summary.main(
+                [
+                    "--submitter-run",
+                    f"deepseek-chat-agentic-rerun5={submitter_dir}",
+                    "--judge-label",
+                    "gpt-5.4-mini",
+                    "--judge-label",
+                    "claude-sonnet-4-6",
+                    "--judge-cell",
+                    f"deepseek-chat-agentic-rerun5:gpt-5.4-mini={judge_dir}",
+                    "--blocked-cell",
+                    "deepseek-chat-agentic-rerun5:claude-sonnet-4-6=provider credential unavailable",
+                    "--registry-path",
+                    str(registry),
+                    "--output-dir",
+                    str(output_dir),
+                ]
+            )
+
+            self.assertEqual(exit_code, 0)
+            summary = json.loads((output_dir / "summary.json").read_text(encoding="utf-8"))
+            markdown = (output_dir / "summary.md").read_text(encoding="utf-8")
+
+            self.assertEqual(summary["coverage"]["completed_cells"], 1)
+            self.assertEqual(summary["coverage"]["blocked_cells"], 1)
+            self.assertEqual(summary["coverage"]["excluded_family_bias_cells"], 0)
+            self.assertEqual(summary["coverage"]["official"]["completed_cells"], 1)
+            self.assertIn("Pending Cells", markdown)
+            self.assertIn("Official Jury Aggregate", markdown)
+            self.assertIn("provider credential unavailable", markdown)
+
+    def test_canary_probe_builds_public_and_control_specs_without_leaking_raw_output(self):
+        public_canary = generate_canary_string("BU:EUAUTO:ABC123", salt="public-salt")
+        control_canary = generate_canary_string("BU:EUAUTO:ABC123", salt="control-salt")
+        rows = [
+            canary_probe.ReleaseIndexCanary(
+                benchmark_unit_id="BU:EUAUTO:ABC123",
+                holdout_bucket="public",
+                canary_string=public_canary,
+            ),
+            canary_probe.ReleaseIndexCanary(
+                benchmark_unit_id="BU:EUAUTO:PRIVATE1",
+                holdout_bucket="private",
+                canary_string=generate_canary_string("BU:EUAUTO:PRIVATE1", salt="public-salt"),
+            ),
+        ]
+
+        specs = canary_probe.build_canary_probe_specs(
+            rows,
+            public_limit=1,
+            tail_chars=8,
+            control_salt="control-salt",
+        )
+
+        self.assertEqual(len(specs), 2)
+        public_spec = specs[0]
+        control_spec = specs[1]
+        self.assertEqual(public_spec.probe_kind, "public")
+        self.assertEqual(control_spec.probe_kind, "control")
+        self.assertEqual(public_spec.benchmark_unit_id, "BU:EUAUTO:ABC123")
+        self.assertEqual(len(public_spec.expected_tail), 8)
+        self.assertEqual(len(control_spec.expected_tail), 8)
+        self.assertEqual(public_spec.expected_full_string, public_canary)
+        self.assertEqual(control_spec.expected_full_string, control_canary)
+        redacted = public_spec.to_redacted_dict()
+        self.assertNotIn("expected_full_string", redacted)
+        self.assertNotIn(public_canary, json.dumps(redacted))
+
+    def test_canary_probe_evaluate_response_detects_exact_match_and_distance(self):
+        expected = generate_canary_string("BU:EUAUTO:XYZ789", salt="public-salt")
+        prompt_stem, expected_tail = canary_probe.split_canary(expected, tail_chars=8)
+        spec = canary_probe.CanaryProbeSpec(
+            probe_id="public-01-BU_EUAUTO_XYZ789",
+            probe_kind="public",
+            benchmark_unit_id="BU:EUAUTO:XYZ789",
+            expected_full_string=expected,
+            prompt_stem=prompt_stem,
+            expected_tail=expected_tail,
+            public_reference_canary=expected,
+        )
+
+        exact = canary_probe.evaluate_probe_response(spec, f'"{expected}"\n')
+        mismatch = canary_probe.evaluate_probe_response(spec, expected[:-1] + "Z")
+
+        self.assertTrue(exact["exact_match"])
+        self.assertEqual(exact["levenshtein_distance"], 0)
+        self.assertFalse(mismatch["exact_match"])
+        self.assertGreater(mismatch["levenshtein_distance"], 0)
+        self.assertTrue(exact["starts_with_prompt_stem"])
+
+    def test_canary_probe_main_dry_run_writes_redacted_summary(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            release_index_path = root / "release_index.jsonl"
+            output_dir = root / "canary_probe"
+
+            write_jsonl(
+                str(release_index_path),
+                [
+                    {
+                        "benchmark_unit_id": "BU:EUAUTO:AAA111",
+                        "paper_id": "P:1",
+                        "release_tier": "shadow_gold",
+                        "holdout_bucket": "public",
+                        "canary_string": generate_canary_string("BU:EUAUTO:AAA111", salt="public-salt"),
+                        "benchmark_split": "test",
+                    },
+                    {
+                        "benchmark_unit_id": "BU:EUAUTO:BBB222",
+                        "paper_id": "P:2",
+                        "release_tier": "shadow_gold",
+                        "holdout_bucket": "private",
+                        "canary_string": generate_canary_string("BU:EUAUTO:BBB222", salt="public-salt"),
+                        "benchmark_split": "test",
+                    },
+                ],
+            )
+
+            exit_code = canary_probe.main(
+                [
+                    "--model",
+                    "deepseek-chat",
+                    "--release-index",
+                    str(release_index_path),
+                    "--output-dir",
+                    str(output_dir),
+                    "--public-limit",
+                    "1",
+                    "--dry-run",
+                ]
+            )
+
+            self.assertEqual(exit_code, 0)
+            summary = json.loads((output_dir / "summary.json").read_text(encoding="utf-8"))
+            markdown = (output_dir / "summary.md").read_text(encoding="utf-8")
+            specs_lines = (output_dir / "probe_specs.jsonl").read_text(encoding="utf-8").splitlines()
+
+            self.assertTrue(summary["dry_run"])
+            self.assertEqual(summary["public_probe_count"], 1)
+            self.assertEqual(summary["control_probe_count"], 1)
+            self.assertEqual(summary["models_requested"], ["deepseek-chat"])
+            self.assertGreater(len(summary["production_models_expected"]), 1)
+            self.assertEqual(summary["production_models_requested"], ["deepseek-chat"])
+            self.assertEqual(summary["production_models_ok"], [])
+            self.assertIn("gpt-4o-mini", summary["production_models_missing"])
+            self.assertEqual(summary["hosted_production_models_requested"], ["deepseek-chat"])
+            self.assertEqual(summary["hosted_production_models_ok"], 0)
+            self.assertIn("probe mode: dry-run", markdown)
+            self.assertIn("deepseek-chat", markdown)
+            self.assertEqual(len(specs_lines), 2)
+            self.assertNotIn("LS-PWB-CANARY", "\n".join(specs_lines))
+
+    def test_canary_probe_allows_vllm_backend_without_api_key(self):
+        spec = canary_probe.CanaryProbeSpec(
+            probe_id="public-01",
+            probe_kind="public",
+            benchmark_unit_id="BU:EUAUTO:AAA111",
+            expected_full_string="LS-PWB-CANARY-AAA111",
+            prompt_stem="LS-PWB-CANARY-",
+            expected_tail="AAA111",
+            public_reference_canary="LS-PWB-CANARY-AAA111",
+        )
+
+        with mock.patch.object(
+            canary_probe,
+            "call_model_with_retry",
+            return_value={
+                "output_text": "LS-PWB-CANARY-AAA111",
+                "usage": {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
+            },
+        ):
+            summary, results = canary_probe.run_model_probes(
+                "openweight-vllm-submitter",
+                provider={
+                    "request_model": "meta-llama/Llama-3.3-70B-Instruct",
+                    "backend_type": "vllm_http",
+                    "provider_name": "vLLM",
+                    "execution_target": "cayuga_vllm",
+                },
+                api_key=None,
+                probes=[spec],
+                dry_run=False,
+                temperature=0.0,
+                max_tokens=16,
+                pause_between_calls=0.0,
+            )
+
+        self.assertEqual(summary["status"], "ok")
+        self.assertEqual(len(results), 1)
+
+    def test_inspect_adapter_builds_records_and_replays_scores_and_judgments(self):
+        paper = make_source_paper()
+        evidence_unit = make_evidence_unit(
+            paper,
+            unit_id="EU:inspect",
+            unit_type=EvidenceUnitType.FIGURE_TABLE_RESULT,
+            evidence_pointers=("Fig1", "Table1"),
+        )
+        benchmark_unit = BenchmarkUnit(
+            benchmark_unit_id="BU:inspect",
+            paper_id=paper.paper_id,
+            evidence_unit_ids=("EU:inspect",),
+            split="test",
+        )
+        task_bundle = build_task_bundle(
+            benchmark_unit=benchmark_unit,
+            source_paper=paper,
+            evidence_units=(evidence_unit,),
+            truth_manifest=make_truth_manifest(paper),
+            release_tier=ReleaseTier.PUBLIC_GOLD,
+        )
+        source_bundle = AutoReviewSourceBundle(
+            paper_id=paper.paper_id,
+            bundle_completeness=AutoReviewBundleCompleteness.REVIEW_READY,
+            results_text="Results cite Fig1 and Table1 with p < 0.05.",
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            task_bundles_path = root / "task_bundles.jsonl"
+            source_bundles_path = root / "source_bundles.jsonl"
+            submissions_path = root / "submissions.jsonl"
+            judgments_path = root / "judgments.jsonl"
+            write_jsonl(str(task_bundles_path), [task_bundle])
+            write_jsonl(str(source_bundles_path), [source_bundle])
+            write_jsonl(
+                str(submissions_path),
+                [
+                    SubmissionRecord(
+                        submission_id="SUB:inspect",
+                        task_bundle_id=task_bundle.task_bundle_id,
+                        source="inspect",
+                        producer_id="inspect:test",
+                        output_text="Results\n\nThese results cite Fig1 and Table1 with p < 0.05.",
+                    )
+                ],
+            )
+            judgments_path.write_text(
+                json.dumps(
+                    {
+                        "task_bundle_id": task_bundle.task_bundle_id,
+                        "overall_pass": True,
+                        "passes_threshold_rule": True,
+                        "mean_axis_score": 2.5,
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            records = inspect_adapter.build_inspect_records(
+                task_bundles_path=task_bundles_path,
+                source_bundles_path=source_bundles_path,
+                submissions_path=submissions_path,
+                judgments_path=judgments_path,
+                include_submission_scores=True,
+                limit=1,
+            )
+            replay = inspect_adapter.replay_submission_scores(
+                submissions_path,
+                task_bundles_path=task_bundles_path,
+            )
+            judge_replay = inspect_adapter.replay_judge_results(
+                judgments_path,
+                task_bundles_path=task_bundles_path,
+            )
+
+            self.assertEqual(len(records), 1)
+            self.assertEqual(records[0]["id"], task_bundle.task_bundle_id)
+            self.assertEqual(records[0]["input"]["task_family"], task_bundle.task_family.value)
+            self.assertEqual(
+                records[0]["metadata"]["submission_record"]["task_bundle_id"],
+                task_bundle.task_bundle_id,
+            )
+            self.assertIn(
+                "deterministic_checks_passed",
+                records[0]["metadata"]["submission_deterministic_evaluation"],
+            )
+            self.assertTrue(records[0]["metadata"]["judge_result"]["overall_pass"])
+            self.assertEqual(len(replay), 1)
+            self.assertEqual(replay[0]["task_bundle_id"], task_bundle.task_bundle_id)
+            self.assertIn("deterministic_checks_passed", replay[0])
+            self.assertEqual(len(judge_replay), 1)
+            self.assertEqual(judge_replay[0]["task_bundle_id"], task_bundle.task_bundle_id)
+            self.assertTrue(judge_replay[0]["overall_pass"])
+
+    def test_inspect_adapter_generates_submission_records_with_shared_registry_runtime(self):
+        paper = make_source_paper()
+        evidence_unit = make_evidence_unit(
+            paper,
+            unit_id="EU:inspect-generate",
+            unit_type=EvidenceUnitType.METHODS_PROTOCOL_BLOCK,
+            evidence_pointers=("Fig1",),
+        )
+        benchmark_unit = BenchmarkUnit(
+            benchmark_unit_id="BU:inspect-generate",
+            paper_id=paper.paper_id,
+            evidence_unit_ids=("EU:inspect-generate",),
+            split="test",
+        )
+        task_bundle = build_task_bundle(
+            benchmark_unit=benchmark_unit,
+            source_paper=paper,
+            evidence_units=(evidence_unit,),
+            truth_manifest=make_truth_manifest(paper),
+            release_tier=ReleaseTier.PUBLIC_GOLD,
+        )
+        source_bundle = AutoReviewSourceBundle(
+            paper_id=paper.paper_id,
+            bundle_completeness=AutoReviewBundleCompleteness.REVIEW_READY,
+            methods_text="Methods mention Fig1 and n = 12.",
+            provenance_fields={"title": "Inspect adapter generation test"},
+        )
+        registry_payload = {
+            "models": [
+                {
+                    "model_label": "custom-submit",
+                    "backend_type": "openai_compatible_api",
+                    "request_model": "custom-submit",
+                    "role_eligibility": "submitter",
+                    "judge_policy": "not_applicable",
+                    "family_bias_group": "custom_submitter",
+                    "provider_name": "custom",
+                    "execution_target": "hosted_api",
+                    "model_version_note": "v1",
+                }
+            ]
+        }
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            task_bundles_path = root / "task_bundles.jsonl"
+            source_bundles_path = root / "source_bundles.jsonl"
+            registry_path = root / "registry.json"
+            write_jsonl(str(task_bundles_path), [task_bundle])
+            write_jsonl(str(source_bundles_path), [source_bundle])
+            registry_path.write_text(json.dumps(registry_payload) + "\n", encoding="utf-8")
+
+            with mock.patch.object(
+                inspect_adapter,
+                "call_model_with_retry",
+                return_value={
+                    "output_text": "Methods\n\nWe analyzed n = 12 samples and reference Fig1.",
+                    "usage": {"prompt_tokens": 10, "completion_tokens": 6, "total_tokens": 16},
+                },
+            ) as mocked_call:
+                rows = inspect_adapter.generate_submission_records(
+                    model_label="custom-submit",
+                    registry_path=registry_path,
+                    task_bundles_path=task_bundles_path,
+                    source_bundles_path=source_bundles_path,
+                    temperature=0.1,
+                    max_tokens=128,
+                    dry_run=False,
+                )
+
+            self.assertEqual(len(rows), 1)
+            self.assertEqual(rows[0]["model"], "custom-submit")
+            self.assertEqual(rows[0]["request_model"], "custom-submit")
+            self.assertEqual(rows[0]["prompt_version"], "v2")
+            self.assertEqual(
+                rows[0]["submission_record"]["task_bundle_id"],
+                task_bundle.task_bundle_id,
+            )
+            self.assertIn("Methods", rows[0]["prompt"])
+            self.assertIn("deterministic_checks_passed", rows[0]["deterministic_evaluation"])
+            mocked_call.assert_called_once()
+
+    def test_publication_validation_slice_and_readiness_gate(self):
+        task_bundles = []
+        index = 1
+        study_classes = tuple(StudyClass)
+        for task_family in (
+            TaskFamily.METHODS_TO_TEXT,
+            TaskFamily.RESULTS_TO_TEXT,
+            TaskFamily.ABSTRACT_FROM_EVIDENCE,
+        ):
+            for family_offset in range(20):
+                task_bundles.append(
+                    make_task_bundle(
+                        index=index,
+                        task_family=task_family,
+                        study_class=study_classes[family_offset % len(study_classes)],
+                    )
+                )
+                index += 1
+
+        judge_units = build_publication_validation_slice(task_bundles, target_per_family=20)
+        summary = summarize_publication_validation_slice(task_bundles, judge_units, target_per_family=20)
+        registry_path = default_frontier_registry_path()
+        registry = load_frontier_registry(registry_path)
+        official_judges = sorted(
+            label
+            for label, entry in registry.items()
+            if entry.get("judge_policy") == "official" and entry.get("execution_target") == "hosted_api"
+        )
+        hosted_submitters = sorted(
+            label
+            for label, entry in registry.items()
+            if entry.get("submitter_track") == "hosted_frontier"
+        )
+        open_weight_submitters = sorted(
+            label for label, entry in registry.items() if entry.get("submitter_track") == "open_weight"
+        )
+        submitter_runs = []
+        matrix_cells = []
+        for submitter_model in hosted_submitters:
+            submitter_label = f"{submitter_model}-submitter"
+            submitter_entry = registry[submitter_model]
+            submitter_runs.append(
+                {
+                    "label": submitter_label,
+                    "request_model": submitter_model,
+                    "model": submitter_model,
+                    "submitter_track": "hosted_frontier",
+                    "family_bias_group": submitter_entry["family_bias_group"],
+                }
+            )
+            for judge_label in official_judges:
+                if registry[judge_label]["family_bias_group"] == submitter_entry["family_bias_group"]:
+                    continue
+                matrix_cells.append(
+                    {
+                        "submitter_label": submitter_label,
+                        "judge_label": judge_label,
+                        "status": "completed",
+                    }
+                )
+        for submitter_model in open_weight_submitters:
+            submitter_entry = registry[submitter_model]
+            submitter_runs.append(
+                {
+                    "label": f"{submitter_model}-submitter",
+                    "request_model": submitter_model,
+                    "model": submitter_model,
+                    "submitter_track": "open_weight",
+                    "family_bias_group": submitter_entry["family_bias_group"],
+                }
+            )
+        production_models = list(default_canary_models(registry_path=registry_path))
+        readiness = summarize_publication_readiness(
+            matrix_summary={
+                "registry_path": str(registry_path),
+                "official_judge_labels": official_judges,
+                "submitter_runs": submitter_runs,
+                "matrix_cells": matrix_cells,
+            },
+            canary_summary={
+                "registry_path": str(registry_path),
+                "models_requested": production_models,
+                "production_models_requested": production_models,
+                "production_models_ok": production_models,
+                "model_summaries": [{"model": label, "status": "ok"} for label in production_models],
+                "any_public_exact_match": False,
+                "any_control_exact_match": False,
+            },
+            validation_summary=summary,
+            agreement_metrics={
+                "pre_adjudication_kappa": 0.45,
+                "post_adjudication_kappa": 0.65,
+                "jury_vs_adjudicator_icc": 0.55,
+            },
+        )
+
+        self.assertEqual(len(judge_units), 60)
+        self.assertTrue(summary["ready"])
+        self.assertTrue(summary["study_class_stratification_ready"])
+        for family in (
+            TaskFamily.METHODS_TO_TEXT.value,
+            TaskFamily.RESULTS_TO_TEXT.value,
+            TaskFamily.ABSTRACT_FROM_EVIDENCE.value,
+        ):
+            self.assertEqual(sum(summary["per_family_study_class_counts"][family].values()), 20)
+            self.assertTrue(summary["per_family_stratification_ready"][family])
+        self.assertTrue(readiness["leaderboard_gate_passed"])
+        self.assertTrue(readiness["gates"]["official_hosted_matrix_complete"])
+        self.assertEqual(readiness["canary_coverage"]["missing_requested_models"], [])
+        self.assertEqual(readiness["hosted_official_matrix"]["counts"]["missing_cells"], 0)
+
+    def test_publication_readiness_matches_submitter_runs_by_registry_model_label(self):
+        registry_payload = {
+            "models": [
+                {
+                    "model_label": "custom-hosted",
+                    "backend_type": "openai_compatible_api",
+                    "request_model": "provider/custom-hosted-v2",
+                    "role_eligibility": "submitter",
+                    "judge_policy": "not_applicable",
+                    "family_bias_group": "hosted_vendor",
+                    "provider_name": "custom",
+                    "execution_target": "hosted_api",
+                    "model_version_note": "v2",
+                    "submitter_track": "hosted_frontier",
+                },
+                {
+                    "model_label": "custom-judge",
+                    "backend_type": "anthropic_api",
+                    "request_model": "provider/custom-judge-v1",
+                    "role_eligibility": "judge",
+                    "judge_policy": "official",
+                    "family_bias_group": "judge_vendor",
+                    "provider_name": "custom",
+                    "execution_target": "hosted_api",
+                    "model_version_note": "v1",
+                },
+            ]
+        }
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            registry_path = Path(tmpdir) / "registry.json"
+            registry_path.write_text(json.dumps(registry_payload) + "\n", encoding="utf-8")
+            production_models = list(default_canary_models(registry_path=registry_path))
+            registry = load_frontier_registry(registry_path)
+            production_request_models = [
+                registry[label]["request_model"] for label in production_models
+            ]
+            readiness = summarize_publication_readiness(
+                matrix_summary={
+                    "registry_path": str(registry_path),
+                    "official_judge_labels": ["custom-judge"],
+                    "submitter_tracks_present": ["hosted_frontier", "open_weight"],
+                    "submitter_runs": [
+                        {
+                            "label": "custom-hosted-run",
+                            "model": "custom-hosted",
+                            "request_model": "provider/custom-hosted-v2",
+                            "submitter_track": "hosted_frontier",
+                            "family_bias_group": "hosted_vendor",
+                        }
+                    ],
+                    "matrix_cells": [
+                        {
+                            "submitter_label": "custom-hosted-run",
+                            "judge_label": "custom-judge",
+                            "status": "completed",
+                        }
+                    ],
+                },
+                canary_summary={
+                    "registry_path": str(registry_path),
+                    "models_requested": production_request_models,
+                    "production_models_requested": production_request_models,
+                    "production_models_ok": production_models,
+                    "model_summaries": [
+                        {"model": registry[label]["request_model"], "status": "ok"}
+                        for label in production_models
+                    ],
+                    "any_public_exact_match": False,
+                    "any_control_exact_match": False,
+                },
+                validation_summary={
+                    "ready": True,
+                    "study_class_stratification_ready": True,
+                },
+                agreement_metrics={
+                    "pre_adjudication_kappa": 0.45,
+                    "post_adjudication_kappa": 0.65,
+                    "jury_vs_adjudicator_icc": 0.55,
+                },
+            )
+
+        self.assertTrue(readiness["leaderboard_gate_passed"])
+        self.assertTrue(readiness["gates"]["official_hosted_matrix_complete"])
+        self.assertTrue(readiness["gates"]["full_canary_report_ready"])
+        self.assertEqual(readiness["canary_coverage"]["missing_requested_models"], [])
+        self.assertEqual(readiness["canary_coverage"]["missing_ok_models"], [])
+        self.assertEqual(readiness["hosted_official_matrix"]["missing_submitter_models"], [])
+        self.assertEqual(readiness["hosted_official_matrix"]["counts"]["completed_cells"], 1)
+
+    def test_publication_readiness_non_numeric_agreement_metrics_fail_closed(self):
+        registry_payload = {
+            "models": [
+                {
+                    "model_label": "custom-hosted",
+                    "backend_type": "openai_compatible_api",
+                    "request_model": "custom-hosted",
+                    "role_eligibility": "submitter",
+                    "judge_policy": "not_applicable",
+                    "family_bias_group": "hosted_vendor",
+                    "provider_name": "custom",
+                    "execution_target": "hosted_api",
+                    "model_version_note": "v1",
+                    "submitter_track": "hosted_frontier",
+                },
+                {
+                    "model_label": "custom-judge",
+                    "backend_type": "anthropic_api",
+                    "request_model": "custom-judge",
+                    "role_eligibility": "judge",
+                    "judge_policy": "official",
+                    "family_bias_group": "judge_vendor",
+                    "provider_name": "custom",
+                    "execution_target": "hosted_api",
+                    "model_version_note": "v1",
+                },
+            ]
+        }
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            registry_path = Path(tmpdir) / "registry.json"
+            registry_path.write_text(json.dumps(registry_payload) + "\n", encoding="utf-8")
+            production_models = list(default_canary_models(registry_path=registry_path))
+            readiness = summarize_publication_readiness(
+                matrix_summary={
+                    "registry_path": str(registry_path),
+                    "official_judge_labels": ["custom-judge"],
+                    "submitter_tracks_present": ["hosted_frontier", "open_weight"],
+                    "submitter_runs": [
+                        {
+                            "label": "custom-hosted-run",
+                            "model": "custom-hosted",
+                            "request_model": "custom-hosted",
+                            "submitter_track": "hosted_frontier",
+                            "family_bias_group": "hosted_vendor",
+                        }
+                    ],
+                    "matrix_cells": [
+                        {
+                            "submitter_label": "custom-hosted-run",
+                            "judge_label": "custom-judge",
+                            "status": "completed",
+                        }
+                    ],
+                },
+                canary_summary={
+                    "registry_path": str(registry_path),
+                    "production_models_requested": production_models,
+                    "production_models_ok": production_models,
+                    "model_summaries": [
+                        {"model": label, "status": "ok"} for label in production_models
+                    ],
+                    "any_public_exact_match": False,
+                    "any_control_exact_match": False,
+                },
+                validation_summary={
+                    "ready": True,
+                    "study_class_stratification_ready": True,
+                },
+                agreement_metrics={
+                    "pre_adjudication_kappa": "n/a",
+                    "post_adjudication_kappa": None,
+                    "jury_vs_adjudicator_icc": "nan",
+                },
+            )
+
+        self.assertFalse(readiness["leaderboard_gate_passed"])
+        self.assertEqual(
+            readiness["agreement_metrics"],
+            {
+                "pre_adjudication_kappa": 0.0,
+                "post_adjudication_kappa": 0.0,
+                "jury_vs_adjudicator_icc": 0.0,
+            },
+        )
+        self.assertFalse(readiness["gates"]["pre_adjudication_kappa_ok"])
+        self.assertFalse(readiness["gates"]["post_adjudication_kappa_ok"])
+        self.assertFalse(readiness["gates"]["jury_vs_adjudicator_icc_ok"])
+
+    def test_publication_readiness_string_boolean_flags_are_parsed(self):
+        registry_payload = {
+            "models": [
+                {
+                    "model_label": "custom-hosted",
+                    "backend_type": "openai_compatible_api",
+                    "request_model": "custom-hosted",
+                    "role_eligibility": "submitter",
+                    "judge_policy": "not_applicable",
+                    "family_bias_group": "hosted_vendor",
+                    "provider_name": "custom",
+                    "execution_target": "hosted_api",
+                    "model_version_note": "v1",
+                    "submitter_track": "hosted_frontier",
+                },
+                {
+                    "model_label": "custom-judge",
+                    "backend_type": "anthropic_api",
+                    "request_model": "custom-judge",
+                    "role_eligibility": "judge",
+                    "judge_policy": "official",
+                    "family_bias_group": "judge_vendor",
+                    "provider_name": "custom",
+                    "execution_target": "hosted_api",
+                    "model_version_note": "v1",
+                },
+            ]
+        }
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            registry_path = Path(tmpdir) / "registry.json"
+            registry_path.write_text(json.dumps(registry_payload) + "\n", encoding="utf-8")
+            production_models = list(default_canary_models(registry_path=registry_path))
+            readiness = summarize_publication_readiness(
+                matrix_summary={
+                    "registry_path": str(registry_path),
+                    "official_judge_labels": ["custom-judge"],
+                    "submitter_tracks_present": ["hosted_frontier", "open_weight"],
+                    "submitter_runs": [
+                        {
+                            "label": "custom-hosted-run",
+                            "model": "custom-hosted",
+                            "request_model": "custom-hosted",
+                            "submitter_track": "hosted_frontier",
+                            "family_bias_group": "hosted_vendor",
+                        }
+                    ],
+                    "matrix_cells": [
+                        {
+                            "submitter_label": "custom-hosted-run",
+                            "judge_label": "custom-judge",
+                            "status": "completed",
+                        }
+                    ],
+                },
+                canary_summary={
+                    "registry_path": str(registry_path),
+                    "production_models_requested": production_models,
+                    "production_models_ok": production_models,
+                    "model_summaries": [
+                        {"model": label, "status": "ok"} for label in production_models
+                    ],
+                    "any_public_exact_match": "false",
+                    "any_control_exact_match": "false",
+                },
+                validation_summary={
+                    "ready": "false",
+                    "study_class_stratification_ready": "0",
+                },
+                agreement_metrics={
+                    "pre_adjudication_kappa": "0.45",
+                    "post_adjudication_kappa": "0.65",
+                    "jury_vs_adjudicator_icc": "0.55",
+                },
+            )
+
+        self.assertFalse(readiness["leaderboard_gate_passed"])
+        self.assertFalse(readiness["gates"]["validation_slice_ready"])
+        self.assertFalse(readiness["gates"]["study_class_stratification_ready"])
+        self.assertTrue(readiness["gates"]["full_canary_report_ready"])
+        self.assertTrue(readiness["gates"]["pre_adjudication_kappa_ok"])
+
+    def test_publication_readiness_blocks_partial_matrix_and_canary_coverage(self):
+        registry_path = default_frontier_registry_path()
+        registry = load_frontier_registry(registry_path)
+        official_judges = sorted(
+            label
+            for label, entry in registry.items()
+            if entry.get("judge_policy") == "official" and entry.get("execution_target") == "hosted_api"
+        )
+        hosted_submitters = sorted(
+            label
+            for label, entry in registry.items()
+            if entry.get("submitter_track") == "hosted_frontier"
+        )
+        primary_submitter = hosted_submitters[0]
+        primary_judge = official_judges[0]
+        readiness = summarize_publication_readiness(
+            matrix_summary={
+                "registry_path": str(registry_path),
+                "official_judge_labels": official_judges,
+                "submitter_tracks_present": ["hosted_frontier", "open_weight"],
+                "submitter_runs": [
+                    {
+                        "label": f"{primary_submitter}-submitter",
+                        "request_model": primary_submitter,
+                        "model": primary_submitter,
+                        "submitter_track": "hosted_frontier",
+                        "family_bias_group": registry[primary_submitter]["family_bias_group"],
+                    }
+                ],
+                "matrix_cells": [
+                    {
+                        "submitter_label": f"{primary_submitter}-submitter",
+                        "judge_label": primary_judge,
+                        "status": "completed",
+                    }
+                ],
+            },
+            canary_summary={
+                "registry_path": str(registry_path),
+                "models_requested": [primary_submitter],
+                "production_models_requested": [primary_submitter],
+                "production_models_ok": [primary_submitter],
+                "model_summaries": [{"model": primary_submitter, "status": "ok"}],
+                "any_public_exact_match": False,
+                "any_control_exact_match": False,
+            },
+            validation_summary={
+                "ready": True,
+                "study_class_stratification_ready": True,
+            },
+            agreement_metrics={
+                "pre_adjudication_kappa": 0.45,
+                "post_adjudication_kappa": 0.65,
+                "jury_vs_adjudicator_icc": 0.55,
+            },
+        )
+        self.assertFalse(readiness["leaderboard_gate_passed"])
+        self.assertFalse(readiness["gates"]["official_hosted_matrix_complete"])
+        self.assertFalse(readiness["gates"]["full_canary_report_ready"])
+        self.assertGreater(readiness["hosted_official_matrix"]["counts"]["missing_cells"], 0)
+        self.assertNotEqual(readiness["canary_coverage"]["missing_requested_models"], [])
+
+    def test_cli_build_publication_validation_slice_and_readiness(self):
+        task_bundles = []
+        index = 1
+        study_classes = tuple(StudyClass)
+        for task_family in (
+            TaskFamily.METHODS_TO_TEXT,
+            TaskFamily.RESULTS_TO_TEXT,
+            TaskFamily.ABSTRACT_FROM_EVIDENCE,
+        ):
+            for family_offset in range(20):
+                task_bundles.append(
+                    make_task_bundle(
+                        index=index,
+                        task_family=task_family,
+                        study_class=study_classes[family_offset % len(study_classes)],
+                    )
+                )
+                index += 1
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            task_bundles_path = root / "task_bundles.jsonl"
+            judge_units_path = root / "publication_validation.jsonl"
+            validation_summary_path = root / "publication_validation_summary.json"
+            matrix_summary_path = root / "matrix_summary.json"
+            canary_summary_path = root / "canary_summary.json"
+            agreement_path = root / "agreement.json"
+            readiness_path = root / "readiness.json"
+            write_jsonl(str(task_bundles_path), task_bundles)
+            registry_path = default_frontier_registry_path()
+            registry = load_frontier_registry(registry_path)
+            official_judges = sorted(
+                label
+                for label, entry in registry.items()
+                if entry.get("judge_policy") == "official" and entry.get("execution_target") == "hosted_api"
+            )
+            hosted_submitters = sorted(
+                label
+                for label, entry in registry.items()
+                if entry.get("submitter_track") == "hosted_frontier"
+            )
+            submitter_runs = []
+            matrix_cells = []
+            for submitter_model in hosted_submitters:
+                submitter_label = f"{submitter_model}-submitter"
+                submitter_entry = registry[submitter_model]
+                submitter_runs.append(
+                    {
+                        "label": submitter_label,
+                        "request_model": submitter_model,
+                        "model": submitter_model,
+                        "submitter_track": "hosted_frontier",
+                        "family_bias_group": submitter_entry["family_bias_group"],
+                    }
+                )
+                for judge_label in official_judges:
+                    if registry[judge_label]["family_bias_group"] == submitter_entry["family_bias_group"]:
+                        continue
+                    matrix_cells.append(
+                        {
+                            "submitter_label": submitter_label,
+                            "judge_label": judge_label,
+                            "status": "completed",
+                        }
+                    )
+            matrix_summary_path.write_text(
+                json.dumps(
+                    {
+                        "registry_path": str(registry_path),
+                        "official_judge_labels": official_judges,
+                        "submitter_tracks_present": ["hosted_frontier", "open_weight"],
+                        "submitter_runs": submitter_runs,
+                        "matrix_cells": matrix_cells,
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            production_models = list(default_canary_models(registry_path=registry_path))
+            canary_summary_path.write_text(
+                json.dumps(
+                    {
+                        "registry_path": str(registry_path),
+                        "models_requested": production_models,
+                        "production_models_requested": production_models,
+                        "production_models_ok": production_models,
+                        "model_summaries": [{"model": label, "status": "ok"} for label in production_models],
+                        "any_public_exact_match": False,
+                        "any_control_exact_match": False,
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            agreement_path.write_text(
+                json.dumps(
+                    {
+                        "pre_adjudication_kappa": 0.45,
+                        "post_adjudication_kappa": 0.65,
+                        "jury_vs_adjudicator_icc": 0.55,
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            self.assertEqual(
+                cli_main(
+                    [
+                        "build-publication-validation-slice",
+                        "--task-bundles",
+                        str(task_bundles_path),
+                        "--output",
+                        str(judge_units_path),
+                        "--summary-output",
+                        str(validation_summary_path),
+                    ]
+                ),
+                0,
+            )
+            self.assertEqual(
+                cli_main(
+                    [
+                        "summarize-publication-readiness",
+                        "--matrix-summary",
+                        str(matrix_summary_path),
+                        "--canary-summary",
+                        str(canary_summary_path),
+                        "--validation-summary",
+                        str(validation_summary_path),
+                        "--agreement-metrics",
+                        str(agreement_path),
+                        "--output",
+                        str(readiness_path),
+                    ]
+                ),
+                0,
+            )
+            readiness = json.loads(readiness_path.read_text(encoding="utf-8"))
+            self.assertTrue(readiness["leaderboard_gate_passed"])
+            self.assertTrue(readiness["gates"]["study_class_stratification_ready"])
+            self.assertTrue(readiness["gates"]["official_hosted_matrix_complete"])
+            validation_summary = json.loads(validation_summary_path.read_text(encoding="utf-8"))
+            self.assertTrue(validation_summary["study_class_stratification_ready"])
+
+    def test_cli_build_publication_validation_batch(self):
+        task_bundles = []
+        index = 1
+        study_classes = tuple(StudyClass)
+        for task_family in (
+            TaskFamily.METHODS_TO_TEXT,
+            TaskFamily.RESULTS_TO_TEXT,
+            TaskFamily.ABSTRACT_FROM_EVIDENCE,
+        ):
+            for family_offset in range(20):
+                task_bundles.append(
+                    make_task_bundle(
+                        index=index,
+                        task_family=task_family,
+                        study_class=study_classes[family_offset % len(study_classes)],
+                        holdout_bucket="public",
+                    )
+                )
+                index += 1
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            task_bundles_path = root / "task_bundles.jsonl"
+            truth_manifests_path = root / "truth_manifests.jsonl"
+            batch_dir = root / "publication_validation_batch"
+            write_jsonl(str(task_bundles_path), task_bundles)
+            truth_manifests = []
+            for bundle in task_bundles:
+                paper = make_source_paper(
+                    paper_id=bundle.paper_id,
+                    study_class=bundle.study_class,
+                    claim_mode=bundle.claim_mode,
+                )
+                truth_manifests.append(
+                    make_truth_manifest(
+                        paper,
+                        manifest_id=bundle.truth_manifest_id,
+                        paper_id=bundle.paper_id,
+                        assertion_texts=(f"Claim for {bundle.task_bundle_id}",),
+                    )
+                )
+            write_jsonl(str(truth_manifests_path), truth_manifests)
+
+            self.assertEqual(
+                cli_main(
+                    [
+                        "build-publication-validation-batch",
+                        "--task-bundles",
+                        str(task_bundles_path),
+                        "--truth-manifests",
+                        str(truth_manifests_path),
+                        "--output-dir",
+                        str(batch_dir),
+                        "--adjudicator",
+                        "adj_1",
+                        "--reviewers",
+                        "rev_a",
+                        "rev_b",
+                    ]
+                ),
+                0,
+            )
+
+            selected_bundles_path = batch_dir / "selected_task_bundles.jsonl"
+            inventory_path = batch_dir / "task_bundle_inventory.json"
+            validation_summary_path = batch_dir / "publication_validation_summary.json"
+            judge_units_path = batch_dir / "judge_units.jsonl"
+            forms_path = batch_dir / "judge_review_forms.jsonl"
+            adjudications_path = batch_dir / "judge_adjudications.jsonl"
+            progress_path = batch_dir / "judge_progress.json"
+            review_packets_dir = batch_dir / "review_packets"
+            packet_manifest_path = review_packets_dir / "packet_manifest.jsonl"
+            packet_summary_path = review_packets_dir / "packet_summary.json"
+            packet_summary_md_path = review_packets_dir / "summary.md"
+            hold_audit_path = batch_dir / "annotation_hold_audit.json"
+            hold_audit_md_path = batch_dir / "annotation_hold_audit.md"
+            batch_summary_path = batch_dir / "publication_validation_batch_summary.json"
+            truth_manifest_lookup_path = batch_dir / "truth_manifest_lookup.jsonl"
+            truth_manifest_lookup_md_path = batch_dir / "truth_manifest_lookup.md"
+            selected_truth_manifests_path = batch_dir / "selected_truth_manifests.jsonl"
+            dispatch_dir = batch_dir / "dispatch"
+            dispatch_readme_path = dispatch_dir / "README.md"
+            organizer_handoff_manifest_path = dispatch_dir / "organizer" / "handoff_manifest.md"
+            organizer_truth_manifest_lookup_path = dispatch_dir / "organizer" / "truth_manifest_lookup.jsonl"
+            reviewer_a_dispatch_forms_path = dispatch_dir / "rev_a" / "judge_review_forms.jsonl"
+            reviewer_a_dispatch_launch_message_path = dispatch_dir / "rev_a" / "launch_message.md"
+            adjudicator_dispatch_launch_message_path = dispatch_dir / "adjudicator" / "launch_message.md"
+            reviewer_forms_dir = batch_dir / "reviewer_forms"
+            reviewer_a_forms_path = reviewer_forms_dir / "rev_a_judge_review_forms.jsonl"
+            reviewer_b_forms_path = reviewer_forms_dir / "rev_b_judge_review_forms.jsonl"
+            handoff_manifest_path = batch_dir / "handoff_manifest.md"
+            launch_checklist_path = batch_dir / "review_launch_checklist.md"
+            reviewer_request_template_path = batch_dir / "reviewer_request_template.md"
+            adjudicator_handoff_path = batch_dir / "adjudicator_handoff.md"
+            reviewer_launch_messages_dir = batch_dir / "launch_messages"
+            reviewer_a_launch_message_path = reviewer_launch_messages_dir / "rev_a_launch_message.md"
+            reviewer_b_launch_message_path = reviewer_launch_messages_dir / "rev_b_launch_message.md"
+            adjudicator_launch_message_path = reviewer_launch_messages_dir / "adj_1_launch_message.md"
+
+            for path in (
+                selected_bundles_path,
+                inventory_path,
+                validation_summary_path,
+                judge_units_path,
+                forms_path,
+                adjudications_path,
+                progress_path,
+                packet_manifest_path,
+                packet_summary_path,
+                packet_summary_md_path,
+                hold_audit_path,
+                hold_audit_md_path,
+                batch_summary_path,
+                truth_manifest_lookup_path,
+                truth_manifest_lookup_md_path,
+                selected_truth_manifests_path,
+                dispatch_readme_path,
+                organizer_handoff_manifest_path,
+                organizer_truth_manifest_lookup_path,
+                reviewer_a_dispatch_forms_path,
+                reviewer_a_dispatch_launch_message_path,
+                adjudicator_dispatch_launch_message_path,
+                reviewer_a_forms_path,
+                reviewer_b_forms_path,
+                handoff_manifest_path,
+                launch_checklist_path,
+                reviewer_request_template_path,
+                adjudicator_handoff_path,
+                reviewer_a_launch_message_path,
+                reviewer_b_launch_message_path,
+                adjudicator_launch_message_path,
+            ):
+                self.assertTrue(path.exists(), str(path))
+
+            selected_bundles = load_jsonl(str(selected_bundles_path), loader=task_bundle_from_dict)
+            judge_units = load_jsonl(str(judge_units_path), loader=judge_validation_unit_from_dict)
+            forms = load_jsonl(str(forms_path), loader=judge_review_form_from_dict)
+            adjudications = load_jsonl(str(adjudications_path), loader=judge_adjudication_record_from_dict)
+            packets = load_jsonl(str(packet_manifest_path), loader=publication_annotation_packet_from_dict)
+            validation_summary = json.loads(validation_summary_path.read_text(encoding="utf-8"))
+            progress_summary = json.loads(progress_path.read_text(encoding="utf-8"))
+            packet_summary = publication_annotation_packet_summary_from_dict(
+                json.loads(packet_summary_path.read_text(encoding="utf-8"))
+            )
+            hold_audit = publication_annotation_hold_audit_report_from_dict(
+                json.loads(hold_audit_path.read_text(encoding="utf-8"))
+            )
+            batch_summary = json.loads(batch_summary_path.read_text(encoding="utf-8"))
+            truth_manifest_lookup = load_jsonl(str(truth_manifest_lookup_path))
+            selected_truth_manifests = load_jsonl(
+                str(selected_truth_manifests_path),
+                loader=truth_manifest_from_dict,
+            )
+
+            self.assertEqual(len(selected_bundles), 60)
+            self.assertEqual(len(judge_units), 60)
+            self.assertEqual(len(forms), 120)
+            self.assertEqual(len(adjudications), 60)
+            self.assertEqual(len(packets), 120)
+            self.assertEqual(len(truth_manifest_lookup), 60)
+            self.assertEqual(len(selected_truth_manifests), 60)
+            reviewer_a_forms = load_jsonl(str(reviewer_a_forms_path), loader=judge_review_form_from_dict)
+            reviewer_b_forms = load_jsonl(str(reviewer_b_forms_path), loader=judge_review_form_from_dict)
+            self.assertEqual(len(reviewer_a_forms), 60)
+            self.assertEqual(len(reviewer_b_forms), 60)
+            self.assertTrue(all(form.reviewer_id == "rev_a" for form in reviewer_a_forms))
+            self.assertTrue(all(form.reviewer_id == "rev_b" for form in reviewer_b_forms))
+            self.assertTrue(validation_summary["ready"])
+            self.assertTrue(validation_summary["study_class_stratification_ready"])
+            self.assertEqual(progress_summary["progress_summary"]["total_judge_units"], 60)
+            self.assertEqual(progress_summary["progress_summary"]["review_slots_completed"], 0)
+            self.assertTrue(all(unit.frozen for unit in judge_units))
+            self.assertTrue(all(PUBLICATION_SELECTION_LOCK_NOTE in unit.notes for unit in judge_units))
+            self.assertTrue(all(PUBLICATION_RUBRIC_LOCK_NOTE in unit.notes for unit in judge_units))
+            self.assertTrue(packet_summary.ok)
+            self.assertTrue(hold_audit.selection_locked)
+            self.assertTrue(hold_audit.rubric_locked)
+            self.assertTrue(hold_audit.structurally_ready)
+            self.assertIn("Publication Validation Handoff Manifest", handoff_manifest_path.read_text(encoding="utf-8"))
+            self.assertIn("review_launch_checklist.md", handoff_manifest_path.read_text(encoding="utf-8"))
+            self.assertIn("rev_a_launch_message.md", handoff_manifest_path.read_text(encoding="utf-8"))
+            self.assertIn("Reviewer Request Template", reviewer_request_template_path.read_text(encoding="utf-8"))
+            self.assertIn("Publication Validation Adjudicator Handoff", adjudicator_handoff_path.read_text(encoding="utf-8"))
+            self.assertIn("frozen benchmark units", reviewer_a_launch_message_path.read_text(encoding="utf-8"))
+            self.assertIn("Please wait to begin", adjudicator_launch_message_path.read_text(encoding="utf-8"))
+            self.assertTrue(hold_audit.awaiting_human_review)
+            self.assertEqual(batch_summary["target_per_family"], 20)
+            self.assertEqual(batch_summary["reviewers"], ["rev_a", "rev_b"])
+            self.assertEqual(batch_summary["adjudicator"], "adj_1")
+            self.assertTrue(batch_summary["study_class_stratification_ready"])
+            self.assertTrue(batch_summary["selection_locked"])
+            self.assertTrue(batch_summary["rubric_locked"])
+            self.assertTrue(batch_summary["annotation_hold_structurally_ready"])
+            self.assertTrue(batch_summary["annotation_hold_awaiting_human_review"])
+            self.assertEqual(batch_summary["truth_manifest_lookup_rows"], 60)
+            self.assertEqual(batch_summary["selected_truth_manifests"], 60)
+            self.assertIn("canonical truth-manifest source", truth_manifest_lookup_md_path.read_text(encoding="utf-8"))
+            reviewer_dispatch_launch_message = reviewer_a_dispatch_launch_message_path.read_text(encoding="utf-8")
+            adjudicator_dispatch_launch_message = adjudicator_dispatch_launch_message_path.read_text(encoding="utf-8")
+            dispatch_readme = dispatch_readme_path.read_text(encoding="utf-8")
+            reviewer_dispatch_index = (dispatch_dir / "rev_a" / "reviewer_index.md").read_text(encoding="utf-8")
+            reviewer_dispatch_protocol = (dispatch_dir / "rev_a" / "human_annotation_protocol.md").read_text(
+                encoding="utf-8"
+            )
+            self.assertIn("`human_annotation_protocol.md`", reviewer_dispatch_launch_message)
+            self.assertIn("`reviewer_index.md`", reviewer_dispatch_launch_message)
+            self.assertIn("`packets`", reviewer_dispatch_launch_message)
+            self.assertIn("`judge_review_forms.jsonl`", reviewer_dispatch_launch_message)
+            self.assertNotIn("validation/human_annotation_protocol.md", reviewer_dispatch_launch_message)
+            self.assertNotIn("review_packets/", reviewer_dispatch_launch_message)
+            self.assertIn("`human_annotation_protocol.md`", adjudicator_dispatch_launch_message)
+            self.assertIn("`adjudicator_handoff.md`", adjudicator_dispatch_launch_message)
+            self.assertIn("not ready for adjudication yet", adjudicator_dispatch_launch_message)
+            self.assertNotIn("judge_review_forms_merged.jsonl", adjudicator_dispatch_launch_message)
+            self.assertNotIn("validation/human_annotation_protocol.md", adjudicator_dispatch_launch_message)
+            self.assertNotIn("pre_human_review_preflight.md", dispatch_readme)
+            self.assertIn("post-review adjudication inputs are not complete yet", dispatch_readme)
+            self.assertNotIn("publication_validation_v1", dispatch_readme)
+            self.assertIn("-> `packets/", reviewer_dispatch_index)
+            self.assertNotIn("-> `packets/rev_a/", reviewer_dispatch_index)
+            self.assertNotIn("calibration/publication_validation_v1/review_packets", reviewer_dispatch_protocol)
+            self.assertIn("`reviewer_index.md`", reviewer_dispatch_protocol)
+            self.assertIn("`judge_review_forms.jsonl`", reviewer_dispatch_protocol)
+            self.assertEqual(len(list((dispatch_dir / "rev_a" / "packets").glob("*.md"))), 60)
+            self.assertEqual(len(list((dispatch_dir / "rev_b" / "packets").glob("*.md"))), 60)
+            self.assertIn("Dispatch Bundles", dispatch_readme)
+
+    def test_publication_annotation_packets_and_hold_audit(self):
+        task_bundles = []
+        index = 1
+        study_classes = tuple(StudyClass)
+        for task_family in (
+            TaskFamily.METHODS_TO_TEXT,
+            TaskFamily.RESULTS_TO_TEXT,
+            TaskFamily.ABSTRACT_FROM_EVIDENCE,
+        ):
+            for family_offset in range(20):
+                task_bundles.append(
+                    make_task_bundle(
+                        index=index,
+                        task_family=task_family,
+                        study_class=study_classes[family_offset % len(study_classes)],
+                        holdout_bucket="public",
+                    )
+                )
+                index += 1
+
+        judge_units = lock_publication_annotation_units(
+            build_publication_validation_slice(
+                task_bundles,
+                target_per_family=20,
+                include_holdout_buckets=("public",),
+            )
+        )
+        forms = build_judge_review_forms(judge_units, reviewer_ids=("rev_a", "rev_b"))
+        adjudications = build_judge_adjudication_shells(
+            judge_units,
+            adjudicator_id="adj_1",
+            reviewer_ids=("rev_a", "rev_b"),
+        )
+        packets = build_publication_annotation_packets(
+            task_bundles=task_bundles,
+            judge_units=judge_units,
+            forms=forms,
+            reviewer_ids=("rev_a", "rev_b"),
+            authoritative_form_path="judge_review_forms.jsonl",
+            packet_dir="packets",
+        )
+        packet_summary = summarize_publication_annotation_packets(
+            packets,
+            judge_units=judge_units,
+            reviewer_ids=("rev_a", "rev_b"),
+        )
+        hold_audit = audit_publication_annotation_hold(
+            batch_dir="/tmp/publication_validation_v1",
+            task_bundles=task_bundles,
+            selected_task_bundles=task_bundles,
+            judge_units=judge_units,
+            forms=forms,
+            adjudications=adjudications,
+            packets=packets,
+            reviewer_ids=("rev_a", "rev_b"),
+        )
+
+        self.assertIsInstance(packets[0], PublicationAnnotationPacket)
+        self.assertIsInstance(packet_summary, PublicationAnnotationPacketSummary)
+        self.assertIsInstance(hold_audit, PublicationAnnotationHoldAuditReport)
+        self.assertEqual(len(packets), 120)
+        self.assertTrue(packet_summary.ok)
+        self.assertTrue(hold_audit.selection_locked)
+        self.assertTrue(hold_audit.rubric_locked)
+        self.assertTrue(hold_audit.structurally_ready)
+        self.assertTrue(hold_audit.awaiting_human_review)
+        self.assertEqual(hold_audit.review_completion_rate, 0.0)
+        self.assertEqual(hold_audit.reviewer_assignment_counts["rev_a"], 60)
+        self.assertEqual(hold_audit.reviewer_assignment_counts["rev_b"], 60)
+
+    def test_publication_annotation_hold_audit_detects_missing_packet_pair(self):
+        task_bundles = []
+        index = 1
+        study_classes = tuple(StudyClass)
+        for task_family in (
+            TaskFamily.METHODS_TO_TEXT,
+            TaskFamily.RESULTS_TO_TEXT,
+            TaskFamily.ABSTRACT_FROM_EVIDENCE,
+        ):
+            for family_offset in range(20):
+                task_bundles.append(
+                    make_task_bundle(
+                        index=index,
+                        task_family=task_family,
+                        study_class=study_classes[family_offset % len(study_classes)],
+                        holdout_bucket="public",
+                    )
+                )
+                index += 1
+
+        judge_units = lock_publication_annotation_units(
+            build_publication_validation_slice(
+                task_bundles,
+                target_per_family=20,
+                include_holdout_buckets=("public",),
+            )
+        )
+        forms = build_judge_review_forms(judge_units, reviewer_ids=("rev_a", "rev_b"))
+        adjudications = build_judge_adjudication_shells(
+            judge_units,
+            adjudicator_id="adj_1",
+            reviewer_ids=("rev_a", "rev_b"),
+        )
+        packets = build_publication_annotation_packets(
+            task_bundles=task_bundles,
+            judge_units=judge_units,
+            forms=forms,
+            reviewer_ids=("rev_a", "rev_b"),
+            authoritative_form_path="judge_review_forms.jsonl",
+            packet_dir="packets",
+        )
+        report = audit_publication_annotation_hold(
+            batch_dir="/tmp/publication_validation_v1",
+            task_bundles=task_bundles,
+            selected_task_bundles=task_bundles,
+            judge_units=judge_units,
+            forms=forms,
+            adjudications=adjudications,
+            packets=packets[1:],
+            reviewer_ids=("rev_a", "rev_b"),
+        )
+
+        self.assertFalse(report.ok)
+        self.assertFalse(report.structurally_ready)
+        self.assertFalse(report.awaiting_human_review)
+        self.assertTrue(report.missing_packet_pairs)
+
+    def test_cli_build_publication_review_packets_and_audit_hold(self):
+        task_bundles = []
+        index = 1
+        study_classes = tuple(StudyClass)
+        for task_family in (
+            TaskFamily.METHODS_TO_TEXT,
+            TaskFamily.RESULTS_TO_TEXT,
+            TaskFamily.ABSTRACT_FROM_EVIDENCE,
+        ):
+            for family_offset in range(20):
+                task_bundles.append(
+                    make_task_bundle(
+                        index=index,
+                        task_family=task_family,
+                        study_class=study_classes[family_offset % len(study_classes)],
+                        holdout_bucket="public",
+                    )
+                )
+                index += 1
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            task_bundles_path = root / "task_bundles.jsonl"
+            batch_dir = root / "publication_validation_batch"
+            packets_dir = root / "publication_packets_rerun"
+            dispatch_dir = batch_dir / "dispatch"
+            audit_path = root / "annotation_hold_audit.json"
+            audit_md_path = root / "annotation_hold_audit.md"
+            write_jsonl(str(task_bundles_path), task_bundles)
+
+            self.assertEqual(
+                cli_main(
+                    [
+                        "build-publication-validation-batch",
+                        "--task-bundles",
+                        str(task_bundles_path),
+                        "--output-dir",
+                        str(batch_dir),
+                        "--adjudicator",
+                        "adj_1",
+                        "--reviewers",
+                        "rev_a",
+                        "rev_b",
+                    ]
+                ),
+                0,
+            )
+            preserved_dispatch_form_path = dispatch_dir / "rev_a" / "judge_review_forms.jsonl"
+            preserved_dispatch_forms = load_jsonl(str(preserved_dispatch_form_path))
+            preserved_dispatch_forms[0]["completed"] = True
+            preserved_dispatch_forms[0]["notes"] = ["sentinel reviewer working copy"]
+            write_jsonl(str(preserved_dispatch_form_path), preserved_dispatch_forms)
+            starter_unit = load_jsonl(
+                str(batch_dir / "judge_units.jsonl"),
+                loader=judge_validation_unit_from_dict,
+            )[0]
+            (batch_dir / "calibration_mini_round.md").write_text(
+                "\n".join(
+                    [
+                        "# Calibration Mini Round",
+                        "",
+                        f"### 1. `{starter_unit.validation_unit_id}`",
+                        "",
+                        "- reviewer A packet:",
+                        "  `review_packets/packets/rev_a/stale-root-path.md`",
+                        "- reviewer B packet:",
+                        "  `review_packets/packets/rev_b/stale-root-path.md`",
+                        "",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            self.assertEqual(
+                cli_main(
+                    [
+                        "build-publication-review-packets",
+                        "--batch-dir",
+                        str(batch_dir),
+                        "--output-dir",
+                        str(packets_dir),
+                    ]
+                ),
+                0,
+            )
+            self.assertEqual(
+                cli_main(
+                    [
+                        "audit-publication-annotation-hold",
+                        "--batch-dir",
+                        str(batch_dir),
+                        "--packets-dir",
+                        str(packets_dir),
+                        "--output",
+                        str(audit_path),
+                        "--markdown-output",
+                        str(audit_md_path),
+                    ]
+                ),
+                0,
+            )
+
+            packet_summary = json.loads((packets_dir / "packet_summary.json").read_text(encoding="utf-8"))
+            audit = json.loads(audit_path.read_text(encoding="utf-8"))
+            self.assertTrue(packet_summary["ok"])
+            self.assertTrue(audit["selection_locked"])
+            self.assertTrue(audit["rubric_locked"])
+            self.assertTrue(audit["awaiting_human_review"])
+            self.assertIn("Publication Annotation Hold Audit", audit_md_path.read_text(encoding="utf-8"))
+            self.assertTrue((batch_dir / "handoff_manifest.md").exists())
+            self.assertTrue((batch_dir / "review_launch_checklist.md").exists())
+            self.assertTrue((batch_dir / "reviewer_request_template.md").exists())
+            self.assertTrue((batch_dir / "adjudicator_handoff.md").exists())
+            self.assertTrue((batch_dir / "launch_messages" / "rev_a_launch_message.md").exists())
+            self.assertTrue((batch_dir / "launch_messages" / "adj_1_launch_message.md").exists())
+            self.assertTrue((dispatch_dir / "README.md").exists())
+            self.assertTrue((dispatch_dir / "rev_a" / "launch_message.md").exists())
+            self.assertTrue((dispatch_dir / "adjudicator" / "launch_message.md").exists())
+            self.assertTrue((dispatch_dir / "rev_a" / "calibration_mini_round.md").exists())
+            self.assertTrue((dispatch_dir / "rev_a" / "reviewer_index.md").exists())
+            self.assertTrue((dispatch_dir / "rev_b" / "reviewer_index.md").exists())
+            preserved_after_rerun = load_jsonl(str(preserved_dispatch_form_path))
+            self.assertTrue(preserved_after_rerun[0]["completed"])
+            self.assertEqual(preserved_after_rerun[0]["notes"], ["sentinel reviewer working copy"])
+            self.assertIn(
+                "`calibration_mini_round.md`",
+                (dispatch_dir / "rev_a" / "launch_message.md").read_text(encoding="utf-8"),
+            )
+            reviewer_index = (dispatch_dir / "rev_a" / "reviewer_index.md").read_text(encoding="utf-8")
+            reviewer_calibration = (dispatch_dir / "rev_a" / "calibration_mini_round.md").read_text(
+                encoding="utf-8"
+            )
+            self.assertIn("-> `packets/", reviewer_index)
+            self.assertNotIn("-> `packets/rev_a/", reviewer_index)
+            self.assertIn("your packet: `packets/", reviewer_calibration)
+            self.assertNotIn("review_packets/packets", reviewer_calibration)
+            self.assertEqual(len(list((dispatch_dir / "rev_a" / "packets").glob("*.md"))), 60)
+            self.assertEqual(len(list((dispatch_dir / "rev_b" / "packets").glob("*.md"))), 60)
+
+    def test_cli_build_publication_review_packets_detects_stale_dispatch_forms(self):
+        task_bundles = []
+        index = 1
+        study_classes = tuple(StudyClass)
+        for task_family in (
+            TaskFamily.METHODS_TO_TEXT,
+            TaskFamily.RESULTS_TO_TEXT,
+            TaskFamily.ABSTRACT_FROM_EVIDENCE,
+        ):
+            for family_offset in range(20):
+                task_bundles.append(
+                    make_task_bundle(
+                        index=index,
+                        task_family=task_family,
+                        study_class=study_classes[family_offset % len(study_classes)],
+                        holdout_bucket="public",
+                    )
+                )
+                index += 1
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            task_bundles_path = root / "task_bundles.jsonl"
+            batch_dir = root / "publication_validation_batch"
+            dispatch_form_path = batch_dir / "dispatch" / "rev_a" / "judge_review_forms.jsonl"
+            write_jsonl(str(task_bundles_path), task_bundles)
+
+            self.assertEqual(
+                cli_main(
+                    [
+                        "build-publication-validation-batch",
+                        "--task-bundles",
+                        str(task_bundles_path),
+                        "--output-dir",
+                        str(batch_dir),
+                        "--adjudicator",
+                        "adj_1",
+                        "--reviewers",
+                        "rev_a",
+                        "rev_b",
+                    ]
+                ),
+                0,
+            )
+            stale_forms = load_jsonl(str(dispatch_form_path))
+            stale_forms = stale_forms[:-1]
+            write_jsonl(str(dispatch_form_path), stale_forms)
+
+            self.assertEqual(
+                cli_main(
+                    [
+                        "build-publication-review-packets",
+                        "--batch-dir",
+                        str(batch_dir),
+                    ]
+                ),
+                1,
+            )
+            self.assertEqual(
+                cli_main(
+                    [
+                        "build-publication-review-packets",
+                        "--batch-dir",
+                        str(batch_dir),
+                        "--refresh-dispatch-reviewer-forms",
+                    ]
+                ),
+                0,
+            )
+            refreshed_forms = load_jsonl(str(dispatch_form_path))
+            self.assertEqual(len(refreshed_forms), 60)
+
+    def test_cli_build_publication_review_packets_without_adjudications_file(self):
+        task_bundles = []
+        index = 1
+        study_classes = tuple(StudyClass)
+        for task_family in (
+            TaskFamily.METHODS_TO_TEXT,
+            TaskFamily.RESULTS_TO_TEXT,
+            TaskFamily.ABSTRACT_FROM_EVIDENCE,
+        ):
+            for family_offset in range(20):
+                task_bundles.append(
+                    make_task_bundle(
+                        index=index,
+                        task_family=task_family,
+                        study_class=study_classes[family_offset % len(study_classes)],
+                        holdout_bucket="public",
+                    )
+                )
+                index += 1
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            task_bundles_path = root / "task_bundles.jsonl"
+            batch_dir = root / "publication_validation_batch"
+            write_jsonl(str(task_bundles_path), task_bundles)
+
+            self.assertEqual(
+                cli_main(
+                    [
+                        "build-publication-validation-batch",
+                        "--task-bundles",
+                        str(task_bundles_path),
+                        "--output-dir",
+                        str(batch_dir),
+                        "--adjudicator",
+                        "adj_1",
+                        "--reviewers",
+                        "rev_a",
+                        "rev_b",
+                    ]
+                ),
+                0,
+            )
+            (batch_dir / "judge_adjudications.jsonl").unlink()
+
+            self.assertEqual(
+                cli_main(
+                    [
+                        "build-publication-review-packets",
+                        "--batch-dir",
+                        str(batch_dir),
+                    ]
+                ),
+                0,
+            )
+            self.assertTrue((batch_dir / "review_packets" / "packet_summary.json").exists())
+
     def test_judge_review_workflow_build_merge_queue_and_finalize(self):
         judge_units = build_judge_validation_slice(
             [
@@ -3018,6 +6127,363 @@ class QualificationTests(unittest.TestCase):
         self.assertTrue(finalized_units[0].frozen)
         self.assertEqual(finalized_units[0].adjudicator_id, "adj_1")
         self.assertFalse(finalized_units[1].human_adjudicated)
+
+    def test_human_review_string_boolean_flags_are_parsed(self):
+        self.assertFalse(
+            judge_review_form_from_dict(
+                {
+                    "validation_unit_id": "JVU:1",
+                    "reviewer_id": "rev_a",
+                    "completed": "false",
+                }
+            ).completed
+        )
+        self.assertFalse(
+            judge_adjudication_record_from_dict(
+                {
+                    "validation_unit_id": "JVU:1",
+                    "adjudicator_id": "adj_1",
+                    "finalized": "0",
+                }
+            ).finalized
+        )
+        self.assertFalse(
+            judge_adjudication_queue_entry_from_dict(
+                {
+                    "validation_unit_id": "JVU:1",
+                    "status": "awaiting_reviews",
+                    "required_reviewer_count": 2,
+                    "has_final_adjudication": "off",
+                }
+            ).has_final_adjudication
+        )
+        self.assertFalse(
+            judge_validation_unit_from_dict(
+                {
+                    "validation_unit_id": "JVU:1",
+                    "task_bundle_id": "TB:1",
+                    "human_adjudicated": "false",
+                    "frozen": "no",
+                }
+            ).human_adjudicated
+        )
+        self.assertTrue(
+            judge_validation_unit_from_dict(
+                {
+                    "validation_unit_id": "JVU:2",
+                    "task_bundle_id": "TB:2",
+                    "human_adjudicated": "yes",
+                    "frozen": "1",
+                }
+            ).frozen
+        )
+        self.assertFalse(
+            paper_scientific_review_form_from_dict(
+                {
+                    "batch_id": "paper_review_v1",
+                    "paper_id": "PMID:1",
+                    "reviewer_id": "rev_a",
+                    "completed": "false",
+                }
+            ).completed
+        )
+        self.assertFalse(
+            paper_writing_review_form_from_dict(
+                {
+                    "batch_id": "paper_review_v1",
+                    "paper_id": "PMID:1",
+                    "reviewer_id": "rev_a",
+                    "completed": "0",
+                }
+            ).completed
+        )
+        self.assertFalse(
+            paper_review_adjudication_record_from_dict(
+                {
+                    "batch_id": "paper_review_v1",
+                    "paper_id": "PMID:1",
+                    "adjudicator_id": "adj_1",
+                    "finalized": "false",
+                }
+            ).finalized
+        )
+        self.assertFalse(
+            adjudicated_paper_review_record_from_dict(
+                {
+                    "batch_id": "paper_review_v1",
+                    "paper_id": "PMID:1",
+                    "adjudicator_id": "adj_1",
+                    "finalized": "false",
+                }
+            ).finalized
+        )
+        self.assertFalse(
+            pilot_review_form_from_dict(
+                {
+                    "calibration_id": "CAL:1",
+                    "reviewer_id": "rev_a",
+                    "completed": "false",
+                }
+            ).completed
+        )
+        self.assertFalse(
+            pilot_adjudication_record_from_dict(
+                {
+                    "calibration_id": "CAL:1",
+                    "adjudicator_id": "adj_1",
+                    "finalized": "false",
+                }
+            ).finalized
+        )
+        self.assertFalse(
+            adjudication_queue_entry_from_dict(
+                {
+                    "calibration_id": "CAL:1",
+                    "status": "awaiting_reviews",
+                    "required_reviewer_count": 2,
+                    "has_final_adjudication": "false",
+                }
+            ).has_final_adjudication
+        )
+        spec = pilot_calibration_spec_from_dict(
+            {
+                "calibration_id": "CAL:2",
+                "study_class": "methods_resource",
+                "claim_mode": "resource_release",
+                "expects_quarantine_case": "false",
+                "controlled_access_example": "0",
+                "preprint_shadow_only": "no",
+            }
+        )
+        self.assertFalse(spec.expects_quarantine_case)
+        self.assertFalse(spec.controlled_access_example)
+        self.assertFalse(spec.preprint_shadow_only)
+
+    def test_core_artifact_string_boolean_flags_are_parsed(self):
+        source_payload = make_source_paper(paper_id="PMID:string-bool").to_dict()
+        source_payload.update(
+            {
+                "peer_reviewed": "false",
+                "major_correction_affects_interpretation": "false",
+                "partial_retraction_invalidates_core_claims": "0",
+                "explicit_pre2018_exception": "no",
+                "controlled_access_human_data": "off",
+                "small_cell_risk": "false",
+            }
+        )
+        source_paper = source_paper_from_dict(source_payload)
+        self.assertFalse(source_paper.peer_reviewed)
+        self.assertFalse(source_paper.major_correction_affects_interpretation)
+        self.assertFalse(source_paper.partial_retraction_invalidates_core_claims)
+        self.assertFalse(source_paper.explicit_pre2018_exception)
+        self.assertFalse(source_paper.controlled_access_human_data)
+        self.assertFalse(source_paper.small_cell_risk)
+
+        metadata_record = metadata_source_record_from_dict(
+            {
+                "ingestion_id": "ING:1",
+                "source_name": "fixture",
+                "source_record_id": "SRC:1",
+                "title": "Fixture",
+                "publication_year": 2024,
+                "peer_reviewed": "false",
+                "explicit_pre2018_exception": "false",
+                "controlled_access_human_data": "0",
+                "small_cell_risk": "off",
+            }
+        )
+        self.assertFalse(metadata_record.peer_reviewed)
+        self.assertFalse(metadata_record.explicit_pre2018_exception)
+        self.assertFalse(metadata_record.controlled_access_human_data)
+        self.assertFalse(metadata_record.small_cell_risk)
+
+        ingestion_record = ingestion_record_from_dict(
+            {
+                "ingestion_id": "ING:1",
+                "source_name": "fixture",
+                "source_record_id": "SRC:1",
+                "paper_id": "PMID:string-bool",
+                "publication_year": 2024,
+                "releaseability_precheck_passed": "false",
+            }
+        )
+        self.assertFalse(ingestion_record.releaseability_precheck_passed)
+
+        packaging_record = paper_packaging_review_record_from_dict(
+            {
+                "paper_id": "PMID:string-bool",
+                "packaging_review": {
+                    "contains_private_row_level_data": "false",
+                    "contains_recomputed_sensitive_aggregates": "0",
+                    "redistributes_restricted_supplements": "off",
+                    "controlled_access_rule_satisfied": "false",
+                },
+            }
+        )
+        packaging = packaging_record.packaging_review
+        self.assertFalse(packaging.contains_private_row_level_data)
+        self.assertFalse(packaging.contains_recomputed_sensitive_aggregates)
+        self.assertFalse(packaging.redistributes_restricted_supplements)
+        self.assertFalse(packaging.controlled_access_rule_satisfied)
+
+        evidence_unit = evidence_unit_from_dict(
+            {
+                "unit_id": "EU:1",
+                "paper_id": "PMID:string-bool",
+                "unit_type": EvidenceUnitType.CLAIM_CLUSTER.value,
+                "locally_supported": "false",
+                "internally_coherent": "0",
+                "depends_on_excluded_narrative": "no",
+                "releasable": "off",
+            }
+        )
+        self.assertFalse(evidence_unit.locally_supported)
+        self.assertFalse(evidence_unit.internally_coherent)
+        self.assertFalse(evidence_unit.depends_on_excluded_narrative)
+        self.assertFalse(evidence_unit.releasable)
+
+        evaluation = evaluation_record_from_dict(
+            {
+                "evaluation_id": "EVAL:1",
+                "submission_id": "SUB:1",
+                "task_bundle_id": "TB:1",
+                "deterministic_checks_passed": "false",
+            }
+        )
+        self.assertFalse(evaluation.deterministic_checks_passed)
+
+    def test_report_artifact_string_boolean_flags_are_parsed(self):
+        slice_audit = judge_slice_audit_report_from_dict(
+            {
+                "generated_at": "2026-04-24T00:00:00Z",
+                "total_units": 1,
+                "human_adjudicated_units": 0,
+                "frozen_units": 0,
+                "ready_units": 0,
+                "linked_task_bundles": 1,
+                "ok": "false",
+            }
+        )
+        self.assertFalse(slice_audit.ok)
+
+        alignment = llm_judge_alignment_report_from_dict(
+            {
+                "generated_at": "2026-04-24T00:00:00Z",
+                "total_task_bundles": 1,
+                "evaluated_bundles": 1,
+                "judged_bundles": 1,
+                "comparable_bundles": 1,
+                "deterministic_pass_count": 0,
+                "judge_pass_count": 0,
+                "overlap_pass_count": 0,
+                "deterministic_only_count": 0,
+                "judge_only_count": 0,
+                "agreement_count": 1,
+                "disagreement_count": 0,
+                "agreement_rate": 1.0,
+                "gate_a1_count_ok": "false",
+                "judge_pass_subset_ok": "0",
+                "exact_pass_set_match": "off",
+                "ok": "false",
+            }
+        )
+        self.assertFalse(alignment.gate_a1_count_ok)
+        self.assertFalse(alignment.judge_pass_subset_ok)
+        self.assertFalse(alignment.exact_pass_set_match)
+        self.assertFalse(alignment.ok)
+
+        packet_summary = publication_annotation_packet_summary_from_dict(
+            {
+                "generated_at": "2026-04-24T00:00:00Z",
+                "total_packets": 1,
+                "expected_packets": 2,
+                "total_judge_units": 1,
+                "packet_coverage_complete": "false",
+                "authoritative_form_coverage_complete": "0",
+                "ok": "off",
+            }
+        )
+        self.assertFalse(packet_summary.packet_coverage_complete)
+        self.assertFalse(packet_summary.authoritative_form_coverage_complete)
+        self.assertFalse(packet_summary.ok)
+
+        hold_audit = publication_annotation_hold_audit_report_from_dict(
+            {
+                "generated_at": "2026-04-24T00:00:00Z",
+                "batch_dir": "calibration/publication_validation_v1",
+                "total_judge_units": 1,
+                "selection_locked": "false",
+                "rubric_locked": "0",
+                "reviewer_assignments_complete": "off",
+                "packet_coverage_complete": "false",
+                "authoritative_sidecars_present": "0",
+                "structurally_ready": "no",
+                "awaiting_human_review": "false",
+                "ok": "off",
+            }
+        )
+        self.assertFalse(hold_audit.selection_locked)
+        self.assertFalse(hold_audit.rubric_locked)
+        self.assertFalse(hold_audit.reviewer_assignments_complete)
+        self.assertFalse(hold_audit.packet_coverage_complete)
+        self.assertFalse(hold_audit.authoritative_sidecars_present)
+        self.assertFalse(hold_audit.structurally_ready)
+        self.assertFalse(hold_audit.awaiting_human_review)
+        self.assertFalse(hold_audit.ok)
+
+    def test_llm_judge_string_false_flags_are_parsed(self):
+        task_bundles = [
+            make_task_bundle(index=1, task_family=TaskFamily.RESULTS_TO_TEXT),
+        ]
+        evaluations = [
+            EvaluationRecord(
+                evaluation_id="EVAL:1",
+                submission_id="SUB:1",
+                task_bundle_id="TB:1",
+                evaluation_layers=(EvaluationLayer.DETERMINISTIC_CHECKS,),
+                deterministic_checks_passed=False,
+            )
+        ]
+        report = audit_llm_judge_alignment(
+            task_bundles,
+            evaluations,
+            [{"task_bundle_id": "TB:1", "overall_pass": "false"}],
+        )
+        self.assertEqual(report.judge_pass_count, 0)
+        self.assertEqual(report.agreement_count, 1)
+        self.assertTrue(report.ok)
+
+        config = llm_judge_eval.rubric_config_for_task_family("methods_to_text", "v3")
+        shape = llm_judge_eval._score_record_shape(
+            {
+                "axis_scores": {axis: 2 for axis in config.axes},
+                "axis_rationales": {axis: "Rationale." for axis in config.axes},
+                "grounding_issues": [],
+                "overall_pass": "false",
+            },
+            config,
+        )
+        self.assertFalse(shape["overall_pass"])
+        self.assertTrue(shape["passes_threshold_rule"])
+        self.assertFalse(shape["judge_reported_pass_matches_rule"])
+
+    def test_recovery_queue_string_selected_flag_is_parsed(self):
+        entry = auto_review_recovery_batch_entry_from_queue_record(
+            {
+                "paper_id": "PMID:1",
+                "study_class": StudyClass.MECHANISTIC_EXPERIMENTAL.value,
+                "claim_mode": ClaimMode.EXPLORATORY.value,
+                "priority_bucket": "fixture",
+                "candidate_tier": CandidateTier.SHADOW_CANDIDATE.value,
+                "scientific": PaperScientificQualification.A.value,
+                "writing": PaperWritingQualification.W1.value,
+                "packaging": PaperPackagingQualification.P1.value,
+                "bundle_completeness": AutoReviewBundleCompleteness.REVIEW_READY.value,
+                "confidence": AutoReviewConfidence.MEDIUM.value,
+                "selected": "false",
+            }
+        )
+        self.assertFalse(entry.selected)
 
     def test_cli_build_and_finalize_judge_review_workflow(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -3251,6 +6717,406 @@ class QualificationTests(unittest.TestCase):
             )
             self.assertEqual(len(selected_bundles), 4)
             self.assertTrue(all(bundle.holdout_bucket == "public" for bundle in selected_bundles))
+
+    def test_compute_judge_agreement_round_trips_and_hits_perfect_metrics(self):
+        judge_units = build_judge_validation_slice(
+            [
+                make_task_bundle(index=1, task_family=TaskFamily.RESULTS_TO_TEXT),
+                make_task_bundle(index=2, task_family=TaskFamily.ABSTRACT_FROM_EVIDENCE),
+            ],
+            target_total=2,
+        )
+        high_scores = {
+            "evidence_fidelity": 3.0,
+            "traceability": 3.0,
+            "provenance_completeness": 3.0,
+            "writing_structure_compliance": 3.0,
+        }
+        low_scores = {
+            "evidence_fidelity": 0.0,
+            "traceability": 0.0,
+            "provenance_completeness": 0.0,
+            "writing_structure_compliance": 0.0,
+        }
+        forms = (
+            JudgeReviewForm(
+                validation_unit_id=judge_units[0].validation_unit_id,
+                reviewer_id="rev_a",
+                completed=True,
+                rubric_labels=high_scores,
+            ),
+            JudgeReviewForm(
+                validation_unit_id=judge_units[0].validation_unit_id,
+                reviewer_id="rev_b",
+                completed=True,
+                rubric_labels=high_scores,
+            ),
+            JudgeReviewForm(
+                validation_unit_id=judge_units[1].validation_unit_id,
+                reviewer_id="rev_a",
+                completed=True,
+                rubric_labels=low_scores,
+            ),
+            JudgeReviewForm(
+                validation_unit_id=judge_units[1].validation_unit_id,
+                reviewer_id="rev_b",
+                completed=True,
+                rubric_labels=low_scores,
+            ),
+        )
+        adjudications = (
+            JudgeAdjudicationRecord(
+                validation_unit_id=judge_units[0].validation_unit_id,
+                adjudicator_id="adj_1",
+                final_rubric_labels=high_scores,
+                finalized=True,
+                source_reviewer_ids=("rev_a", "rev_b"),
+            ),
+            JudgeAdjudicationRecord(
+                validation_unit_id=judge_units[1].validation_unit_id,
+                adjudicator_id="adj_1",
+                final_rubric_labels=low_scores,
+                finalized=True,
+                source_reviewer_ids=("rev_a", "rev_b"),
+            ),
+        )
+
+        report = compute_judge_agreement(judge_units, forms, adjudications)
+        round_tripped = judge_agreement_report_from_dict(report.to_dict())
+
+        self.assertIsInstance(round_tripped, JudgeAgreementReport)
+        self.assertTrue(report.ok)
+        self.assertEqual(report.pre_adjudication_kappa, 1.0)
+        self.assertEqual(report.post_adjudication_kappa, 1.0)
+        self.assertEqual(report.pre_adjudication_ordinal_alpha, 1.0)
+        self.assertEqual(report.post_adjudication_ordinal_alpha, 1.0)
+        self.assertEqual(report.pre_adjudication_icc, 1.0)
+        self.assertEqual(report.post_adjudication_icc, 1.0)
+        self.assertEqual(report.jury_vs_adjudicator_icc, 1.0)
+        self.assertEqual(report.reviewer_pairwise_kappa["rev_a__rev_b"], 1.0)
+        self.assertEqual(report.reviewer_pairwise_icc["rev_a__rev_b"], 1.0)
+        self.assertEqual(report.reviewer_vs_adjudicator_icc["rev_a"], 1.0)
+        self.assertEqual(report.reviewer_vs_adjudicator_icc["rev_b"], 1.0)
+        self.assertEqual(round_tripped.to_dict(), report.to_dict())
+
+    def test_completed_judge_forms_require_numeric_required_axes(self):
+        judge_units = build_judge_validation_slice(
+            [make_task_bundle(index=1, task_family=TaskFamily.RESULTS_TO_TEXT)],
+            target_total=1,
+        )
+        complete_scores = {
+            "evidence_fidelity": 3.0,
+            "traceability": 3.0,
+            "provenance_completeness": 3.0,
+            "writing_structure_compliance": 3.0,
+        }
+        incomplete_scores = dict(complete_scores)
+        incomplete_scores["traceability"] = None
+        forms = (
+            JudgeReviewForm(
+                validation_unit_id=judge_units[0].validation_unit_id,
+                reviewer_id="rev_a",
+                completed=True,
+                rubric_labels=incomplete_scores,
+            ),
+            JudgeReviewForm(
+                validation_unit_id=judge_units[0].validation_unit_id,
+                reviewer_id="rev_b",
+                completed=True,
+                rubric_labels=complete_scores,
+            ),
+        )
+
+        queue = build_judge_adjudication_queue(
+            judge_units,
+            forms,
+            adjudications=(),
+            reviewer_ids=("rev_a", "rev_b"),
+        )
+        report = compute_judge_agreement(judge_units, forms, adjudications=())
+
+        self.assertEqual(queue[0].status, "awaiting_reviews")
+        self.assertEqual(queue[0].completed_reviewer_ids, ("rev_b",))
+        self.assertEqual(queue[0].pending_reviewer_ids, ("rev_a",))
+        self.assertIn(
+            "completed reviewer forms missing rubric axes: rev_a=traceability",
+            queue[0].notes,
+        )
+        self.assertEqual(report.comparable_pre_adjudication_units, 0)
+        self.assertIn(
+            "ignored completed judge review forms with incomplete rubric labels: "
+            f"{judge_units[0].validation_unit_id}/rev_a:traceability",
+            report.issues,
+        )
+
+    def test_completed_judge_forms_reject_nonfinite_and_out_of_range_scores(self):
+        task_bundles = [make_task_bundle(index=1, task_family=TaskFamily.RESULTS_TO_TEXT)]
+        judge_units = build_judge_validation_slice(task_bundles, target_total=1)
+        base_scores = {
+            "evidence_fidelity": 3.0,
+            "traceability": 3.0,
+            "provenance_completeness": 3.0,
+            "writing_structure_compliance": 3.0,
+        }
+        nonfinite_scores = dict(base_scores)
+        nonfinite_scores["traceability"] = "nan"
+        out_of_range_scores = dict(base_scores)
+        out_of_range_scores["traceability"] = 4.0
+        forms = (
+            JudgeReviewForm(
+                validation_unit_id=judge_units[0].validation_unit_id,
+                reviewer_id="rev_a",
+                completed=True,
+                rubric_labels=nonfinite_scores,
+            ),
+            JudgeReviewForm(
+                validation_unit_id=judge_units[0].validation_unit_id,
+                reviewer_id="rev_b",
+                completed=True,
+                rubric_labels=out_of_range_scores,
+            ),
+        )
+
+        queue = build_judge_adjudication_queue(
+            judge_units,
+            forms,
+            adjudications=(),
+            reviewer_ids=("rev_a", "rev_b"),
+        )
+        report = compute_judge_agreement(judge_units, forms, adjudications=())
+        finalized_units = finalize_judge_validation_units(
+            judge_units,
+            (
+                JudgeAdjudicationRecord(
+                    validation_unit_id=judge_units[0].validation_unit_id,
+                    adjudicator_id="adj_1",
+                    finalized=True,
+                    final_rubric_labels=nonfinite_scores,
+                ),
+            ),
+        )
+        audit = audit_judge_validation_slice(task_bundles, finalized_units, minimum_total=1)
+
+        self.assertEqual(queue[0].status, "awaiting_reviews")
+        self.assertEqual(queue[0].completed_reviewer_ids, ())
+        self.assertEqual(queue[0].pending_reviewer_ids, ("rev_a", "rev_b"))
+        self.assertIn(
+            "completed reviewer forms missing rubric axes: rev_a=traceability, rev_b=traceability",
+            queue[0].notes,
+        )
+        self.assertEqual(report.comparable_pre_adjudication_units, 0)
+        self.assertIn(
+            "ignored completed judge review forms with incomplete rubric labels: "
+            f"{judge_units[0].validation_unit_id}/rev_a:traceability; "
+            f"{judge_units[0].validation_unit_id}/rev_b:traceability",
+            report.issues,
+        )
+        self.assertFalse(audit.ok)
+        self.assertEqual(audit.missing_rubric_axes[judge_units[0].validation_unit_id], ("traceability",))
+
+    def test_judge_queue_normalizes_equivalent_numeric_scores_for_disagreement(self):
+        judge_units = build_judge_validation_slice(
+            [make_task_bundle(index=1, task_family=TaskFamily.RESULTS_TO_TEXT)],
+            target_total=1,
+        )
+        int_scores = {
+            "evidence_fidelity": 1,
+            "traceability": 1.0,
+            "provenance_completeness": "1",
+            "writing_structure_compliance": "1.0",
+        }
+        string_scores = {
+            "evidence_fidelity": "1.0",
+            "traceability": "1",
+            "provenance_completeness": 1.0,
+            "writing_structure_compliance": 1,
+        }
+        forms = (
+            JudgeReviewForm(
+                validation_unit_id=judge_units[0].validation_unit_id,
+                reviewer_id="rev_a",
+                completed=True,
+                rubric_labels=int_scores,
+            ),
+            JudgeReviewForm(
+                validation_unit_id=judge_units[0].validation_unit_id,
+                reviewer_id="rev_b",
+                completed=True,
+                rubric_labels=string_scores,
+            ),
+        )
+
+        queue = build_judge_adjudication_queue(
+            judge_units,
+            forms,
+            adjudications=(),
+            reviewer_ids=("rev_a", "rev_b"),
+        )
+
+        self.assertEqual(queue[0].status, "ready_for_adjudication")
+        self.assertEqual(queue[0].completed_reviewer_ids, ("rev_a", "rev_b"))
+        self.assertEqual(queue[0].disagreement_axes, ())
+
+    def test_validate_judge_agreement_thresholds_reports_metric_and_coverage_issues(self):
+        issues = validate_judge_agreement_thresholds(
+            pre_adjudication_kappa=0.2,
+            post_adjudication_kappa=0.5,
+            jury_vs_adjudicator_icc=0.3,
+            comparable_pre_units=10,
+            comparable_post_units=10,
+            comparable_ordinal_items_pre=0,
+            comparable_ordinal_items_post=0,
+        )
+
+        self.assertIn("pre_adjudication_kappa 0.200 is below threshold 0.400", issues)
+        self.assertIn("post_adjudication_kappa 0.500 is below threshold 0.600", issues)
+        self.assertIn("jury_vs_adjudicator_icc 0.300 is below threshold 0.500", issues)
+        self.assertIn("no comparable ordinal rubric items for pre-adjudication alpha", issues)
+        self.assertIn("no comparable ordinal rubric items for post-adjudication alpha", issues)
+
+    def test_compute_judge_agreement_ignores_units_outside_declared_slice(self):
+        judge_units = build_judge_validation_slice(
+            [make_task_bundle(index=1, task_family=TaskFamily.RESULTS_TO_TEXT)],
+            target_total=1,
+        )
+        forms = (
+            JudgeReviewForm(
+                validation_unit_id=judge_units[0].validation_unit_id,
+                reviewer_id="rev_a",
+                completed=True,
+                rubric_labels={
+                    "evidence_fidelity": 3.0,
+                    "traceability": 3.0,
+                    "provenance_completeness": 3.0,
+                    "writing_structure_compliance": 3.0,
+                },
+            ),
+            JudgeReviewForm(
+                validation_unit_id="JV:TB:extra",
+                reviewer_id="rev_a",
+                completed=True,
+                rubric_labels={
+                    "evidence_fidelity": 0.0,
+                    "traceability": 0.0,
+                    "provenance_completeness": 0.0,
+                    "writing_structure_compliance": 0.0,
+                },
+            ),
+        )
+        adjudications = (
+            JudgeAdjudicationRecord(
+                validation_unit_id="JV:TB:extra",
+                adjudicator_id="adj_1",
+                final_rubric_labels={
+                    "evidence_fidelity": 0.0,
+                    "traceability": 0.0,
+                    "provenance_completeness": 0.0,
+                    "writing_structure_compliance": 0.0,
+                },
+                finalized=True,
+            ),
+        )
+
+        report = compute_judge_agreement(judge_units, forms, adjudications)
+
+        self.assertEqual(report.merged_review_forms, 1)
+        self.assertEqual(report.finalized_adjudications, 0)
+        self.assertEqual(report.unexpected_form_validation_unit_ids, ("JV:TB:extra",))
+        self.assertEqual(report.unexpected_adjudication_validation_unit_ids, ("JV:TB:extra",))
+        self.assertIn("ignored judge review forms for unknown validation units: JV:TB:extra", report.issues)
+        self.assertIn("ignored judge adjudications for unknown validation units: JV:TB:extra", report.issues)
+
+    def test_cli_summarize_judge_agreement(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            judge_units_path = os.path.join(tmpdir, "judge_units.jsonl")
+            forms_path = os.path.join(tmpdir, "judge_forms.jsonl")
+            adjudications_path = os.path.join(tmpdir, "judge_adjudications.jsonl")
+            output_path = os.path.join(tmpdir, "judge_agreement.json")
+            judge_units = build_judge_validation_slice(
+                [
+                    make_task_bundle(index=1, task_family=TaskFamily.RESULTS_TO_TEXT),
+                    make_task_bundle(index=2, task_family=TaskFamily.ABSTRACT_FROM_EVIDENCE),
+                ],
+                target_total=2,
+            )
+            high_scores = {
+                "evidence_fidelity": 3.0,
+                "traceability": 3.0,
+                "provenance_completeness": 3.0,
+                "writing_structure_compliance": 3.0,
+            }
+            low_scores = {
+                "evidence_fidelity": 0.0,
+                "traceability": 0.0,
+                "provenance_completeness": 0.0,
+                "writing_structure_compliance": 0.0,
+            }
+            forms = [
+                JudgeReviewForm(
+                    validation_unit_id=judge_units[0].validation_unit_id,
+                    reviewer_id="rev_a",
+                    completed=True,
+                    rubric_labels=high_scores,
+                ),
+                JudgeReviewForm(
+                    validation_unit_id=judge_units[0].validation_unit_id,
+                    reviewer_id="rev_b",
+                    completed=True,
+                    rubric_labels=high_scores,
+                ),
+                JudgeReviewForm(
+                    validation_unit_id=judge_units[1].validation_unit_id,
+                    reviewer_id="rev_a",
+                    completed=True,
+                    rubric_labels=low_scores,
+                ),
+                JudgeReviewForm(
+                    validation_unit_id=judge_units[1].validation_unit_id,
+                    reviewer_id="rev_b",
+                    completed=True,
+                    rubric_labels=low_scores,
+                ),
+            ]
+            adjudications = [
+                JudgeAdjudicationRecord(
+                    validation_unit_id=judge_units[0].validation_unit_id,
+                    adjudicator_id="adj_1",
+                    final_rubric_labels=high_scores,
+                    finalized=True,
+                    source_reviewer_ids=("rev_a", "rev_b"),
+                ),
+                JudgeAdjudicationRecord(
+                    validation_unit_id=judge_units[1].validation_unit_id,
+                    adjudicator_id="adj_1",
+                    final_rubric_labels=low_scores,
+                    finalized=True,
+                    source_reviewer_ids=("rev_a", "rev_b"),
+                ),
+            ]
+            write_jsonl(judge_units_path, judge_units)
+            write_jsonl(forms_path, forms)
+            write_jsonl(adjudications_path, adjudications)
+
+            exit_code = cli_main(
+                [
+                    "summarize-judge-agreement",
+                    "--judge-units",
+                    judge_units_path,
+                    "--forms",
+                    forms_path,
+                    "--adjudications",
+                    adjudications_path,
+                    "--output",
+                    output_path,
+                ]
+            )
+
+            self.assertEqual(exit_code, 0)
+            payload = json.loads(Path(output_path).read_text(encoding="utf-8"))
+            self.assertTrue(payload["ok"])
+            self.assertEqual(payload["pre_adjudication_kappa"], 1.0)
+            self.assertEqual(payload["post_adjudication_kappa"], 1.0)
+            self.assertEqual(payload["jury_vs_adjudicator_icc"], 1.0)
 
     def test_cli_summarize_task_bundles_and_select_judge_candidates(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -4240,7 +8106,9 @@ class QualificationTests(unittest.TestCase):
                 "title": "RNA-seq atlas of cell states",
                 "doi": "https://doi.org/10.1000/XYZ",
                 "year": "2024",
-                "modality_overlays": ["omics_transcriptomics"],
+                "modality_overlays": "omics_transcriptomics; qPCR",
+                "crossmark_updates": "correction|expression_of_concern",
+                "integrity_flags": "paper_mill_pattern, image_reuse_pattern",
                 "study_class": "mechanistic_experimental",
             },
             {
@@ -4263,9 +8131,33 @@ class QualificationTests(unittest.TestCase):
         paper = papers[0]
         self.assertEqual(paper.paper_id, "DOI:10.1000/xyz")
         self.assertIn(ModalityOverlay.OMICS_TRANSCRIPTOMICS, paper.modality_overlays)
+        self.assertIn(ModalityOverlay.QPCR, paper.modality_overlays)
+        self.assertIn(CrossmarkUpdateType.CORRECTION, paper.crossmark_updates)
+        self.assertIn(CrossmarkUpdateType.EXPRESSION_OF_CONCERN, paper.crossmark_updates)
+        self.assertIn(IntegrityFlag.PAPER_MILL_PATTERN, paper.integrity_flags)
+        self.assertIn(IntegrityFlag.IMAGE_REUSE_PATTERN, paper.integrity_flags)
         self.assertTrue(all(record.paper_id == paper.paper_id for record in ingestion_records))
         self.assertTrue(all(record.releaseability_precheck_passed for record in ingestion_records))
         self.assertEqual(audit.merged_duplicates, 1)
+
+    def test_ingest_metadata_records_parses_string_boolean_flags(self):
+        standardized = ingest_metadata_records(
+            [
+                {
+                    "source_name": "crossref",
+                    "id": "CR-BOOL",
+                    "title": "Boolean metadata parsing",
+                    "year": "2024",
+                    "explicit_pre2018_exception": "off",
+                    "controlled_access_human_data": "0",
+                    "small_cell_risk": "no",
+                }
+            ]
+        )
+
+        self.assertFalse(standardized[0].explicit_pre2018_exception)
+        self.assertFalse(standardized[0].controlled_access_human_data)
+        self.assertFalse(standardized[0].small_cell_risk)
 
     def test_verify_ingestion_artifacts_flags_precedence_violation(self):
         paper = make_source_paper(paper_id="PMID:123")
@@ -4494,6 +8386,96 @@ class QualificationTests(unittest.TestCase):
                 payload = json.load(handle)
             spec = execution_job_spec_from_dict(payload)
             self.assertEqual(spec.job_kind, "baseline_replay")
+            self.assertEqual(spec.output_artifacts["output_dir"], output_dir)
+
+    def test_build_frontier_submitter_job_spec_for_vllm_agentic_run(self):
+        profile = build_cayuga_execution_profile(
+            "/tmp/cayuga",
+            ROOT,
+        )
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_dir = os.path.join(tmpdir, "frontier_run")
+            spec = build_frontier_submitter_job_spec(
+                profile,
+                registry_path=str(default_frontier_registry_path()),
+                model_label="openweight-vllm-submitter",
+                runner_kind="agentic",
+                task_source="inspection-slice",
+                output_dir=output_dir,
+                endpoint_url="http://cayuga-node:8000/v1/chat/completions",
+                served_model_name="meta-llama/Llama-3.3-70B-Instruct",
+                tensor_parallel_size=4,
+                gpu_count=4,
+                dtype_note="fp8",
+                scheduler_notes=("partition=gpu",),
+            )
+
+            self.assertIsInstance(spec, ExecutionJobSpec)
+            self.assertEqual(spec.job_kind, "frontier_submitter_agentic")
+            self.assertIn("LSPWB_VLLM_ENDPOINT_URL", spec.environment_exports)
+            self.assertIn("agentic_trace", spec.output_artifacts)
+            script = render_execution_job_script(spec, profile)
+            self.assertIn("llm_agentic_eval.py", script)
+            self.assertIn("--registry-path", script)
+
+    def test_cli_write_frontier_submitter_job(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            profile_path = os.path.join(tmpdir, "cayuga_profile.json")
+            script_output = os.path.join(tmpdir, "jobs", "frontier_job.sh")
+            spec_output = os.path.join(tmpdir, "jobs", "frontier_job_spec.json")
+            output_dir = os.path.join(tmpdir, "frontier_run")
+            self.assertEqual(
+                cli_main(
+                    [
+                        "write-execution-profile",
+                        "--profile",
+                        "cayuga",
+                        "--repo-root",
+                        ROOT,
+                        "--cayuga-root",
+                        "/tmp/cayuga",
+                        "--output",
+                        profile_path,
+                    ]
+                ),
+                0,
+            )
+            self.assertEqual(
+                cli_main(
+                    [
+                        "write-frontier-submitter-job",
+                        "--execution-profile",
+                        profile_path,
+                        "--registry-path",
+                        str(default_frontier_registry_path()),
+                        "--model-label",
+                        "openweight-vllm-submitter",
+                        "--runner-kind",
+                        "smoke",
+                        "--task-source",
+                        "inspection-slice",
+                        "--output-dir",
+                        output_dir,
+                        "--job-spec-output",
+                        spec_output,
+                        "--script-output",
+                        script_output,
+                        "--endpoint-url",
+                        "http://cayuga-node:8000/v1/chat/completions",
+                        "--served-model-name",
+                        "meta-llama/Llama-3.3-70B-Instruct",
+                        "--tensor-parallel-size",
+                        "4",
+                        "--gpu-count",
+                        "4",
+                    ]
+                ),
+                0,
+            )
+            self.assertTrue(os.path.exists(script_output))
+            self.assertTrue(os.path.exists(spec_output))
+            spec = execution_job_spec_from_dict(json.loads(Path(spec_output).read_text()))
+            self.assertEqual(spec.job_kind, "frontier_submitter_smoke")
             self.assertEqual(spec.output_artifacts["output_dir"], output_dir)
 
     def test_build_auto_review_recovery_batch_balanced_selection(self):
@@ -5566,6 +9548,49 @@ class QualificationTests(unittest.TestCase):
         self.assertEqual(len(fetch_records), 0)
         self.assertEqual(len(final_candidates), 1)
         self.assertIn("crossref_error", final_candidates[0].metadata)
+
+    def test_collection_enrichment_tolerates_malformed_json(self):
+        candidate = collection_candidate_record_from_dict(
+            {
+                "candidate_id": "CBADJSON",
+                "paper_key": "DOI:10.1/badjson",
+                "study_class_votes": {"methods_resource": 1},
+                "selected_study_class": StudyClass.METHODS_RESOURCE.value,
+                "shortlist_target_class": StudyClass.METHODS_RESOURCE.value,
+                "doi": "10.1/badjson",
+                "pmid": "12345",
+                "title": "Malformed enrichment",
+                "publication_year": 2024,
+                "journal": "Journal",
+                "abstract": "Abstract.",
+                "publication_status": PublicationStatus.PUBLISHED.value,
+                "peer_reviewed": True,
+                "source_names": ["pubmed"],
+                "source_record_ids": ["12345"],
+            }
+        )
+
+        def malformed_fetcher(url, headers=None):
+            return b"{not-valid-json"
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            epmc_candidates, epmc_fetch_records = enrich_candidates_with_europepmc(
+                [candidate],
+                os.path.join(tmpdir, "epmc"),
+                fetcher=malformed_fetcher,
+            )
+            crossref_candidates, crossref_fetch_records = enrich_candidates_with_crossref(
+                [candidate],
+                os.path.join(tmpdir, "crossref"),
+                fetcher=malformed_fetcher,
+            )
+
+        self.assertEqual(len(epmc_fetch_records), 0)
+        self.assertEqual(len(crossref_fetch_records), 0)
+        self.assertEqual(epmc_candidates[0].candidate_id, candidate.candidate_id)
+        self.assertEqual(crossref_candidates[0].candidate_id, candidate.candidate_id)
+        self.assertIn("europepmc_error", epmc_candidates[0].metadata)
+        self.assertIn("crossref_error", crossref_candidates[0].metadata)
 
     def test_shortlist_collection_candidates_preserves_per_class_caps_and_metadata(self):
         candidates = [
@@ -6744,6 +10769,24 @@ class PaperQualificationFlowTests(unittest.TestCase):
         audit = audit_auto_review_source_bundles(bundles)
         self.assertEqual(audit.total_bundles, 1)
         self.assertEqual(audit.completeness_counts["metadata_only"], 1)
+
+    def test_build_auto_review_source_bundles_accepts_abstract_text_alias(self):
+        paper = make_source_paper(
+            paper_id="PMID:auto-abstract-alias",
+            metadata={
+                "abstract_text": (
+                    "We used CRISPR perturbation in cell lines. "
+                    "The results show pathway inhibition in Fig. 1."
+                ),
+                "methods_text": "CRISPR perturbation was performed in metastatic cell lines.",
+                "figure_captions": ["Fig. 1. Pathway inhibition after perturbation."],
+            },
+        )
+
+        bundle = build_auto_review_source_bundles((paper,))[0]
+
+        self.assertIn("CRISPR perturbation", bundle.abstract_text)
+        self.assertIn("pathway inhibition", bundle.results_text)
 
     def test_build_auto_review_source_bundles_infers_methods_from_abstract(self):
         paper = make_source_paper(

@@ -39,7 +39,8 @@ __all__ = [
 
 
 FIGURE_REF_PATTERN = re.compile(
-    r"\b(?:Fig(?:ure)?s?\.?|FIG\.?)\s*\d+[A-Za-z]?(?:[-,\s]+\d+[A-Za-z]?)*\b"
+    r"\b(?:Fig(?:ure)?s?\.?|FIG\.?)\s*\d+[A-Za-z]?(?:[-,\s]+\d+[A-Za-z]?)*\b",
+    re.IGNORECASE,
 )
 TABLE_REF_PATTERN = re.compile(
     r"\bTable[s]?\s*\d+[A-Za-z]?(?:[-,\s]+\d+[A-Za-z]?)*\b",
@@ -118,7 +119,8 @@ def citation_specificity(output_text: str) -> CitationSpecificityReport:
     accessions = _unique_matches(ACCESSION_PATTERN, text)
     repo_urls = _unique_matches(REPOSITORY_URL_PATTERN, text)
 
-    forbidden_hits = [token for token in FORBIDDEN_POINTER_TOKENS if token in text]
+    lowercase_text = text.lower()
+    forbidden_hits = [token for token in FORBIDDEN_POINTER_TOKENS if token in lowercase_text]
 
     citation_count = (
         len(figure_refs)
