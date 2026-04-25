@@ -49,6 +49,18 @@ Current evaluation anchors:
   `calibration/llm_public_slice_matrix_v1/summary.md`
 - current canary probe report:
   `docs/canary_probe_report.md`
+- preview freeze checklist:
+  `docs/research_preview_freeze_checklist.md`
+
+Current freeze stance:
+
+- human reviewer execution is on hold
+- the frozen publication-validation batch remains structurally ready, not
+  human-validated
+- preview work should prioritize reproducibility, claim clarity, Gemini
+  completion when credentials are available, Inspect/replay usability, and
+  open-weight track separation
+- final leaderboard and publication-grade benchmark claims remain blocked
 
 ## What Exists
 
@@ -196,8 +208,8 @@ Auto-only review is intentionally stricter and lower-trust. `build-auto-paper-qu
 - This is still a `v0.1 research preview`, not a human-validated benchmark
   release.
 - The repo now has a populated, packet-complete publication-validation batch
-  from real benchmark bundles, but it is still awaiting human review and
-  adjudication; `kappa`, `ICC`, and `alpha` are still pending.
+  from real benchmark bundles, but human reviewer execution is currently on
+  hold; `kappa`, `ICC`, and `alpha` are still pending.
 - The current cross-model matrix and canary probes are meaningful but
   incomplete; Anthropic coverage is present in current artifacts, while Gemini
   submitter/judge coverage is still missing from the release-facing gates.
@@ -205,6 +217,9 @@ Auto-only review is intentionally stricter and lower-trust. `build-auto-paper-qu
 - The project is still effectively solo-authored at this stage; co-authored
   human validation is still the threshold between preview status and a
   defensible benchmark release.
+
+The current non-human freeze plan is tracked in
+`docs/research_preview_freeze_checklist.md`.
 
 ## Quick Start
 
@@ -279,6 +294,18 @@ PYTHONPATH=src python3 -m life_science_paperwritingbench.cli audit-publication-a
 frozen batch is structurally ready and merely waiting on human review, while
 publication readiness stays red until agreement, matrix, and contamination
 gates are satisfied.
+
+Audit reviewer-return intake before merge:
+
+```bash
+PYTHONPATH=src python3 -m life_science_paperwritingbench.cli audit-publication-review-intake \
+  --batch-dir calibration/publication_validation_v1 \
+  --stage calibration
+
+PYTHONPATH=src python3 -m life_science_paperwritingbench.cli audit-publication-review-intake \
+  --batch-dir calibration/publication_validation_v1 \
+  --stage full
+```
 
 Inspect adapter usage:
 

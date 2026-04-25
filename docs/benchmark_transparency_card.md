@@ -53,12 +53,23 @@
     registry-declared production probe
   - Gemini remains missing from the current hosted-working-set run
 
+## Current Preview-Freeze Stance
+
+- current freeze target: `v0.1 research preview`
+- current freeze checklist: `docs/research_preview_freeze_checklist.md`
+- human reviewer execution is on hold
+- the publication-validation batch is selected, packet-complete, and
+  structurally ready, but it is not human-validated
+- `leaderboard_gate_passed=false` is the correct state until agreement,
+  matrix, and canary gates are complete
+- hosted-frontier results and future open-weight/VLLM results should remain
+  separate tracks until comparable artifacts exist
+
 ## Known Current Limitations
 
 - no network-backed ingestion connector yet
-- no human-adjudicated judge validation slice yet; the publication-validation
-  batch is populated and packet-complete, but agreement/adjudication metrics are
-  still pending
+- no human-adjudicated judge validation slice yet; human reviewer execution is
+  held, and agreement/adjudication metrics are still pending
 - no reviewer-facing calibration UI yet; current calibration ops are file + CLI based
 - no scheduler launcher yet for large-scale replay
 - no full-text PDF parser yet; current extraction is metadata-driven parser-assisted drafting plus semi-structured reviewed specs

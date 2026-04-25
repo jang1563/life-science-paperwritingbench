@@ -5931,6 +5931,181 @@ class QualificationTests(unittest.TestCase):
             self.assertEqual(len(list((dispatch_dir / "rev_a" / "packets").glob("*.md"))), 60)
             self.assertEqual(len(list((dispatch_dir / "rev_b" / "packets").glob("*.md"))), 60)
 
+    def test_cli_audit_publication_review_intake_checks_calibration_scope(self):
+        task_bundles = []
+        index = 1
+        study_classes = tuple(StudyClass)
+        for task_family in (
+            TaskFamily.METHODS_TO_TEXT,
+            TaskFamily.RESULTS_TO_TEXT,
+            TaskFamily.ABSTRACT_FROM_EVIDENCE,
+        ):
+            for family_offset in range(20):
+                task_bundles.append(
+                    make_task_bundle(
+                        index=index,
+                        task_family=task_family,
+                        study_class=study_classes[family_offset % len(study_classes)],
+                        holdout_bucket="public",
+                    )
+                )
+                index += 1
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            task_bundles_path = root / "task_bundles.jsonl"
+            batch_dir = root / "publication_validation_batch"
+            intake_output = root / "publication_review_intake.json"
+            write_jsonl(str(task_bundles_path), task_bundles)
+            self.assertEqual(
+                cli_main(
+                    [
+                        "build-publication-validation-batch",
+                        "--task-bundles",
+                        str(task_bundles_path),
+                        "--output-dir",
+                        str(batch_dir),
+                        "--adjudicator",
+                        "adj_1",
+                        "--reviewers",
+                        "rev_a",
+                        "rev_b",
+                    ]
+                ),
+                0,
+            )
+
+            judge_units = load_jsonl(
+                str(batch_dir / "judge_units.jsonl"),
+                loader=judge_validation_unit_from_dict,
+            )
+            starter_ids = tuple(unit.validation_unit_id for unit in judge_units[:6])
+            (batch_dir / "calibration_mini_round.md").write_text(
+                "\n".join(
+                    ["# Calibration Mini-Round", ""]
+                    + [
+                        f"### {offset}. `{validation_unit_id}`"
+                        for offset, validation_unit_id in enumerate(starter_ids, start=1)
+                    ]
+                    + [""]
+                ),
+                encoding="utf-8",
+            )
+
+            self.assertEqual(
+                cli_main(
+                    [
+                        "audit-publication-review-intake",
+                        "--batch-dir",
+                        str(batch_dir),
+                        "--stage",
+                        "calibration",
+                        "--output",
+                        str(intake_output),
+                    ]
+                ),
+                1,
+            )
+            blank_intake = json.loads(intake_output.read_text(encoding="utf-8"))
+            self.assertFalse(blank_intake["ok"])
+            self.assertEqual(len(blank_intake["missing_required_completed_pairs"]), 12)
+
+            stale_calibration_path = batch_dir / "stale_calibration_mini_round.md"
+            stale_calibration_path.write_text(
+                "# Calibration Mini-Round\n\n### 1. `JV:TB:MISSING`\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(
+                cli_main(
+                    [
+                        "audit-publication-review-intake",
+                        "--batch-dir",
+                        str(batch_dir),
+                        "--stage",
+                        "calibration",
+                        "--calibration-mini-round",
+                        str(stale_calibration_path),
+                        "--output",
+                        str(intake_output),
+                    ]
+                ),
+                1,
+            )
+            stale_intake = json.loads(intake_output.read_text(encoding="utf-8"))
+            self.assertEqual(
+                stale_intake["unexpected_starter_validation_unit_ids"],
+                ["JV:TB:MISSING"],
+            )
+
+            reviewer_paths = (
+                batch_dir / "reviewer_forms" / "rev_a_judge_review_forms.jsonl",
+                batch_dir / "reviewer_forms" / "rev_b_judge_review_forms.jsonl",
+            )
+            for reviewer_path in reviewer_paths:
+                rows = load_jsonl(str(reviewer_path))
+                for row in rows:
+                    if row["validation_unit_id"] in starter_ids:
+                        row["completed"] = True
+                        row["rubric_labels"] = {
+                            axis: 2
+                            for axis in row["rubric_labels"]
+                        }
+                write_jsonl(str(reviewer_path), rows)
+
+            self.assertEqual(
+                cli_main(
+                    [
+                        "audit-publication-review-intake",
+                        "--batch-dir",
+                        str(batch_dir),
+                        "--stage",
+                        "calibration",
+                        "--output",
+                        str(intake_output),
+                    ]
+                ),
+                0,
+            )
+            ready_intake = json.loads(intake_output.read_text(encoding="utf-8"))
+            self.assertTrue(ready_intake["ok"])
+            self.assertEqual(
+                ready_intake["per_reviewer"]["rev_a"]["completed_valid_rows"],
+                6,
+            )
+            self.assertEqual(
+                ready_intake["per_reviewer"]["rev_b"]["completed_valid_rows"],
+                6,
+            )
+
+            reviewer_a_rows = load_jsonl(str(reviewer_paths[0]))
+            for row in reviewer_a_rows:
+                if row["validation_unit_id"] not in starter_ids:
+                    row["completed"] = True
+                    row["rubric_labels"] = {
+                        axis: 2
+                        for axis in row["rubric_labels"]
+                    }
+                    break
+            write_jsonl(str(reviewer_paths[0]), reviewer_a_rows)
+
+            self.assertEqual(
+                cli_main(
+                    [
+                        "audit-publication-review-intake",
+                        "--batch-dir",
+                        str(batch_dir),
+                        "--stage",
+                        "calibration",
+                        "--output",
+                        str(intake_output),
+                    ]
+                ),
+                1,
+            )
+            scoped_intake = json.loads(intake_output.read_text(encoding="utf-8"))
+            self.assertFalse(scoped_intake["ok"])
+            self.assertEqual(len(scoped_intake["completed_out_of_scope_pairs"]), 1)
+
     def test_cli_build_publication_review_packets_detects_stale_dispatch_forms(self):
         task_bundles = []
         index = 1

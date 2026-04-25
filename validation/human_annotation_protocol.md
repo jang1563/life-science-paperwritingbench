@@ -116,6 +116,15 @@ Recommended use:
 - the organizer compares early disagreements and clarifies borderline guidance
 - only then should the remaining `54` units proceed
 
+After the starter files come back, the organizer can verify that exactly the
+starter rows are complete before telling reviewers to continue:
+
+```bash
+PYTHONPATH=src python3 -m life_science_paperwritingbench.cli audit-publication-review-intake \
+  --batch-dir calibration/publication_validation_v1 \
+  --stage calibration
+```
+
 ## Rubric Scale
 
 Use the same four-point anchored ordinal scale for each rubric axis:
@@ -177,6 +186,14 @@ Recommended pacing:
 ## Adjudication Workflow
 
 After both reviewers finish:
+
+First, audit the returned reviewer copies before merge:
+
+```bash
+PYTHONPATH=src python3 -m life_science_paperwritingbench.cli audit-publication-review-intake \
+  --batch-dir calibration/publication_validation_v1 \
+  --stage full
+```
 
 1. Merge reviewer outputs:
 

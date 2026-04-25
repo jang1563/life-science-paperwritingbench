@@ -144,10 +144,12 @@ from .paper_qualification_flow import (
     build_paper_qualification_records,
 )
 from .judge import (
+    DEFAULT_JUDGE_RUBRIC_AXES,
     audit_judge_validation_slice,
     audit_llm_judge_alignment,
     build_judge_validation_slice,
     build_judge_validation_units,
+    _numeric_judge_rubric_score,
     render_llm_judge_alignment_markdown,
 )
 from .publication import (
@@ -937,6 +939,214 @@ def _extract_calibration_validation_unit_ids(text: str) -> Sequence[str]:
         seen.add(validation_unit_id)
         ids.append(validation_unit_id)
     return tuple(ids)
+
+
+def _required_axes_for_intake(judge_unit) -> Sequence[str]:
+    axes = tuple(str(axis).strip() for axis in judge_unit.rubric_labels if str(axis).strip())
+    return axes or tuple(DEFAULT_JUDGE_RUBRIC_AXES)
+
+
+def _missing_completed_intake_axes(form, judge_unit) -> Sequence[str]:
+    labels = dict(form.rubric_labels)
+    return tuple(
+        axis
+        for axis in _required_axes_for_intake(judge_unit)
+        if axis not in labels or _numeric_judge_rubric_score(labels[axis]) is None
+    )
+
+
+def _default_publication_review_intake_inputs(batch_dir: Path) -> Sequence[str]:
+    return tuple(
+        str(path)
+        for path in sorted((batch_dir / "reviewer_forms").glob("*_judge_review_forms.jsonl"))
+    )
+
+
+def _pair_label(pair) -> str:
+    return f"{pair[0]}::{pair[1]}"
+
+
+def _audit_publication_review_intake_payload(
+    *,
+    batch_dir: Path,
+    input_paths: Sequence[str],
+    stage: str,
+    calibration_mini_round_path: Optional[Path],
+):
+    judge_units = load_jsonl(
+        str(batch_dir / "judge_units.jsonl"),
+        loader=judge_validation_unit_from_dict,
+    )
+    canonical_forms = load_jsonl(
+        str(batch_dir / "judge_review_forms.jsonl"),
+        loader=judge_review_form_from_dict,
+    )
+    submitted_forms = []
+    for input_path in input_paths:
+        submitted_forms.extend(
+            load_jsonl(
+                str(input_path),
+                loader=judge_review_form_from_dict,
+            )
+        )
+
+    reviewer_ids = _reviewer_ids_from_judge_forms(canonical_forms)
+    expected_pairs = {
+        (form.validation_unit_id, form.reviewer_id)
+        for form in canonical_forms
+    }
+    submitted_pair_counts = Counter(
+        (form.validation_unit_id, form.reviewer_id)
+        for form in submitted_forms
+    )
+    submitted_pairs = set(submitted_pair_counts)
+    duplicate_pairs = tuple(
+        sorted(pair for pair, count in submitted_pair_counts.items() if count > 1)
+    )
+    missing_pairs = tuple(sorted(expected_pairs - submitted_pairs))
+    unexpected_pairs = tuple(sorted(submitted_pairs - expected_pairs))
+    unit_lookup = {unit.validation_unit_id: unit for unit in judge_units}
+    completed_forms = [form for form in submitted_forms if form.completed]
+    incomplete_completed_pairs = {}
+    valid_completed_pairs = set()
+    for form in completed_forms:
+        pair = (form.validation_unit_id, form.reviewer_id)
+        judge_unit = unit_lookup.get(form.validation_unit_id)
+        if judge_unit is None:
+            continue
+        missing_axes = _missing_completed_intake_axes(form, judge_unit)
+        if missing_axes:
+            incomplete_completed_pairs[pair] = tuple(missing_axes)
+            continue
+        valid_completed_pairs.add(pair)
+
+    issues = []
+    if not input_paths:
+        issues.append("no reviewer intake input files found")
+    if missing_pairs:
+        issues.append(f"missing expected reviewer form rows: {len(missing_pairs)}")
+    if unexpected_pairs:
+        issues.append(f"unexpected reviewer form rows: {len(unexpected_pairs)}")
+    if duplicate_pairs:
+        issues.append(f"duplicate reviewer form rows: {len(duplicate_pairs)}")
+    if incomplete_completed_pairs:
+        issues.append(
+            "completed reviewer forms with missing or invalid rubric axes: "
+            f"{len(incomplete_completed_pairs)}"
+        )
+
+    starter_validation_unit_ids = ()
+    unexpected_starter_validation_unit_ids = ()
+    if stage == "calibration":
+        if calibration_mini_round_path is None or not calibration_mini_round_path.exists():
+            issues.append("calibration mini-round file is missing")
+        else:
+            starter_validation_unit_ids = _extract_calibration_validation_unit_ids(
+                calibration_mini_round_path.read_text(encoding="utf-8")
+            )
+            if not starter_validation_unit_ids:
+                issues.append("calibration mini-round has no validation unit ids")
+            expected_validation_unit_ids = {
+                form.validation_unit_id
+                for form in canonical_forms
+            }
+            unexpected_starter_validation_unit_ids = tuple(
+                validation_unit_id
+                for validation_unit_id in starter_validation_unit_ids
+                if validation_unit_id not in expected_validation_unit_ids
+            )
+            if unexpected_starter_validation_unit_ids:
+                issues.append(
+                    "calibration mini-round references unknown validation units: "
+                    f"{len(unexpected_starter_validation_unit_ids)}"
+                )
+        required_completed_pairs = {
+            (validation_unit_id, reviewer_id)
+            for validation_unit_id in starter_validation_unit_ids
+            for reviewer_id in reviewer_ids
+            if (validation_unit_id, reviewer_id) in expected_pairs
+        }
+        completed_out_of_scope_pairs = tuple(
+            sorted(valid_completed_pairs - required_completed_pairs)
+        )
+        if completed_out_of_scope_pairs:
+            issues.append(
+                "non-starter reviewer forms were completed during calibration intake: "
+                f"{len(completed_out_of_scope_pairs)}"
+            )
+    else:
+        required_completed_pairs = set(expected_pairs)
+        completed_out_of_scope_pairs = ()
+
+    missing_required_completed_pairs = tuple(
+        sorted(required_completed_pairs - valid_completed_pairs)
+    )
+    if missing_required_completed_pairs:
+        issues.append(
+            f"missing required completed reviewer forms for {stage} intake: "
+            f"{len(missing_required_completed_pairs)}"
+        )
+
+    per_reviewer = {}
+    for reviewer_id in reviewer_ids:
+        reviewer_expected_pairs = {
+            pair for pair in expected_pairs if pair[1] == reviewer_id
+        }
+        reviewer_submitted_pairs = {
+            pair for pair in submitted_pairs if pair[1] == reviewer_id
+        }
+        reviewer_required_pairs = {
+            pair for pair in required_completed_pairs if pair[1] == reviewer_id
+        }
+        reviewer_incomplete_pairs = {
+            pair for pair in incomplete_completed_pairs if pair[1] == reviewer_id
+        }
+        per_reviewer[reviewer_id] = {
+            "expected_rows": len(reviewer_expected_pairs),
+            "submitted_rows": sum(1 for form in submitted_forms if form.reviewer_id == reviewer_id),
+            "missing_rows": len(reviewer_expected_pairs - reviewer_submitted_pairs),
+            "unexpected_rows": len(reviewer_submitted_pairs - reviewer_expected_pairs),
+            "completed_valid_rows": len(
+                {pair for pair in valid_completed_pairs if pair[1] == reviewer_id}
+            ),
+            "completed_with_invalid_axes": len(reviewer_incomplete_pairs),
+            "required_completed_rows": len(reviewer_required_pairs),
+            "missing_required_completed_rows": len(
+                reviewer_required_pairs - valid_completed_pairs
+            ),
+            "completed_out_of_scope_rows": len(
+                {pair for pair in completed_out_of_scope_pairs if pair[1] == reviewer_id}
+            ),
+        }
+
+    payload = {
+        "batch_dir": str(batch_dir),
+        "stage": stage,
+        "input_paths": list(input_paths),
+        "reviewer_ids": list(reviewer_ids),
+        "total_expected_rows": len(expected_pairs),
+        "total_submitted_rows": len(submitted_forms),
+        "duplicate_pairs": [_pair_label(pair) for pair in duplicate_pairs],
+        "missing_pairs": [_pair_label(pair) for pair in missing_pairs],
+        "unexpected_pairs": [_pair_label(pair) for pair in unexpected_pairs],
+        "starter_validation_unit_ids": list(starter_validation_unit_ids),
+        "unexpected_starter_validation_unit_ids": list(unexpected_starter_validation_unit_ids),
+        "required_completed_pairs": [_pair_label(pair) for pair in sorted(required_completed_pairs)],
+        "missing_required_completed_pairs": [
+            _pair_label(pair) for pair in missing_required_completed_pairs
+        ],
+        "completed_out_of_scope_pairs": [
+            _pair_label(pair) for pair in completed_out_of_scope_pairs
+        ],
+        "completed_with_invalid_axes": {
+            _pair_label(pair): list(missing_axes)
+            for pair, missing_axes in sorted(incomplete_completed_pairs.items())
+        },
+        "per_reviewer": per_reviewer,
+        "issues": issues,
+        "ok": not issues,
+    }
+    return payload
 
 
 def _rewrite_packet_paths_for_dispatch_calibration(
@@ -3623,6 +3833,26 @@ def command_audit_publication_annotation_hold(args: argparse.Namespace) -> int:
     return 0 if report.ok else 1
 
 
+def command_audit_publication_review_intake(args: argparse.Namespace) -> int:
+    batch_dir = Path(args.batch_dir)
+    input_paths = tuple(args.inputs or _default_publication_review_intake_inputs(batch_dir))
+    calibration_mini_round_path = (
+        Path(args.calibration_mini_round)
+        if args.calibration_mini_round
+        else batch_dir / "calibration_mini_round.md"
+    )
+    payload = _audit_publication_review_intake_payload(
+        batch_dir=batch_dir,
+        input_paths=input_paths,
+        stage=args.stage,
+        calibration_mini_round_path=calibration_mini_round_path,
+    )
+    if args.output:
+        _write_json(args.output, payload)
+    _print_json(payload)
+    return 0 if payload["ok"] else 1
+
+
 def command_audit_judge_slice(args: argparse.Namespace) -> int:
     task_bundles = load_jsonl(args.task_bundles, loader=task_bundle_from_dict)
     judge_units = load_jsonl(args.judge_units, loader=judge_validation_unit_from_dict)
@@ -4560,6 +4790,26 @@ def build_parser() -> argparse.ArgumentParser:
     publication_annotation_hold.add_argument("--output")
     publication_annotation_hold.add_argument("--markdown-output")
     publication_annotation_hold.set_defaults(func=command_audit_publication_annotation_hold)
+
+    publication_review_intake = subparsers.add_parser(
+        "audit-publication-review-intake",
+        help="Audit returned publication reviewer JSONL files before merge/adjudication.",
+    )
+    publication_review_intake.add_argument("--batch-dir", required=True)
+    publication_review_intake.add_argument(
+        "--inputs",
+        nargs="+",
+        help="Returned reviewer JSONL files. Defaults to reviewer_forms/*_judge_review_forms.jsonl.",
+    )
+    publication_review_intake.add_argument(
+        "--stage",
+        choices=("calibration", "full"),
+        default="calibration",
+        help="Check only the calibration starter set, or the full review round.",
+    )
+    publication_review_intake.add_argument("--calibration-mini-round")
+    publication_review_intake.add_argument("--output")
+    publication_review_intake.set_defaults(func=command_audit_publication_review_intake)
 
     audit_judge_slice = subparsers.add_parser(
         "audit-judge-slice",

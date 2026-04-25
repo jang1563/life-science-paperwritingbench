@@ -4,31 +4,35 @@
 
 This document is a working manuscript draft for the repo's `v0.1 research
 preview`. It is intentionally honest about what is already implemented, what
-has early empirical support, and what still remains blocked on human
-validation or provider access.
+has early empirical support, and what is deliberately held or incomplete.
+Human reviewer execution is currently on hold, so the draft should be read as
+a preview-freeze artifact rather than a claim of human-validated benchmark
+readiness.
 
 ## Draft Abstract
 
 Large language models can now produce fluent scientific prose, but evaluating
-whether that prose is faithful to biomedical source evidence remains difficult.
-We present Life-Science PaperWritingBench, a benchmark framework for generating
-biomedical paper sections from curated source evidence. The benchmark is
-governance-first: paper qualification, evidence-unit extraction, truth-manifest
-freezing, release-tier assignment, contamination controls, and model
-evaluation are treated as separate layers rather than collapsed into a single
-task-release decision. The current `v0.1` preview focuses on three writing
-families, `methods_to_text`, `results_to_text`, and
-`abstract_from_evidence`, and combines deterministic checks with a rubric-based
-LLM judge. Early results show that an agentic
-`writer -> critic -> reviser` baseline with conservative output selection
-improves judged quality over the current single-pass baseline, and a partial
-cross-model matrix already shows a meaningful separation signal across
-submitters. We also report an initial completion-style canary probe with no
-exact canary reproduction among the currently reachable DeepSeek/OpenAI models.
-We release this preview deliberately with explicit limitations:
-human-adjudicated judge validation is not yet complete, the frontier-model
-matrix is only partial, and the benchmark should be interpreted as a research
-preview rather than a final leaderboard.
+whether that prose remains faithful to biomedical source evidence is still
+difficult. We present Life-Science PaperWritingBench, a governance-first
+benchmark framework for evidence-grounded biomedical section writing. The
+framework separates paper qualification, evidence-unit extraction,
+truth-manifest freezing, release-tier assignment, contamination controls, and
+model evaluation rather than collapsing them into one task-release decision.
+The current `v0.1` research preview focuses on three writing families:
+`methods_to_text`, `results_to_text`, and `abstract_from_evidence`. It combines
+deterministic scoring with a rubric-based LLM judge and includes both
+single-pass and agentic `writer -> critic -> reviser` baselines. Early results
+show that a conservative non-regressive selector improves judged quality for
+the strongest agentic baseline while preserving deterministic citation
+behavior. A partial hosted model matrix shows separation across DeepSeek,
+OpenAI, and Anthropic submitters, and a hosted-working-set canary probe reports
+no exact public/control canary reproduction among completed models. The repo
+also includes an Inspect-compatible adapter, artifact-backed replay helpers,
+and a frozen `60`-bundle human-validation batch with reviewer packets and
+adjudication shells. Reviewer execution is currently held, so agreement
+statistics are not reported. We therefore release this as a research preview,
+not a final leaderboard or human-validated benchmark, and make the remaining
+validation and provider-coverage gaps explicit.
 
 ## 1. Introduction
 
@@ -373,9 +377,9 @@ This matters because the repo is no longer missing a validation workflow in
 the abstract. It now has a selection-locked batch, reviewer packets, blank
 review forms, blank adjudication shells, and a structural hold audit showing
 that the batch is ready for humans. What is still missing is the human review
-execution itself. The current publication-readiness snapshot remains red
-because agreement metrics are still absent and the frontier matrix / canary
-coverage are still incomplete.
+execution itself, which is currently held. The current publication-readiness
+snapshot remains red because agreement metrics are still absent and the
+frontier matrix / canary coverage are still incomplete.
 
 ## 7. What These Results Mean
 
@@ -402,8 +406,8 @@ The current preview has several important limitations that should be stated
 plainly.
 
 - The repo now has a frozen `60`-bundle publication-validation batch, but it
-  still does not report `kappa`, `ICC`, or `alpha` because no completed human
-  reviews have been merged yet.
+  still does not report `kappa`, `ICC`, or `alpha` because human reviewer
+  execution is currently held and no completed reviews have been merged yet.
 - The cross-model matrix is incomplete.
 - Anthropic coverage is present in the current matrix and canary artifacts, but
   Gemini submitter/judge coverage is still missing from the release-facing
@@ -424,8 +428,10 @@ release gating in a single workflow. The current preview suggests that
 biomedical section-writing systems can already be meaningfully separated, and
 that agentic revision can help when paired with a conservative selector.
 However, the project is not yet at the point where judged scores alone should
-be treated as publication-grade benchmark evidence. The next major milestone is
-executing the frozen human-validation batch, not leaderboard expansion.
+be treated as publication-grade benchmark evidence. While human validation is
+held, the immediate milestone is a clean `v0.1 research preview` freeze:
+reproducible artifacts, precise claim language, clearer replay instructions,
+and explicit separation between hosted-frontier and future open-weight tracks.
 
 ## References
 
@@ -468,9 +474,10 @@ https://arxiv.org/abs/2503.05244
 - Current publication-readiness snapshot:
   `calibration/publication_validation_v1/publication_readiness_snapshot.json`
 
-## Appendix: Remaining Path to Human Validation
+## Appendix: Held Human-Validation Path
 
-The remaining gap is now operational more than architectural.
+The human-validation gap is operational more than architectural, but this work
+is currently held.
 
 1. Distribute the frozen reviewer packets under
    `calibration/publication_validation_v1/review_packets/`.
@@ -486,8 +493,11 @@ and structural-QA pieces in place; the remaining work is to execute the
 human review loop and then rerun the readiness gate with real agreement
 numbers.
 
+Until that happens, use `docs/research_preview_freeze_checklist.md` as the
+active non-human preview-freeze plan.
+
 ## Open Writing Tasks
 
-- tighten the abstract to `200-250` words
+- align the final paper format with the target workshop venue
 - convert this markdown draft into the preferred workshop paper format
 - replace the ASCII pipeline figure with a camera-ready figure if needed
