@@ -51,6 +51,8 @@ Current evaluation anchors:
   `docs/canary_probe_report.md`
 - preview freeze checklist:
   `docs/research_preview_freeze_checklist.md`
+- preview release notes:
+  `docs/v0.1_research_preview_release_notes.md`
 
 Current freeze stance:
 

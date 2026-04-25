@@ -107,7 +107,8 @@ If human validation stays held, prioritize:
 
 ## Release Note Template
 
-Use this shape for a preview tag or PR:
+Use `docs/v0.1_research_preview_release_notes.md` as the release-facing note.
+For a shorter preview tag or PR body, use this shape:
 
 ```text
 Life-Science PaperWritingBench v0.1 research preview
@@ -119,4 +120,3 @@ partial hosted model matrix, and redacted canary probes.
 It is not a final benchmark release. Human agreement metrics, Gemini coverage,
 and open-weight comparable artifacts remain pending.
 ```
-
