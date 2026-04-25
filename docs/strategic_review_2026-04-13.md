@@ -113,9 +113,9 @@ Four sessions, each with an explicit gate before the next.
   - Add new `evaluate_submission_v2` that replaces the pointer-token traceability heuristic with a regex-based citation-specificity score (hoist the `citation_specificity` helper from `scripts/llm_smoke_eval.py` into a new package module `src/life_science_paperwritingbench/scoring.py` — keeping `baselines.py` free of duplicate regex).
   - Wire `evaluate_submissions` to accept a `version: Literal["v1","v2"]` kwarg defaulting to `"v2"`.
 - Update unit tests in `tests/test_qualification.py`: the two existing `test_run_baseline_and_evaluate_submissions*` tests use `evidence_pointers=("Fig1", "Table1")` — they should still pass under v2 because Fig1/Table1 match the new regex. Add 3–4 new tests: (a) v2 rejects placeholder pointer tokens, (b) v2 credits real figure/table/accession/URL citations, (c) forbidden-pointer output still fails v2.
-- Success criterion: full test suite passes; v2 evaluation on `calibration/llm_public_slice_v2/submissions.jsonl` yields a deterministic pass rate **≥ 15/30 (current judge pass rate) and ≤ 30/30**. The v2 deterministic check is more permissive than the judge's full rubric — it tests for citation *presence*, the judge tests for citation *correctness* — so deterministic ≥ judge is the expected relation.
+- Success criterion: full test suite passes; v2 evaluation on `calibration/llm_public_slice_v2/submissions.jsonl` yields a deterministic pass rate **≥ 15/30 (current judge pass rate) and ≤ 30/30**, and the **judge-pass set is a subset of the deterministic-pass set** (`judge_only_count = 0`). The v2 deterministic check is more permissive than the judge's full rubric — it tests for citation *presence*, the judge tests for citation *correctness* — so deterministic ≥ judge is the expected relation, and that relation should hold at the bundle level rather than only in the aggregate count.
 
-**Gate A1 → A2:** the expected relation holds. If deterministic < judge on the same submissions, the new scoring is too strict — loosen or re-examine before adding more rubric changes.
+**Gate A1 → A2:** the expected relation holds in both count and membership terms. If deterministic < judge on the same submissions, or if any judge-passing submission still fails deterministic scoring (`judge_only_count > 0`), the new scoring is too strict — loosen or re-examine before adding more rubric changes.
 
 **Session 2 — Judge rubric v3 (~$5 API, 1 session).**
 - In `scripts/llm_judge_eval.py`:
@@ -127,6 +127,35 @@ Four sessions, each with an explicit gate before the next.
 
 **Gate A2 → A3:** abstract-rubric mismatch is resolved. If abstracts still under 3/12, reopen the axis definitions.
 
+**Status update (2026-04-20):** Session 2 succeeded, and the follow-on
+agentic writer/critic/reviser lane now has two useful calibration
+artifacts:
+
+- best deterministic / citation artifact:
+  `calibration/llm_agentic_public_slice_v1_rerun2/summary.md`
+  with `26 / 30` final deterministic passes and mean citation
+  specificity `0.878`
+- best judged artifact:
+  `calibration/llm_agentic_public_slice_v1_rerun5_judged_v3/summary.md`
+  with `30 / 30` judge-reported overall pass, mean axis score `2.653`,
+  and `60` grounding issues
+
+Important nuance:
+
+- the `rerun5` judged gain came from a conservative selected-output
+  policy in `scripts/llm_agentic_eval.py`, not from a uniformly better
+  raw reviser
+- the raw reviser still regresses some bundles, but the selected output
+  layer blocks those regressions and yields the strongest judged slice
+  seen so far
+
+Recommended handoff into Session 3:
+
+- use `rerun5` as the judged comparison anchor
+- keep `rerun2` as the deterministic traceability anchor
+- measure new models against both views so judged quality and
+  deterministic citation behavior are not conflated
+
 **Session 3 — Cross-model breadth (~$7 API, 1 session).**
 - Activate Gemini 2.5 Flash in `scripts/llm_smoke_eval.py` (already wired in `PROVIDERS`, just run with `--model gemini-2.5-flash`) and add Claude Haiku 4.5 as a new submitter provider — copy the Anthropic `x-api-key` adapter pattern from `scripts/llm_judge_eval.py` (already proven working there). Run all three (DeepSeek V3, Gemini 2.5 Flash, Claude Haiku 4.5) on the 30-bundle slice with the v2 prompt.
 - Add two judges to `scripts/llm_judge_eval.py`: Gemini 2.5 Pro and GPT-5 mini (or GPT-4o if pricing shifts). Run the 3-judge jury on all three models' submissions, aggregating with unweighted mean and applying family-bias exclusion (Claude judge drops for Claude submissions, Gemini judge drops for Gemini submissions; DeepSeek has no family collision). Output to `calibration/llm_public_slice_matrix_v1/`.
@@ -134,6 +163,47 @@ Four sessions, each with an explicit gate before the next.
 - Success criterion: ≥ 30 percentage-point spread between weakest and strongest model's overall pass rate. If tight clustering, the rubric is still underspecified and Gate A3 fails.
 
 **Gate A3 → A4:** meaningful cross-model spread observed. If not, stop and return to rubric design.
+
+**Status update (2026-04-21):** Session 3 is partially complete, and the
+repo now has a reusable matrix summarizer in:
+
+- `scripts/llm_matrix_summary.py`
+- `calibration/llm_public_slice_matrix_v1/summary.md`
+
+Current checkpoint:
+
+- submitter runs present:
+  - `deepseek-chat-agentic-rerun5`
+  - `gpt-4o-mini-agentic-v1`
+- judges declared:
+  - `claude-sonnet-4-6`
+  - `gpt-5.4-mini`
+  - `gpt-5-mini`
+- completed cells: `5 / 6`
+- blocked cells: `1 / 6`
+- missing cells: `0 / 6`
+- common-judge spread across the two live submitters:
+  - `30.0` percentage points
+- strongest same-judge separation:
+  - `gpt-5.4-mini` yields `25 / 30` for DeepSeek vs `14 / 30` for
+    `gpt-4o-mini` (`36.7` percentage points)
+
+Important caveats:
+
+- the missing Claude cell is currently blocked by an invalid Anthropic
+  key in local `~/.api_keys`
+- Gemini is still not in the matrix because the local Google key is also
+  invalid
+- `gpt-5-mini` is informative but noisy (`7` and `8` parse failures on
+  the two completed cells), so `gpt-5.4-mini` is currently the better
+  OpenAI-side judge anchor
+
+Interpretation:
+
+- Gate A3 is now **signal-green but completeness-yellow**
+- the benchmark is already separating submitters on the public slice, but
+  the intended `3 submitters x 3 judges` release matrix is not finished
+  until Anthropic / Gemini access is restored
 
 **Session 4 — Canary probe + README refresh + arXiv draft (~$5 API, 1–2 sessions).**
 - New script `scripts/canary_probe.py`: contamination probe across the 5 frontier models (3 submitters + 2 judges). Because Anthropic does not expose token log-probabilities and OpenAI/Gemini increasingly restrict them, the probe is **a completion test**, not a log-prob test: prompt each model with a short natural-language stem containing the canary prefix (`Continue the sequence exactly: LS-PWB-CANARY-...`) and check whether the model reproduces the full stored canary string verbatim. Also run matched-length random-control canaries that were never published, as a negative control. Report per-model: (a) did the model reproduce our canary verbatim? (b) did it reproduce any random control? (c) Levenshtein distance to the expected continuation. Binary reproducing-the-public-canary = contamination red flag. Publish in `docs/canary_probe_report.md`.
@@ -144,10 +214,28 @@ Four sessions, each with an explicit gate before the next.
 - Draft a 6–8 page workshop paper in `paper/` (new dir) covering: governance core, task families, rubric design, cross-model results, canary-probe results, honest limitations. See venue note below for realistic targets.
 - Tag and push a `v0.1-research-preview` git tag. Consider an arXiv submission once the draft has been read by at least one external reader.
 
+**Status update (2026-04-21):** Session 4 is now partially started.
+
+- `scripts/canary_probe.py` exists and writes redacted probe artifacts
+- `docs/canary_probe_report.md` now points at the current probe results
+- current live mini-probe artifact:
+  `calibration/canary_probe_v1_live_openai_deepseek/summary.md`
+- current live mini-probe result:
+  - models covered: `deepseek-chat`, `gpt-4o-mini`, `gpt-5.4-mini`
+  - exact public-canary matches: `0 / 3`
+  - exact control matches: `0 / 3`
+
+Interpretation:
+
+- the early contamination signal is encouraging
+- however, Session 4 remains **coverage-yellow** because Anthropic and
+  Gemini are still blocked by invalid local keys
+- README refresh and paper drafting remain undone
+
 Realistic venues given 2026 timing: workshop tracks at **NeurIPS 2026** (typically September/October deadline) or **AAAI 2027**, or a late arXiv-only release targeting **BioNLP 2027 at ACL**. BioNLP 2026 at ACL has already closed, and the NeurIPS D&B main track (typically May–June deadline) is probably too tight for Tier A alone and better paired with Tier B.
 
 **Tier A exit criteria (all must hold before considering Tier B):**
-1. v2 deterministic pass rate ≥ v2 judge pass rate on the same 30 submissions (internal consistency).
+1. v2 deterministic pass rate ≥ v2 judge pass rate on the same 30 submissions, and the judge-pass set is a subset of the deterministic-pass set (internal consistency).
 2. 4-point ordinal rubric with behavioral anchors is shipped and covered by at least one regression test.
 3. Abstract family rubric swap yields ≥ 5 / 12 pass rate on the 30-bundle slice (up from 1 / 12 pre-swap).
 4. 3 models × 3 judges matrix is published with ≥ 30 percentage-point spread between strongest and weakest submitter's overall pass rate.
