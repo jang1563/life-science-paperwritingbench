@@ -55,6 +55,8 @@ Current evaluation anchors:
   `docs/v0.1_research_preview_release_notes.md`
 - Inspect/replay quickstart:
   `docs/inspect_replay_quickstart.md`
+- open-weight / VLLM track policy:
+  `docs/open_weight_vllm_track.md`
 
 Current freeze stance:
 
@@ -224,6 +226,9 @@ Auto-only review is intentionally stricter and lower-trust. `build-auto-paper-qu
 
 The current non-human freeze plan is tracked in
 `docs/research_preview_freeze_checklist.md`.
+
+Open-weight / VLLM runs are tracked separately from hosted-frontier results;
+see `docs/open_weight_vllm_track.md`.
 
 ## Quick Start
 

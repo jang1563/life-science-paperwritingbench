@@ -53,3 +53,7 @@ PYTHONPATH=src python3 -m life_science_paperwritingbench.cli write-frontier-subm
   --tensor-parallel-size 4 \
   --gpu-count 4
 ```
+
+Treat `openweight-vllm-submitter` outputs as a separate open-weight track, not
+as hosted-frontier matrix cells. See `docs/open_weight_vllm_track.md` before
+registering or comparing those artifacts.

@@ -502,6 +502,22 @@ def summarize_publication_readiness(
                 }
             )
         )
+    required_submitter_tracks = ("hosted_frontier", "open_weight")
+    missing_required_submitter_tracks = tuple(
+        sorted(set(required_submitter_tracks) - set(submitter_tracks))
+    )
+    track_summary = {
+        "required_submitter_tracks": list(required_submitter_tracks),
+        "submitter_tracks_present": list(submitter_tracks),
+        "missing_required_submitter_tracks": list(missing_required_submitter_tracks),
+        "hosted_frontier_policy": (
+            "Hosted-frontier submitters define the official hosted matrix gate."
+        ),
+        "open_weight_policy": (
+            "Open-weight/VLLM submitters are tracked separately and do not satisfy "
+            "hosted-frontier submitter cells."
+        ),
+    }
     pre_kappa = _safe_metric_float(agreement_metrics.get("pre_adjudication_kappa", 0.0))
     post_kappa = _safe_metric_float(agreement_metrics.get("post_adjudication_kappa", 0.0))
     jury_icc = _safe_metric_float(agreement_metrics.get("jury_vs_adjudicator_icc", 0.0))
@@ -512,9 +528,7 @@ def summarize_publication_readiness(
         ),
         "official_judges_present": hosted_official_matrix["all_required_official_judges_declared"],
         "official_hosted_matrix_complete": hosted_official_matrix["ready"],
-        "hosted_and_open_weight_submitters_present": {"hosted_frontier", "open_weight"}.issubset(
-            set(submitter_tracks)
-        ),
+        "hosted_and_open_weight_submitters_present": not missing_required_submitter_tracks,
         "full_canary_report_ready": canary_coverage["ready"],
         "pre_adjudication_kappa_ok": pre_kappa >= PRE_ADJUDICATION_KAPPA_THRESHOLD,
         "post_adjudication_kappa_ok": post_kappa >= POST_ADJUDICATION_KAPPA_THRESHOLD,
@@ -529,6 +543,7 @@ def summarize_publication_readiness(
             "jury_vs_adjudicator_icc": jury_icc,
         },
         "registry_path": str(registry_path),
+        "track_summary": track_summary,
         "hosted_official_matrix": hosted_official_matrix,
         "canary_coverage": canary_coverage,
     }

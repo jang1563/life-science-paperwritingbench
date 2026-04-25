@@ -5056,10 +5056,111 @@ class QualificationTests(unittest.TestCase):
         self.assertTrue(readiness["leaderboard_gate_passed"])
         self.assertTrue(readiness["gates"]["official_hosted_matrix_complete"])
         self.assertTrue(readiness["gates"]["full_canary_report_ready"])
+        self.assertEqual(readiness["track_summary"]["missing_required_submitter_tracks"], [])
         self.assertEqual(readiness["canary_coverage"]["missing_requested_models"], [])
         self.assertEqual(readiness["canary_coverage"]["missing_ok_models"], [])
         self.assertEqual(readiness["hosted_official_matrix"]["missing_submitter_models"], [])
         self.assertEqual(readiness["hosted_official_matrix"]["counts"]["completed_cells"], 1)
+
+    def test_publication_readiness_keeps_open_weight_separate_from_hosted_matrix(self):
+        registry_payload = {
+            "models": [
+                {
+                    "model_label": "custom-hosted",
+                    "backend_type": "openai_compatible_api",
+                    "request_model": "custom-hosted",
+                    "role_eligibility": "submitter",
+                    "judge_policy": "not_applicable",
+                    "family_bias_group": "hosted_vendor",
+                    "provider_name": "custom",
+                    "execution_target": "hosted_api",
+                    "model_version_note": "v1",
+                    "submitter_track": "hosted_frontier",
+                },
+                {
+                    "model_label": "custom-openweight",
+                    "backend_type": "vllm_http",
+                    "request_model": "custom-openweight",
+                    "role_eligibility": "submitter",
+                    "judge_policy": "not_applicable",
+                    "family_bias_group": "open_weight",
+                    "provider_name": "vLLM",
+                    "execution_target": "cayuga_vllm",
+                    "model_version_note": "local deployment",
+                    "submitter_track": "open_weight",
+                },
+                {
+                    "model_label": "custom-judge",
+                    "backend_type": "anthropic_api",
+                    "request_model": "custom-judge",
+                    "role_eligibility": "judge",
+                    "judge_policy": "official",
+                    "family_bias_group": "judge_vendor",
+                    "provider_name": "custom",
+                    "execution_target": "hosted_api",
+                    "model_version_note": "v1",
+                },
+            ]
+        }
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            registry_path = Path(tmpdir) / "registry.json"
+            registry_path.write_text(json.dumps(registry_payload) + "\n", encoding="utf-8")
+            production_models = list(default_canary_models(registry_path=registry_path))
+            readiness = summarize_publication_readiness(
+                matrix_summary={
+                    "registry_path": str(registry_path),
+                    "official_judge_labels": ["custom-judge"],
+                    "submitter_runs": [
+                        {
+                            "label": "custom-openweight-run",
+                            "model": "custom-openweight",
+                            "request_model": "custom-openweight",
+                            "submitter_track": "open_weight",
+                            "family_bias_group": "open_weight",
+                        }
+                    ],
+                    "matrix_cells": [
+                        {
+                            "submitter_label": "custom-openweight-run",
+                            "judge_label": "custom-judge",
+                            "status": "completed",
+                        }
+                    ],
+                },
+                canary_summary={
+                    "registry_path": str(registry_path),
+                    "production_models_requested": production_models,
+                    "production_models_ok": production_models,
+                    "model_summaries": [
+                        {"model": label, "status": "ok"} for label in production_models
+                    ],
+                    "any_public_exact_match": False,
+                    "any_control_exact_match": False,
+                },
+                validation_summary={
+                    "ready": True,
+                    "study_class_stratification_ready": True,
+                },
+                agreement_metrics={
+                    "pre_adjudication_kappa": 0.45,
+                    "post_adjudication_kappa": 0.65,
+                    "jury_vs_adjudicator_icc": 0.55,
+                },
+            )
+
+        self.assertFalse(readiness["leaderboard_gate_passed"])
+        self.assertFalse(readiness["gates"]["official_hosted_matrix_complete"])
+        self.assertFalse(readiness["gates"]["hosted_and_open_weight_submitters_present"])
+        self.assertEqual(
+            readiness["track_summary"]["missing_required_submitter_tracks"],
+            ["hosted_frontier"],
+        )
+        self.assertEqual(
+            readiness["hosted_official_matrix"]["missing_submitter_models"],
+            ["custom-hosted"],
+        )
+        self.assertEqual(readiness["hosted_official_matrix"]["counts"]["completed_cells"], 0)
 
     def test_publication_readiness_non_numeric_agreement_metrics_fail_closed(self):
         registry_payload = {

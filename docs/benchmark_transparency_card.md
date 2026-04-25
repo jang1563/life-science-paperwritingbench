@@ -64,6 +64,7 @@
   matrix, and canary gates are complete
 - hosted-frontier results and future open-weight/VLLM results should remain
   separate tracks until comparable artifacts exist
+- open-weight / VLLM track policy: `docs/open_weight_vllm_track.md`
 
 ## Known Current Limitations
 

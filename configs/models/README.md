@@ -23,6 +23,10 @@ at runtime with environment variables exported by Cayuga job scaffolds:
 This keeps open-weight deployment details out of the scripts themselves while
 preserving one stable model label and one stable artifact contract.
 
+Open-weight / VLLM outputs are a separate track from hosted-frontier outputs.
+Use `docs/open_weight_vllm_track.md` for release-facing naming, metadata, and
+claim-boundary rules.
+
 The same registry is now also used by the Inspect-facing helpers in
 `inspect_evals/life_science_paperwritingbench.py`, so external runners can use
 the same model labels and backend metadata as the first-party scripts.

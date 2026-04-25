@@ -102,7 +102,8 @@ If human validation stays held, prioritize:
 1. Complete Gemini coverage when credentials are available.
 2. Keep hosted-working-set results separate from registry-complete claims.
 3. Tighten Inspect adapter examples and replay documentation.
-4. Prepare an open-weight/VLLM track without mixing it into hosted results.
+4. Prepare an open-weight/VLLM track without mixing it into hosted results;
+   use `docs/open_weight_vllm_track.md` as the track policy.
 5. Keep the workshop draft in preview language until agreement metrics exist.
 
 ## Release Note Template
