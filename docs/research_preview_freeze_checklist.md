@@ -62,6 +62,7 @@ These are intentionally held, not forgotten:
 
 ### Gate 2: Artifact Anchor Freeze
 
+- external-reader artifact index is named
 - best judged agentic artifact is named
 - best deterministic/citation artifact is named
 - current matrix summary is named

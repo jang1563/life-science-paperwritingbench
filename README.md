@@ -41,6 +41,8 @@ The current repo state is best thought of as a `v0.1 research preview`.
 
 Current evaluation anchors:
 
+- preview artifact index:
+  `docs/v0.1_research_preview_artifact_index.md`
 - best judged agentic artifact:
   `calibration/llm_agentic_public_slice_v1_rerun5_judged_v3/`
 - best deterministic / citation-specificity artifact:

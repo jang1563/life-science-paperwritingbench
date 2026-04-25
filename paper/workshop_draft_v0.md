@@ -459,6 +459,10 @@ https://arxiv.org/abs/2503.05244
 
 ## Appendix: Current Artifact Anchors
 
+The release-facing artifact map is:
+
+- `docs/v0.1_research_preview_artifact_index.md`
+
 - Best judged agentic artifact:
   `calibration/llm_agentic_public_slice_v1_rerun5_judged_v3/summary.md`
 - Best deterministic / citation artifact:
