@@ -53,6 +53,8 @@ Current evaluation anchors:
   `docs/research_preview_freeze_checklist.md`
 - preview release notes:
   `docs/v0.1_research_preview_release_notes.md`
+- Inspect/replay quickstart:
+  `docs/inspect_replay_quickstart.md`
 
 Current freeze stance:
 
@@ -319,6 +321,9 @@ records = build_inspect_records(limit=3)
 print([record["id"] for record in records])
 PY
 ```
+
+See `docs/inspect_replay_quickstart.md` for API-free deterministic score
+replay, judge replay, and dry-run provider submission examples.
 
 Validate the pilot calibration scaffold:
 
