@@ -43,6 +43,8 @@ Current evaluation anchors:
 
 - preview artifact index:
   `docs/v0.1_research_preview_artifact_index.md`
+- current session handoff:
+  `docs/session_handoff_2026-04-26.md`
 - best judged agentic artifact:
   `calibration/llm_agentic_public_slice_v1_rerun5_judged_v3/`
 - best deterministic / citation-specificity artifact:
