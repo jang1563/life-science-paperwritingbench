@@ -41,6 +41,7 @@ Then inspect:
 - `docs/inspect_replay_quickstart.md`
 - `docs/open_weight_vllm_track.md`
 - `paper/workshop_draft_v0.md`
+- `paper/figures/governance_pipeline.mmd`
 
 Current artifact anchors:
 
@@ -144,8 +145,8 @@ Recommended order if human validation stays held:
 
 1. Prepare the workshop draft for a target venue format while preserving
    preview language.
-2. Build a camera-ready or publication-friendly pipeline figure from the
-   current governance stack.
+2. Render and refine `paper/figures/governance_pipeline.mmd` into a
+   camera-ready or publication-friendly pipeline figure.
 3. When Gemini credentials are available, complete Gemini submitter, official
    judge, and canary cells.
 4. When cluster time is available, scaffold and run the

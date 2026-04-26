@@ -77,7 +77,32 @@ meaningfully score today, while deferring broader tasks like discussion,
 related work, or figure-caption generation until the current release path is
 stronger.
 
+### Contributions
+
+This preview makes four concrete contributions.
+
+1. It frames biomedical section-writing evaluation as a governance problem
+   before a model-scoring problem, separating paper qualification, evidence
+   extraction, truth freezing, release-tier assignment, and evaluation.
+2. It defines three evidence-grounded writing families with explicit release
+   and contamination controls rather than treating scientific writing as a
+   generic long-form task.
+3. It provides a reproducible preview evaluation stack: deterministic scoring
+   `v2`, rubric judge `v3`, agentic baselines, hosted-frontier matrix
+   summaries, canary probes, and Inspect-compatible replay helpers.
+4. It publishes a deliberately bounded preview state, including a frozen
+   `60`-bundle human-validation batch that is structurally ready while human
+   reviewer execution remains held.
+
 ### Figure 1. Current benchmark pipeline
+
+Figure source:
+
+- `paper/figures/governance_pipeline.mmd`
+
+Caption draft:
+
+- `paper/figures/governance_pipeline_caption.md`
 
 ```text
 Source papers
@@ -504,4 +529,5 @@ active non-human preview-freeze plan.
 
 - align the final paper format with the target workshop venue
 - convert this markdown draft into the preferred workshop paper format
-- replace the ASCII pipeline figure with a camera-ready figure if needed
+- render `paper/figures/governance_pipeline.mmd` into the venue's preferred
+  camera-ready figure format if needed
