@@ -1,5 +1,7 @@
 # Figure 1 Caption
 
+Figure source: `paper/figures/governance_pipeline.svg`.
+
 Life-Science PaperWritingBench treats biomedical section-writing evaluation as
 a governance stack before it treats it as a model-scoring problem. Source
 papers pass through scientific, packaging, and integrity qualification; curated

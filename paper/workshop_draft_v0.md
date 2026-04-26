@@ -98,6 +98,7 @@ This preview makes four concrete contributions.
 
 Figure source:
 
+- `paper/figures/governance_pipeline.svg`
 - `paper/figures/governance_pipeline.mmd`
 
 Caption draft:
@@ -529,5 +530,5 @@ active non-human preview-freeze plan.
 
 - align the final paper format with the target workshop venue
 - convert this markdown draft into the preferred workshop paper format
-- render `paper/figures/governance_pipeline.mmd` into the venue's preferred
-  camera-ready figure format if needed
+- export `paper/figures/governance_pipeline.svg` to the venue's preferred
+  figure format if needed
