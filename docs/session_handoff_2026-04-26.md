@@ -40,6 +40,7 @@ Then inspect:
 - `docs/research_preview_freeze_checklist.md`
 - `docs/inspect_replay_quickstart.md`
 - `docs/open_weight_vllm_track.md`
+- `paper/workshop_short_paper_v0.md`
 - `paper/workshop_draft_v0.md`
 - `paper/figures/governance_pipeline.svg`
 - `paper/figures/governance_pipeline.mmd`
@@ -64,6 +65,11 @@ Current artifact anchors:
 Recent preview-freeze commits on
 `codex-project-review-hardening-publication-readiness`:
 
+- this update: add a venue-neutral short-paper draft for external workshop
+  adaptation
+- `03ea043` Add governance pipeline SVG figure
+- `b67661c` Strengthen workshop preview narrative
+- `8ecb845` Add preview freeze session handoff
 - `0450af2` Add v0.1 preview artifact index
 - `dbaca88` Separate open-weight VLLM track policy
 - `a5ea220` Add Inspect replay quickstart
@@ -85,6 +91,9 @@ Main outcomes:
 - added open-weight / VLLM track policy and readiness `track_summary`
 - added a regression proving open-weight submitter runs do not fill missing
   hosted-frontier matrix cells
+- added a governance pipeline figure and companion short-paper draft so the
+  preview can be adapted to a target workshop without starting from the long
+  narrative
 
 ## Verification Status
 
@@ -144,8 +153,8 @@ separate-track open-weight artifacts exist.
 
 Recommended order if human validation stays held:
 
-1. Prepare the workshop draft for a target venue format while preserving
-   preview language.
+1. Adapt `paper/workshop_short_paper_v0.md` to a target venue format while
+   preserving preview language.
 2. Export and refine `paper/figures/governance_pipeline.svg` into the target
    venue's preferred figure format.
 3. When Gemini credentials are available, complete Gemini submitter, official

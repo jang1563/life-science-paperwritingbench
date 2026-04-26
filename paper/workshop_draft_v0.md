@@ -7,7 +7,8 @@ preview`. It is intentionally honest about what is already implemented, what
 has early empirical support, and what is deliberately held or incomplete.
 Human reviewer execution is currently on hold, so the draft should be read as
 a preview-freeze artifact rather than a claim of human-validated benchmark
-readiness.
+readiness. A compressed venue-neutral short-paper version is available at
+`paper/workshop_short_paper_v0.md`.
 
 ## Draft Abstract
 
