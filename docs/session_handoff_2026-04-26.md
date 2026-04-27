@@ -38,6 +38,8 @@ Then inspect:
 
 - `docs/v0.1_research_preview_release_notes.md`
 - `docs/research_preview_freeze_checklist.md`
+- `docs/pre_human_validation_target_review.md`
+- `docs/pre_human_validation_audit_campaign.md`
 - `docs/inspect_replay_quickstart.md`
 - `docs/open_weight_vllm_track.md`
 - `paper/workshop_short_paper_v0.md`
@@ -67,6 +69,8 @@ Recent preview-freeze commits on
 
 - this update: add a venue-neutral short-paper draft for external workshop
   adaptation
+- this update: add pre-human-validation target review and deep audit campaign
+  plan before fixing the reviewer target
 - `03ea043` Add governance pipeline SVG figure
 - `b67661c` Strengthen workshop preview narrative
 - `8ecb845` Add preview freeze session handoff
@@ -94,6 +98,9 @@ Main outcomes:
 - added a governance pipeline figure and companion short-paper draft so the
   preview can be adapted to a target workshop without starting from the long
   narrative
+- added a pre-human-validation target review and audit campaign so reviewer
+  dispatch stays blocked until target suitability, packet semantics, rubric
+  behavior, and methodology gaps are reviewed
 
 ## Verification Status
 
@@ -153,15 +160,17 @@ separate-track open-weight artifacts exist.
 
 Recommended order if human validation stays held:
 
-1. Adapt `paper/workshop_short_paper_v0.md` to a target venue format while
+1. Complete `docs/pre_human_validation_audit_campaign.md` before fixing a human
+   reviewer target or dispatching the calibration mini-round.
+2. Adapt `paper/workshop_short_paper_v0.md` to a target venue format while
    preserving preview language.
-2. Export and refine `paper/figures/governance_pipeline.svg` into the target
+3. Export and refine `paper/figures/governance_pipeline.svg` into the target
    venue's preferred figure format.
-3. When Gemini credentials are available, complete Gemini submitter, official
+4. When Gemini credentials are available, complete Gemini submitter, official
    judge, and canary cells.
-4. When cluster time is available, scaffold and run the
+5. When cluster time is available, scaffold and run the
    `openweight-vllm-submitter` track using `docs/open_weight_vllm_track.md`.
-5. When human validation resumes, start with the calibration starter set and
+6. When human validation resumes, start with the calibration starter set and
    run `audit-publication-review-intake --stage calibration` before letting
    reviewers continue.
 
