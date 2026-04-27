@@ -40,6 +40,7 @@ Then inspect:
 - `docs/research_preview_freeze_checklist.md`
 - `docs/pre_human_validation_target_review.md`
 - `docs/pre_human_validation_audit_campaign.md`
+- `docs/pre_human_validation_semantic_packet_audit.md`
 - `docs/inspect_replay_quickstart.md`
 - `docs/open_weight_vllm_track.md`
 - `paper/workshop_short_paper_v0.md`
@@ -101,6 +102,9 @@ Main outcomes:
 - added a pre-human-validation target review and audit campaign so reviewer
   dispatch stays blocked until target suitability, packet semantics, rubric
   behavior, and methodology gaps are reviewed
+- added the Phase 2 semantic packet audit; structural linkage is intact, but
+  packet sidecar paths, scored-object wording, and reviewer-axis labels must be
+  fixed before human dispatch
 
 ## Verification Status
 
@@ -160,17 +164,20 @@ separate-track open-weight artifacts exist.
 
 Recommended order if human validation stays held:
 
-1. Complete `docs/pre_human_validation_audit_campaign.md` before fixing a human
-   reviewer target or dispatching the calibration mini-round.
-2. Adapt `paper/workshop_short_paper_v0.md` to a target venue format while
+1. Close `SPK-001` through `SPK-004` in
+   `docs/pre_human_validation_semantic_packet_audit.md` before dispatching the
+   calibration mini-round.
+2. Run Phase 3 rubric red-team from
+   `docs/pre_human_validation_audit_campaign.md`.
+3. Adapt `paper/workshop_short_paper_v0.md` to a target venue format while
    preserving preview language.
-3. Export and refine `paper/figures/governance_pipeline.svg` into the target
+4. Export and refine `paper/figures/governance_pipeline.svg` into the target
    venue's preferred figure format.
-4. When Gemini credentials are available, complete Gemini submitter, official
+5. When Gemini credentials are available, complete Gemini submitter, official
    judge, and canary cells.
-5. When cluster time is available, scaffold and run the
+6. When cluster time is available, scaffold and run the
    `openweight-vllm-submitter` track using `docs/open_weight_vllm_track.md`.
-6. When human validation resumes, start with the calibration starter set and
+7. When human validation resumes, start with the calibration starter set and
    run `audit-publication-review-intake --stage calibration` before letting
    reviewers continue.
 
