@@ -25,16 +25,16 @@ PUBLICATION_RUBRIC_LOCK_NOTE = "publication_validation_rubric_locked"
 
 PUBLICATION_RUBRIC_GUIDANCE: Mapping[str, str] = {
     "evidence_fidelity": (
-        "Judge whether the eventual section stays faithful to the bundled benchmark evidence and avoids unsupported claims."
+        "Judge whether the frozen benchmark unit is supported by the bundled evidence and avoids requiring unsupported claims."
     ),
     "traceability": (
         "Judge whether concrete statements can be traced back to the provided evidence units, assertions, and provenance hints."
     ),
     "provenance_completeness": (
-        "Judge whether the section preserves source/provenance cues that the benchmark expects for grounded scientific writing."
+        "Judge whether the packet includes enough source/provenance cues for grounded scientific writing."
     ),
     "writing_structure_compliance": (
-        "Judge whether the section follows the requested section form and reads like a compliant scientific section rather than notes or meta-commentary."
+        "Judge whether the requested writing task has a clear section form suitable for compliant scientific writing."
     ),
 }
 
@@ -59,6 +59,14 @@ def _expected_publication_total() -> int:
 
 def _reviewer_form_filename(reviewer_id: str) -> str:
     return f"{_safe_filename_token(reviewer_id)}_judge_review_forms.jsonl"
+
+
+def _reviewer_form_path_from_template(template: str, reviewer_id: str) -> str:
+    return template.format(
+        reviewer_id=reviewer_id,
+        reviewer_token=_safe_filename_token(reviewer_id),
+        reviewer_form_filename=_reviewer_form_filename(reviewer_id),
+    )
 
 
 def lock_publication_annotation_units(
@@ -133,7 +141,10 @@ def build_publication_annotation_packets(
                     holdout_bucket=bundle.holdout_bucket,
                     rubric_version=unit.rubric_version,
                     authoritative_form_present=form_present,
-                    authoritative_form_path=authoritative_form_path,
+                    authoritative_form_path=_reviewer_form_path_from_template(
+                        authoritative_form_path,
+                        reviewer_id,
+                    ),
                     packet_markdown_path=packet_markdown_path,
                     evidence_unit_ids=tuple(str(item) for item in artifacts.get("evidence_unit_ids", bundle.evidence_unit_ids)),
                     evidence_pointers=tuple(str(item) for item in artifacts.get("evidence_pointers", ())),
@@ -220,6 +231,8 @@ def render_publication_annotation_packet_markdown(
     judge_unit: JudgeValidationUnit,
     task_bundle: TaskBundle,
 ) -> str:
+    task_generation_profile = dict(task_bundle.scoring_profile)
+    task_generation_profile.pop("rubric_axes", None)
     lines: List[str] = [
         f"# Publication Annotation Packet: {packet.reviewer_id}",
         "",
@@ -234,39 +247,67 @@ def render_publication_annotation_packet_markdown(
         f"- Holdout bucket: `{packet.holdout_bucket or 'unassigned'}`",
         f"- Rubric version: `{packet.rubric_version}`",
         f"- Truth manifest: `{task_bundle.truth_manifest_id or 'unknown'}`",
-        f"- Authoritative sidecar: `{packet.authoritative_form_path}` "
+        f"- Reviewer form: `{packet.authoritative_form_path}` "
         f"(match `validation_unit_id={packet.validation_unit_id}` and `reviewer_id={packet.reviewer_id}`)",
         "",
-        "## Frozen Contract",
+        "## Scored Object",
         "",
-        f"- Selection locked: `{'yes' if PUBLICATION_SELECTION_LOCK_NOTE in judge_unit.notes else 'no'}`",
-        f"- Rubric locked: `{'yes' if PUBLICATION_RUBRIC_LOCK_NOTE in judge_unit.notes else 'no'}`",
-        f"- Judge unit frozen: `{'yes' if judge_unit.frozen else 'no'}`",
-        f"- Human-adjudicated already: `{'yes' if judge_unit.human_adjudicated else 'no'}`",
+        "This round scores the frozen benchmark unit against the linked frozen",
+        "truth-manifest evidence. It does not score a model-generated section.",
         "",
-        "## Evidence Context",
+        "Use the evidence pointers, evidence items, assertion IDs, authoring",
+        "constraints, and truth manifest to judge whether this benchmark unit is",
+        "suitable for the human-review rubric.",
         "",
-        f"- Evidence unit IDs: {', '.join(f'`{item}`' for item in packet.evidence_unit_ids) or 'none'}",
-        f"- Evidence pointers: {', '.join(f'`{item}`' for item in packet.evidence_pointers) or 'none'}",
-        f"- Evidence items: {', '.join(f'`{item}`' for item in packet.evidence_items) or 'none'}",
-        f"- Evidence types: {', '.join(f'`{item}`' for item in packet.evidence_types) or 'none'}",
-        f"- Assertion IDs: {', '.join(f'`{item}`' for item in packet.assertion_ids) or 'none'}",
+        "## Reviewer Form",
         "",
-        "## Authoring Constraints",
+        f"- Working copy: `{packet.authoritative_form_path}`",
+        f"- Update only the row matching `validation_unit_id={packet.validation_unit_id}` and `reviewer_id={packet.reviewer_id}`.",
+        "- Keep `validation_unit_id`, `reviewer_id`, rubric axes, and rubric version unchanged.",
         "",
-        "```json",
-        json.dumps(dict(task_bundle.authoring_constraints), indent=2, sort_keys=True),
-        "```",
-        "",
-        "## Scoring Profile",
-        "",
-        "```json",
-        json.dumps(dict(task_bundle.scoring_profile), indent=2, sort_keys=True),
-        "```",
-        "",
-        "## Rubric Guidance",
+        "## Human-Review Axes",
         "",
     ]
+    for axis in DEFAULT_JUDGE_RUBRIC_AXES:
+        lines.append(f"- `{axis}`")
+    lines.extend(
+        [
+            "",
+            "## Frozen Contract",
+            "",
+            f"- Selection locked: `{'yes' if PUBLICATION_SELECTION_LOCK_NOTE in judge_unit.notes else 'no'}`",
+            f"- Rubric locked: `{'yes' if PUBLICATION_RUBRIC_LOCK_NOTE in judge_unit.notes else 'no'}`",
+            f"- Judge unit frozen: `{'yes' if judge_unit.frozen else 'no'}`",
+            f"- Human-adjudicated already: `{'yes' if judge_unit.human_adjudicated else 'no'}`",
+            "",
+            "## Evidence Context",
+            "",
+            f"- Evidence unit IDs: {', '.join(f'`{item}`' for item in packet.evidence_unit_ids) or 'none'}",
+            f"- Evidence pointers: {', '.join(f'`{item}`' for item in packet.evidence_pointers) or 'none'}",
+            f"- Evidence items: {', '.join(f'`{item}`' for item in packet.evidence_items) or 'none'}",
+            f"- Evidence types: {', '.join(f'`{item}`' for item in packet.evidence_types) or 'none'}",
+            f"- Assertion IDs: {', '.join(f'`{item}`' for item in packet.assertion_ids) or 'none'}",
+            "",
+            "## Authoring Constraints",
+            "",
+            "```json",
+            json.dumps(dict(task_bundle.authoring_constraints), indent=2, sort_keys=True),
+            "```",
+            "",
+            "## Task Generation Profile",
+            "",
+            "This construction profile is not the human-review rubric. Human-review",
+            "axes are listed above and are the only axes reviewers should edit in the",
+            "JSONL form.",
+            "",
+            "```json",
+            json.dumps(task_generation_profile, indent=2, sort_keys=True),
+            "```",
+            "",
+            "## Rubric Guidance",
+            "",
+        ]
+    )
     for axis in DEFAULT_JUDGE_RUBRIC_AXES:
         lines.append(f"- `{axis}`: {PUBLICATION_RUBRIC_GUIDANCE.get(axis, 'Assess this axis using the frozen batch rubric.')}")
     lines.extend(
@@ -275,7 +316,7 @@ def render_publication_annotation_packet_markdown(
             "## Reviewer Workflow",
             "",
             "- Read this packet for context, but treat the JSONL sidecar as the authoritative submission surface.",
-            "- Update the matching row in `judge_review_forms.jsonl` using the same `validation_unit_id` and `reviewer_id`.",
+            f"- Update the matching row in `{packet.authoritative_form_path}` using the same `validation_unit_id` and `reviewer_id`.",
             "- Do not add or remove rubric axes, and do not change the rubric version for this frozen round.",
             "- Return the updated JSONL form copy for merge and adjudication.",
         ]
@@ -293,6 +334,7 @@ def render_publication_annotation_reviewer_markdown(
     reviewer_id: str,
     batch_dir: str,
     packet_dir: Optional[str] = None,
+    reviewer_form_path: Optional[str] = None,
 ) -> str:
     reviewer_packets = sorted(
         [packet for packet in packets if packet.reviewer_id == reviewer_id],
@@ -301,21 +343,39 @@ def render_publication_annotation_reviewer_markdown(
     study_counts = Counter(packet.study_class.value for packet in reviewer_packets)
     family_counts = Counter(packet.task_family.value for packet in reviewer_packets)
     rubric_versions = sorted({packet.rubric_version for packet in reviewer_packets})
+    reviewer_form_paths = sorted({packet.authoritative_form_path for packet in reviewer_packets})
+    if reviewer_form_path is None:
+        reviewer_form_path = reviewer_form_paths[0] if len(reviewer_form_paths) == 1 else "reviewer-specific JSONL copy"
     lines: List[str] = [
         f"# Publication Annotation Handoff: {reviewer_id}",
         "",
         f"- Batch directory: `{batch_dir}`",
         f"- Total assignments: `{len(reviewer_packets)}`",
         f"- Rubric versions: {', '.join(f'`{item}`' for item in rubric_versions) or 'none'}",
+        f"- Reviewer form: `{reviewer_form_path}`",
         "",
-        "## Coverage",
+        "## Scored Object",
         "",
-        f"- Task families: {', '.join(f'`{key}`={value}' for key, value in sorted(family_counts.items())) or 'none'}",
-        f"- Study classes: {', '.join(f'`{key}`={value}' for key, value in sorted(study_counts.items())) or 'none'}",
+        "This round scores frozen benchmark units against linked frozen",
+        "truth-manifest evidence. It does not score model-generated sections.",
         "",
-        "## Assignments",
+        "## Human-Review Axes",
         "",
     ]
+    for axis in DEFAULT_JUDGE_RUBRIC_AXES:
+        lines.append(f"- `{axis}`")
+    lines.extend(
+        [
+            "",
+            "## Coverage",
+            "",
+            f"- Task families: {', '.join(f'`{key}`={value}' for key, value in sorted(family_counts.items())) or 'none'}",
+            f"- Study classes: {', '.join(f'`{key}`={value}' for key, value in sorted(study_counts.items())) or 'none'}",
+            "",
+            "## Assignments",
+            "",
+        ]
+    )
     for packet in reviewer_packets:
         packet_path = packet.packet_markdown_path
         if packet_dir is not None:
@@ -333,7 +393,7 @@ def render_publication_annotation_reviewer_markdown(
             "## Workflow",
             "",
             "- Read each markdown packet for context.",
-            "- Fill the matching row in `judge_review_forms.jsonl`; that JSONL remains authoritative.",
+            f"- Fill the matching row in `{reviewer_form_path}`; that JSONL remains authoritative.",
             "- Keep `validation_unit_id`, `reviewer_id`, rubric axes, and rubric version unchanged.",
             "- Return updated JSONL reviewer copies for merge and adjudication.",
         ]

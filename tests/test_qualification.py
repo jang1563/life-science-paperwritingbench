@@ -5744,6 +5744,12 @@ class QualificationTests(unittest.TestCase):
             reviewer_dispatch_protocol = (dispatch_dir / "rev_a" / "human_annotation_protocol.md").read_text(
                 encoding="utf-8"
             )
+            source_packet_text = next((review_packets_dir / "packets" / "rev_a").glob("*.md")).read_text(
+                encoding="utf-8"
+            )
+            dispatch_packet_text = next((dispatch_dir / "rev_a" / "packets").glob("*.md")).read_text(
+                encoding="utf-8"
+            )
             self.assertIn("`human_annotation_protocol.md`", reviewer_dispatch_launch_message)
             self.assertIn("`reviewer_index.md`", reviewer_dispatch_launch_message)
             self.assertIn("`packets`", reviewer_dispatch_launch_message)
@@ -5763,6 +5769,15 @@ class QualificationTests(unittest.TestCase):
             self.assertNotIn("calibration/publication_validation_v1/review_packets", reviewer_dispatch_protocol)
             self.assertIn("`reviewer_index.md`", reviewer_dispatch_protocol)
             self.assertIn("`judge_review_forms.jsonl`", reviewer_dispatch_protocol)
+            self.assertIn("## Scored Object", source_packet_text)
+            self.assertIn("reviewer_forms/rev_a_judge_review_forms.jsonl", source_packet_text)
+            self.assertIn("## Human-Review Axes", source_packet_text)
+            self.assertIn("## Task Generation Profile", source_packet_text)
+            self.assertNotIn("## Scoring Profile", source_packet_text)
+            self.assertNotIn('"rubric_axes"', source_packet_text)
+            self.assertNotIn("eventual section", source_packet_text)
+            self.assertIn("`judge_review_forms.jsonl`", dispatch_packet_text)
+            self.assertNotIn("reviewer_forms/rev_a_judge_review_forms.jsonl", dispatch_packet_text)
             self.assertEqual(len(list((dispatch_dir / "rev_a" / "packets").glob("*.md"))), 60)
             self.assertEqual(len(list((dispatch_dir / "rev_b" / "packets").glob("*.md"))), 60)
             self.assertIn("Dispatch Bundles", dispatch_readme)

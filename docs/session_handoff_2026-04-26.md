@@ -105,6 +105,10 @@ Main outcomes:
 - added the Phase 2 semantic packet audit; structural linkage is intact, but
   packet sidecar paths, scored-object wording, and reviewer-axis labels must be
   fixed before human dispatch
+- remediated the Phase 2 P1 packet findings in the packet-generation source:
+  packets now state the scored object, show the human-review axes, distinguish
+  task-generation metadata from reviewer rubric fields, and route source versus
+  dispatch reviewer form paths correctly
 
 ## Verification Status
 
@@ -164,9 +168,9 @@ separate-track open-weight artifacts exist.
 
 Recommended order if human validation stays held:
 
-1. Close `SPK-001` through `SPK-004` in
-   `docs/pre_human_validation_semantic_packet_audit.md` before dispatching the
-   calibration mini-round.
+1. Resolve `SPK-005` in
+   `docs/pre_human_validation_semantic_packet_audit.md`: keep, replace, or
+   explicitly flag the thinnest evidence unit.
 2. Run Phase 3 rubric red-team from
    `docs/pre_human_validation_audit_campaign.md`.
 3. Adapt `paper/workshop_short_paper_v0.md` to a target venue format while

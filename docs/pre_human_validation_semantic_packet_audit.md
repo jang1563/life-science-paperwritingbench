@@ -65,10 +65,10 @@ Task-family coverage is balanced:
 
 | ID | Severity | Status | Finding | Risk | Required action before dispatch |
 | --- | --- | --- | --- | --- | --- |
-| `SPK-001` | `P1` | Open | All 120 packet markdown files point reviewers at canonical `judge_review_forms.jsonl` rather than the reviewer-specific working copy under `reviewer_forms/`. | Reviewers may edit or return the wrong JSONL, while the protocol expects `reviewer_forms/reviewer_a_judge_review_forms.jsonl` and `reviewer_forms/reviewer_b_judge_review_forms.jsonl`. | Regenerate or patch packets so reviewer A/B packets name their own `reviewer_forms/<reviewer>_judge_review_forms.jsonl` sidecar. Keep canonical `judge_review_forms.jsonl` blank as the frozen source template. |
-| `SPK-002` | `P1` | Open | All 120 packets use rubric wording such as "eventual section" rather than the selected scored object. | Reviewers may infer they are judging an unseen or future model-generated section instead of the frozen benchmark unit and truth-manifest evidence. | Replace reviewer-facing wording with target-specific language after the target is frozen. If Target A is selected, say the round scores the frozen benchmark unit against the linked truth-manifest evidence. |
-| `SPK-003` | `P1` | Open | Packets do not contain an explicit `Scored Object` block. | The target must be reconstructed from surrounding packet sections and launch docs, which is fragile for human review. | Add a short, repeated `Scored Object` section to every packet and reviewer index. |
-| `SPK-004` | `P1` | Open | Packet `Scoring Profile` rubric axes differ from the actual reviewer form axes. The packets show family-specific axes such as `methods_specificity`, `results_grounding`, or `abstract_coverage`; the reviewer forms use `evidence_fidelity`, `traceability`, `provenance_completeness`, and `writing_structure_compliance`. | Reviewers may score against the wrong axes or treat task-generation profiles as human-review rubric fields. | Either remove `Scoring Profile.rubric_axes` from reviewer packets, or relabel it as a task-generation profile and place the actual human-review axes beside the form instructions. |
+| `SPK-001` | `P1` | Closed | All 120 packet markdown files pointed reviewers at canonical `judge_review_forms.jsonl` rather than the reviewer-specific working copy under `reviewer_forms/`. | Reviewers may edit or return the wrong JSONL, while the protocol expects `reviewer_forms/reviewer_a_judge_review_forms.jsonl` and `reviewer_forms/reviewer_b_judge_review_forms.jsonl`. | Closed by regenerating source packets with reviewer-specific `reviewer_forms/<reviewer>_judge_review_forms.jsonl` paths. Dispatch-bundle packet copies now use local `judge_review_forms.jsonl`. |
+| `SPK-002` | `P1` | Closed | All 120 packets used rubric wording such as "eventual section" rather than the selected scored object. | Reviewers may infer they are judging an unseen or future model-generated section instead of the frozen benchmark unit and truth-manifest evidence. | Closed by replacing the ambiguous wording with frozen benchmark-unit and truth-manifest evidence language. |
+| `SPK-003` | `P1` | Closed | Packets did not contain an explicit `Scored Object` block. | The target must be reconstructed from surrounding packet sections and launch docs, which is fragile for human review. | Closed by adding repeated `Scored Object` sections to packet markdown and reviewer indexes. |
+| `SPK-004` | `P1` | Closed | Packet `Scoring Profile` rubric axes differed from the actual reviewer form axes. The packets showed family-specific axes such as `methods_specificity`, `results_grounding`, or `abstract_coverage`; the reviewer forms use `evidence_fidelity`, `traceability`, `provenance_completeness`, and `writing_structure_compliance`. | Reviewers may score against the wrong axes or treat task-generation profiles as human-review rubric fields. | Closed by listing the human-review axes explicitly and relabeling the remaining task metadata as `Task Generation Profile` without displaying `rubric_axes`. |
 | `SPK-005` | `P2` | Needs decision | Unit `JV:TB:BU:EUAUTO:22F7B605D96A` is the thinnest observed unit, with one evidence item and three assertions from `TM:13C68909DC37`. | The unit may be valid, but it gives reviewers little context for provenance, traceability, and writing-structure judgments. | Manually decide whether to keep it as a thin-evidence calibration edge case, replace it, or flag it in reviewer notes. |
 | `SPK-006` | `P2` | Documented | The selected batch has 49 selected truth manifests for 60 units because several truth manifests are reused across units. | Reuse is not structurally wrong, but it can be mistaken for missing truth manifests during later review. | Keep the reuse documented and ensure any future audit treats manifest reuse separately from missing lookup rows. |
 
@@ -104,8 +104,9 @@ sections as the scored object.
 
 ## Recommended Fix Before Phase 3
 
-Patch the packet-generation source and regenerate the dispatch materials with
-these reviewer-visible additions:
+The P1 packet fixes have been applied to the packet-generation source and
+local dispatch materials. The reviewer-visible additions are now present in the
+generated packet markdown:
 
 ```markdown
 ## Scored Object
@@ -126,12 +127,42 @@ row matching this `validation_unit_id` and `reviewer_id`.
 - `writing_structure_compliance`
 ```
 
-Then rerun the semantic audit and start Phase 3 rubric red-team only after
-`SPK-001` through `SPK-004` are closed.
+## Remediation Verification
+
+The April 27, 2026 remediation pass regenerated local
+`calibration/publication_validation_v1` review packets and dispatch packets.
+
+Observed semantic checks:
+
+| Check | Observed |
+| --- | ---: |
+| Review packet markdown files | 120 |
+| Dispatch packet markdown files | 120 |
+| Packet manifest rows | 120 |
+| Review packets missing `Scored Object` | 0 |
+| Review packets missing `Human-Review Axes` | 0 |
+| Review packets still containing "eventual section" | 0 |
+| Review packets still showing `## Scoring Profile` | 0 |
+| Review packets still displaying `"rubric_axes"` | 0 |
+| Manifest rows lacking reviewer-specific form paths | 0 |
+| Dispatch packets missing local `judge_review_forms.jsonl` path | 0 |
+| Dispatch packets still containing `reviewer_forms/` paths | 0 |
+
+The structural hold audit also remained green:
+
+- `ok=true`
+- `structurally_ready=true`
+- `awaiting_human_review=true`
+- `issues=[]`
+
+Phase 3 rubric red-team can now start from packet semantics that are no longer
+known-P1 ambiguous.
 
 ## Dispatch Decision
 
 Do not dispatch the calibration mini-round yet.
 
-The batch is structurally coherent, but reviewer-facing packet semantics are
-not yet clean enough for one-shot human validation.
+The batch is structurally coherent, and the P1 packet-semantics issues from
+this audit are closed. Dispatch remains held until the thin-evidence `SPK-005`
+decision, rubric red-team, methodology gap review, reviewer UX dry run, and
+target freeze are complete.

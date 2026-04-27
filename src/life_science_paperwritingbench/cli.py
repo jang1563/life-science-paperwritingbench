@@ -642,7 +642,7 @@ def _write_publication_review_packets(
         judge_units=judge_units,
         forms=forms,
         reviewer_ids=reviewer_ids,
-        authoritative_form_path="judge_review_forms.jsonl",
+        authoritative_form_path="reviewer_forms/{reviewer_form_filename}",
         packet_dir="packets",
     )
     summary = summarize_publication_annotation_packets(
@@ -685,6 +685,7 @@ def _write_publication_review_packets(
                 packets,
                 reviewer_id=reviewer_id,
                 batch_dir=str(batch_dir),
+                reviewer_form_path=f"reviewer_forms/{_reviewer_form_filename(reviewer_id)}",
             ),
         )
     handoff_outputs = _write_publication_review_handoff_assets(
@@ -1229,6 +1230,12 @@ def _render_reviewer_dispatch_calibration_mini_round(
     return "\n".join(lines).rstrip() + "\n"
 
 
+def _rewrite_dispatch_packet_markdown(text: str, *, reviewer_id: str) -> str:
+    reviewer_form_path = f"reviewer_forms/{_reviewer_form_filename(reviewer_id)}"
+    text = text.replace(f"`{reviewer_form_path}`", "`judge_review_forms.jsonl`")
+    return text.replace(reviewer_form_path, "judge_review_forms.jsonl")
+
+
 def _sync_publication_dispatch_bundles(
     *,
     batch_dir: Path,
@@ -1371,6 +1378,7 @@ def _sync_publication_dispatch_bundles(
                 reviewer_id=reviewer_id,
                 batch_dir=".",
                 packet_dir="packets",
+                reviewer_form_path="judge_review_forms.jsonl",
             ),
         )
         _write_text(
@@ -1397,7 +1405,23 @@ def _sync_publication_dispatch_bundles(
         if packets_dest.exists():
             shutil.rmtree(packets_dest)
         if packets_source.exists():
-            shutil.copytree(packets_source, packets_dest)
+            packets_dest.mkdir(parents=True, exist_ok=True)
+            for src in sorted(packets_source.rglob("*")):
+                dst = packets_dest / src.relative_to(packets_source)
+                if src.is_dir():
+                    dst.mkdir(parents=True, exist_ok=True)
+                    continue
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                if src.suffix == ".md":
+                    _write_text(
+                        str(dst),
+                        _rewrite_dispatch_packet_markdown(
+                            src.read_text(encoding="utf-8"),
+                            reviewer_id=reviewer_id,
+                        ),
+                    )
+                    continue
+                shutil.copy2(src, dst)
 
     for adjudicator_id in adjudicator_ids:
         adjudicator_token = _safe_filename_token(adjudicator_id)
