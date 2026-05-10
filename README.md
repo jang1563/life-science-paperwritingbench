@@ -786,5 +786,5 @@ print(decision.to_dict())
 ## License and data
 
 - **Code** in this repository is licensed under the [Apache License 2.0](./LICENSE) (see also [`NOTICE`](./NOTICE)). Both commercial and non-commercial use are permitted.
-- **Data** ingested or emitted by the pipeline is governed separately — see [`DATA.md`](./DATA.md) for upstream source terms (PubMed, Europe PMC, Crossref, bioRxiv) and release-bundle licensing.
+- **Data** ingested or emitted by the pipeline is governed separately: see [`DATA.md`](./DATA.md) for upstream source terms (PubMed, Europe PMC, Crossref, bioRxiv) and release-bundle licensing.
 - To cite this work, see [`CITATION.cff`](./CITATION.cff).
