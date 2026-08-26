@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from collections import Counter
 from datetime import datetime, timezone
-import math
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 
 from .models import EvaluationRecord, JudgeSliceAuditReport, JudgeValidationUnit, LLMJudgeAlignmentReport, TaskBundle
@@ -17,8 +16,6 @@ DEFAULT_JUDGE_RUBRIC_AXES = (
     "writing_structure_compliance",
 )
 
-MIN_JUDGE_RUBRIC_SCORE = 0.0
-MAX_JUDGE_RUBRIC_SCORE = 3.0
 DEFAULT_JUDGE_SLICE_SIZE = 30
 
 
@@ -77,34 +74,6 @@ def _is_missing_rubric_value(value: object) -> bool:
     return False
 
 
-def _numeric_judge_rubric_score(value: object) -> Optional[float]:
-    if _is_missing_rubric_value(value) or isinstance(value, bool):
-        return None
-    try:
-        numeric = float(value)
-    except (TypeError, ValueError):
-        return None
-    if not math.isfinite(numeric):
-        return None
-    if numeric < MIN_JUDGE_RUBRIC_SCORE or numeric > MAX_JUDGE_RUBRIC_SCORE:
-        return None
-    return numeric
-
-
-def _bool(value: object, *, default: bool = False) -> bool:
-    if value is None:
-        return default
-    if isinstance(value, bool):
-        return value
-    if isinstance(value, str):
-        normalized = value.strip().lower()
-        if normalized in {"1", "true", "yes", "y", "on"}:
-            return True
-        if normalized in {"0", "false", "no", "n", "off", ""}:
-            return False
-    return bool(value)
-
-
 def missing_required_rubric_axes(
     judge_unit: JudgeValidationUnit,
     *,
@@ -118,7 +87,7 @@ def missing_required_rubric_axes(
         if normalized not in judge_unit.rubric_labels:
             missing.append(normalized)
             continue
-        if _numeric_judge_rubric_score(judge_unit.rubric_labels[normalized]) is None:
+        if _is_missing_rubric_value(judge_unit.rubric_labels[normalized]):
             missing.append(normalized)
     return tuple(missing)
 
@@ -306,7 +275,7 @@ def audit_llm_judge_alignment(
     judge_pass_ids = {
         task_bundle_id
         for task_bundle_id in comparable_ids
-        if _bool(judgment_map[task_bundle_id].get("overall_pass", False))
+        if bool(judgment_map[task_bundle_id].get("overall_pass", False))
     }
 
     overlap_pass_ids = tuple(sorted(deterministic_pass_ids & judge_pass_ids))
@@ -367,7 +336,7 @@ def audit_llm_judge_alignment(
     judge_pass_count = sum(
         1
         for task_bundle_id in expected_task_bundle_ids & judgment_ids
-        if _bool(judgment_map[task_bundle_id].get("overall_pass", False))
+        if bool(judgment_map[task_bundle_id].get("overall_pass", False))
     )
 
     comparable_complete = len(comparable_ids) == len(expected_task_bundle_ids)

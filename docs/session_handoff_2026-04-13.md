@@ -182,64 +182,6 @@ Important interpretation:
 - the canary probe writes only redacted artifacts (hashes, lengths,
   matches, distances), not raw canary strings or raw model outputs
 
-### Current publication-validation status (2026-04-22)
-
-The repo now has a frozen first publication-validation batch in:
-
-- `calibration/publication_validation_v1/`
-
-Canonical validation artifacts:
-
-- batch overview:
-  `calibration/publication_validation_v1/README.md`
-- slice summary:
-  `calibration/publication_validation_v1/publication_validation_summary.json`
-- structural hold audit:
-  `calibration/publication_validation_v1/annotation_hold_audit.json`
-- publication gate snapshot:
-  `calibration/publication_validation_v1/publication_readiness_snapshot.json`
-
-Current publication-validation facts:
-
-- selected bundles:
-  - `60`
-- per-family target coverage:
-  - `20` each for `methods_to_text`, `results_to_text`, and
-    `abstract_from_evidence`
-- study-class stratification ready:
-  - `true`
-- reviewer plan:
-  - `2` reviewers + `1` adjudicator
-- structural hold audit:
-  - `ok = true`
-  - `structurally_ready = true`
-  - `packet_coverage_complete = true`
-  - `reviewer_assignments_complete = true`
-- current queue status:
-  - `60` units `awaiting_reviews`
-  - finalized adjudications `0`
-- current publication-gate snapshot:
-  - `validation_slice_ready = true`
-  - `study_class_stratification_ready = true`
-  - `official_hosted_matrix_complete = false`
-  - `full_canary_report_ready = false`
-  - `pre_adjudication_kappa_ok = false`
-  - `post_adjudication_kappa_ok = false`
-  - `jury_vs_adjudicator_icc_ok = false`
-  - `leaderboard_gate_passed = false`
-
-Interpretation:
-
-- the human-validation path is no longer only a plan: the repo now
-  contains a selection-locked batch, reviewer packets, and structural
-  QA for the first `60`-bundle validation slice
-- publication readiness remains intentionally red because the batch is
-  still waiting on real human reviews and because the matrix/canary
-  breadth is still incomplete
-- if provider keys remain blocked, the highest-leverage next action is
-  reviewer recruitment and packet distribution, not more local rubric
-  churn
-
 ### Stable operating baseline
 
 The project currently has a working `auto-review shadow-first` lane with deterministic provenance-tracked artifacts.
@@ -465,18 +407,7 @@ These are currently more like `full-text acquisition / specificity evidence gap`
 
 ## Canonical files to inspect first next session
 
-If resuming the current preview/publication push, inspect these in order:
-
-1. `calibration/publication_validation_v1/README.md`
-2. `calibration/publication_validation_v1/publication_validation_summary.json`
-3. `calibration/publication_validation_v1/annotation_hold_audit.json`
-4. `calibration/publication_validation_v1/publication_readiness_snapshot.json`
-5. `calibration/llm_public_slice_matrix_v1/summary.md`
-6. `docs/canary_probe_report.md`
-7. `paper/workshop_draft_v0.md`
-
-If returning to the older governance/evidence-enrichment thread instead,
-inspect these next:
+If starting fresh, inspect these in order:
 
 1. `knowledge_base/released/collection_v1_2018_present/auto_review_shadow_v10/program_progress.json`
 2. `knowledge_base/released/collection_v1_2018_present/auto_review_shadow_v10/release_summary.json`
@@ -486,16 +417,6 @@ inspect these next:
 6. `knowledge_base/released/collection_v1_2018_present/auto_review_shadow_v10/shadow_public_inspection_v5_to_v6_delta.json`
 
 ## Best next step
-
-As of `2026-04-23`, the active restart point is
-`calibration/publication_validation_v1/`, not more local rubric surgery.
-The immediate next milestone is to move the frozen `60`-bundle batch from
-`awaiting_reviews` to actual human review while keeping the matrix/canary
-artifacts as the secondary blocked thread until provider access is
-restored.
-
-The older governance-recovery notes below remain useful historical
-context, but they are no longer the main near-term bottleneck.
 
 The `v6 → v7 → v8 → v9 → v10` trajectory closed the fulltext-acquisition
 branch end-to-end:

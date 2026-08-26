@@ -23,6 +23,7 @@ import socket
 import sys
 import time
 import urllib.error
+import urllib.request
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
@@ -39,28 +40,38 @@ from life_science_paperwritingbench.models import (  # noqa: E402
     BaselineRunSpec,
     SubmissionRecord,
 )
-from life_science_paperwritingbench.frontier_runtime import (  # noqa: E402
-    call_anthropic as shared_call_anthropic,
-    call_openai_compatible as shared_call_openai_compatible,
-    default_model_label_for_role,
-    default_frontier_registry_path,
-    load_api_keys,
-    load_frontier_model,
-    load_frontier_registry,
-    registry_entry_provenance,
-    resolve_api_key,
-)
 from life_science_paperwritingbench.policy import BaselineKind  # noqa: E402
 from life_science_paperwritingbench.scoring import citation_specificity  # noqa: E402
 
 
-DEFAULT_REGISTRY_PATH = default_frontier_registry_path()
-PROVIDERS: Dict[str, Dict[str, Any]] = load_frontier_registry(DEFAULT_REGISTRY_PATH, role="submitter")
-DEFAULT_MODEL = default_model_label_for_role(
-    "submitter",
-    preferred_label="deepseek-chat",
-    registry_path=DEFAULT_REGISTRY_PATH,
-)
+PROVIDERS: Dict[str, Dict[str, Any]] = {
+    "deepseek-chat": {
+        "endpoint": "https://api.deepseek.com/chat/completions",
+        "api_key_env": "DEEPSEEK_API_KEY",
+        "request_model": "deepseek-chat",
+        "flavor": "openai",
+    },
+    "gemini-2.5-flash": {
+        "endpoint": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+        "api_key_env": "GEMINI_API_KEY",
+        "request_model": "gemini-2.5-flash",
+        "flavor": "openai",
+    },
+    "gpt-4o-mini": {
+        "endpoint": "https://api.openai.com/v1/chat/completions",
+        "api_key_env": "OPENAI_API_KEY",
+        "request_model": "gpt-4o-mini",
+        "flavor": "openai",
+    },
+    "claude-haiku-4-5": {
+        "endpoint": "https://api.anthropic.com/v1/messages",
+        "api_key_env": "ANTHROPIC_API_KEY",
+        "request_model": "claude-haiku-4-5",
+        "flavor": "anthropic",
+    },
+}
+
+DEFAULT_MODEL = "deepseek-chat"
 DEFAULT_TEMPERATURE = 0.2
 DEFAULT_MAX_TOKENS = 1200
 CRITIC_TEMPERATURE = 0.0
@@ -106,6 +117,24 @@ TASK_FAMILY_TO_TARGET: Dict[str, Tuple[str, Tuple[str, ...]]] = {
     "results_to_text": ("Results", ("abstract_text", "methods_text", "figure_captions", "table_snippets")),
     "abstract_from_evidence": ("Abstract", ("methods_text", "results_text", "figure_captions", "table_snippets")),
 }
+
+
+def load_api_keys(path: Path) -> Dict[str, str]:
+    keys: Dict[str, str] = {}
+    if not path.exists():
+        return keys
+    for raw in path.read_text().splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.startswith("export "):
+            line = line[len("export ") :].strip()
+        if "=" not in line:
+            continue
+        name, _, value = line.partition("=")
+        keys[name.strip()] = value.strip().strip('"').strip("'")
+    return keys
+
 
 def load_task_bundles(path: Path) -> List[Any]:
     bundles = []
@@ -404,25 +433,76 @@ Write the revised "{section_title}" section now."""
 
 
 def call_openai_compatible(prompt: str, *, provider: Mapping[str, Any], api_key: str, temperature: float, max_tokens: int, timeout: int = 120) -> Dict[str, Any]:
-    return shared_call_openai_compatible(
-        prompt,
-        provider=provider,
-        api_key=api_key,
-        temperature=temperature,
-        max_tokens=max_tokens,
-        timeout=timeout,
+    payload = {
+        "model": provider["request_model"],
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": temperature,
+    }
+    payload[provider.get("token_param", "max_tokens")] = max_tokens
+    request = urllib.request.Request(
+        provider["endpoint"],
+        data=json.dumps(payload).encode("utf-8"),
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
     )
+    with urllib.request.urlopen(request, timeout=timeout) as response:  # noqa: S310
+        body = response.read()
+    decoded = json.loads(body)
+    usage = decoded.get("usage", {}) or {}
+    return {
+        "output_text": str(decoded["choices"][0]["message"]["content"]).strip(),
+        "usage": {
+            "prompt_tokens": usage.get("prompt_tokens"),
+            "completion_tokens": usage.get("completion_tokens"),
+            "total_tokens": usage.get("total_tokens"),
+        },
+        "raw": decoded,
+    }
 
 
 def call_anthropic(prompt: str, *, provider: Mapping[str, Any], api_key: str, temperature: float, max_tokens: int, timeout: int = 120) -> Dict[str, Any]:
-    return shared_call_anthropic(
-        prompt,
-        provider=provider,
-        api_key=api_key,
-        temperature=temperature,
-        max_tokens=max_tokens,
-        timeout=timeout,
+    payload = {
+        "model": provider["request_model"],
+        "max_tokens": max_tokens,
+        "temperature": temperature,
+        "messages": [{"role": "user", "content": prompt}],
+    }
+    request = urllib.request.Request(
+        provider["endpoint"],
+        data=json.dumps(payload).encode("utf-8"),
+        headers={
+            "x-api-key": api_key,
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+        },
+        method="POST",
     )
+    with urllib.request.urlopen(request, timeout=timeout) as response:  # noqa: S310
+        body = response.read()
+    decoded = json.loads(body)
+    output_text = "".join(
+        part.get("text", "")
+        for part in decoded.get("content", [])
+        if isinstance(part, dict) and part.get("type") == "text"
+    )
+    usage = decoded.get("usage", {}) or {}
+    prompt_tokens = usage.get("input_tokens")
+    completion_tokens = usage.get("output_tokens")
+    total_tokens = None
+    if isinstance(prompt_tokens, int) and isinstance(completion_tokens, int):
+        total_tokens = prompt_tokens + completion_tokens
+    return {
+        "output_text": output_text.strip(),
+        "usage": {
+            "prompt_tokens": prompt_tokens,
+            "completion_tokens": completion_tokens,
+            "total_tokens": total_tokens,
+        },
+        "raw": decoded,
+    }
 
 
 def call_llm(prompt: str, *, provider: Mapping[str, Any], api_key: str, temperature: float, max_tokens: int, timeout: int = 120) -> Dict[str, Any]:
@@ -616,10 +696,6 @@ def build_baseline_run_spec(
     *,
     model: str,
     request_model: str,
-    backend_type: str = "",
-    provider_name: str = "",
-    execution_target: str = "",
-    submitter_track: str = "",
     temperature: float,
     task_source: str,
     replay_verified: bool,
@@ -648,10 +724,6 @@ def build_baseline_run_spec(
             "api-backed multi-agent orchestration run",
             f"model={model}",
             f"request_model={request_model}",
-            f"backend_type={backend_type}" if backend_type else "backend_type=",
-            f"provider_name={provider_name}" if provider_name else "provider_name=",
-            f"execution_target={execution_target}" if execution_target else "execution_target=",
-            f"submitter_track={submitter_track}" if submitter_track else "submitter_track=",
             f"task_source={task_source}",
             "single-pass reference = writer draft",
             f"selection_policy={SELECTION_POLICY_VERSION}",
@@ -704,8 +776,7 @@ def select_output_stage(
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--model", default=None)
-    parser.add_argument("--registry-path", default=str(DEFAULT_REGISTRY_PATH))
+    parser.add_argument("--model", default=DEFAULT_MODEL, choices=sorted(PROVIDERS))
     parser.add_argument("--keys-file", default=str(Path.home() / ".api_keys"))
     parser.add_argument("--task-source", choices=("smoke", "inspection-slice"), default="smoke")
     parser.add_argument("--output-dir", default=None)
@@ -716,16 +787,7 @@ def main() -> int:
     parser.add_argument("--mark-replay-verified", action="store_true")
     args = parser.parse_args()
 
-    model_label = args.model or default_model_label_for_role(
-        "submitter",
-        preferred_label="deepseek-chat",
-        registry_path=args.registry_path,
-    )
-    try:
-        provider = load_frontier_model(model_label, registry_path=args.registry_path, role="submitter")
-    except KeyError as exc:
-        print(str(exc), file=sys.stderr)
-        return 2
+    provider = PROVIDERS[args.model]
     critic_max_tokens = max(args.max_tokens, CRITIC_MAX_TOKENS_FLOOR)
     if args.output_dir:
         output_dir = Path(args.output_dir)
@@ -736,8 +798,9 @@ def main() -> int:
     output_dir.mkdir(parents=True, exist_ok=True)
 
     keys = load_api_keys(Path(args.keys_file).expanduser())
-    api_key = resolve_api_key(provider, keys)
-    if not args.dry_run and provider.get("api_key_env") and not api_key:
+    env_key = os.environ.get(provider["api_key_env"])
+    api_key = env_key or keys.get(provider["api_key_env"])
+    if not args.dry_run and not api_key:
         print(f"Missing {provider['api_key_env']} (checked env and {args.keys_file})", file=sys.stderr)
         return 2
 
@@ -766,12 +829,12 @@ def main() -> int:
 
     producer_id = (
         f"llm-agentic:{BaselineKind.MULTI_AGENT_ORCHESTRATION.value}:"
-        f"{model_label}@temp={args.temperature}"
+        f"{args.model}@temp={args.temperature}"
     )
     submission_fingerprint = _fingerprint(
         {
             "baseline_kind": BaselineKind.MULTI_AGENT_ORCHESTRATION.value,
-            "model": model_label,
+            "model": args.model,
             "request_model": provider["request_model"],
             "temperature": args.temperature,
             "task_source": args.task_source,
@@ -949,7 +1012,7 @@ def main() -> int:
                 "study_class": bundle.study_class.value,
                 "claim_mode": bundle.claim_mode.value,
                 "producer_id": producer_id,
-                "model": model_label,
+                "model": args.model,
                 "request_model": provider["request_model"],
                 "temperature": args.temperature,
                 "writer_prompt_version": WRITER_PROMPT_VERSION,
@@ -989,12 +1052,8 @@ def main() -> int:
     run_spec = build_baseline_run_spec(
         [bundle.task_bundle_id for bundle in picks],
         producer_id,
-        model=model_label,
+        model=args.model,
         request_model=provider["request_model"],
-        backend_type=str(provider.get("backend_type", "")),
-        provider_name=str(provider.get("provider_name", "")),
-        execution_target=str(provider.get("execution_target", "")),
-        submitter_track=str(provider.get("submitter_track", "")),
         temperature=args.temperature,
         task_source=args.task_source,
         replay_verified=args.mark_replay_verified,
@@ -1101,9 +1160,8 @@ def main() -> int:
     total_completion_tokens = sum((row.get("completion_tokens") or 0) for row in usage_rows)
 
     summary = {
-        "model": model_label,
+        "model": args.model,
         "request_model": provider["request_model"],
-        "registry_path": str(Path(args.registry_path).expanduser()),
         "producer_id": producer_id,
         "baseline_kind": BaselineKind.MULTI_AGENT_ORCHESTRATION.value,
         "task_source": args.task_source,
@@ -1135,14 +1193,13 @@ def main() -> int:
         "total_completion_tokens": total_completion_tokens,
         "usage": usage_rows,
     }
-    summary.update(registry_entry_provenance(provider))
     summary_path = output_dir / "summary.json"
     summary_path.write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
 
     md_lines = [
         "# Agentic LLM Evaluation",
         "",
-        f"- model: `{model_label}` (request model: `{provider['request_model']}`)",
+        f"- model: `{args.model}` (request model: `{provider['request_model']}`)",
         f"- baseline kind: `{BaselineKind.MULTI_AGENT_ORCHESTRATION.value}`",
         f"- task source: `{args.task_source}`",
         f"- revision rounds: {REVISION_ROUNDS}",

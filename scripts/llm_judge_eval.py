@@ -49,6 +49,7 @@ import socket
 import sys
 import time
 import urllib.error
+import urllib.request
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
@@ -59,27 +60,68 @@ from life_science_paperwritingbench.io import (  # noqa: E402
     auto_review_source_bundle_from_dict,
     task_bundle_from_dict,
 )
-from life_science_paperwritingbench.frontier_runtime import (  # noqa: E402
-    call_anthropic as shared_call_anthropic,
-    call_openai_compatible as shared_call_openai_compatible,
-    default_model_label_for_role,
-    default_frontier_registry_path,
-    load_api_keys,
-    load_frontier_model,
-    load_frontier_registry,
-    registry_entry_provenance,
-    resolve_api_key,
-)
 
 
-DEFAULT_REGISTRY_PATH = default_frontier_registry_path()
-PROVIDERS: Dict[str, Dict[str, Any]] = load_frontier_registry(DEFAULT_REGISTRY_PATH, role="judge")
+# ---------------------------------------------------------------------------
+# Providers
+# ---------------------------------------------------------------------------
 
-DEFAULT_JUDGE = default_model_label_for_role(
-    "judge",
-    preferred_label="claude-sonnet-4-6",
-    registry_path=DEFAULT_REGISTRY_PATH,
-)
+
+PROVIDERS: Dict[str, Dict[str, Any]] = {
+    "claude-sonnet-4-6": {
+        "endpoint": "https://api.anthropic.com/v1/messages",
+        "api_key_env": "ANTHROPIC_API_KEY",
+        "request_model": "claude-sonnet-4-6",
+        "flavor": "anthropic",
+    },
+    "claude-haiku-4-5": {
+        "endpoint": "https://api.anthropic.com/v1/messages",
+        "api_key_env": "ANTHROPIC_API_KEY",
+        "request_model": "claude-haiku-4-5",
+        "flavor": "anthropic",
+    },
+    "claude-opus-4-6": {
+        "endpoint": "https://api.anthropic.com/v1/messages",
+        "api_key_env": "ANTHROPIC_API_KEY",
+        "request_model": "claude-opus-4-6",
+        "flavor": "anthropic",
+    },
+    "gemini-2.5-pro": {
+        "endpoint": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+        "api_key_env": "GEMINI_API_KEY",
+        "request_model": "gemini-2.5-pro",
+        "flavor": "openai",
+    },
+    "gpt-5-mini": {
+        "endpoint": "https://api.openai.com/v1/chat/completions",
+        "api_key_env": "OPENAI_API_KEY",
+        "request_model": "gpt-5-mini",
+        "token_param": "max_completion_tokens",
+        "omit_temperature": True,
+        "flavor": "openai",
+    },
+    "gpt-5.4-mini": {
+        "endpoint": "https://api.openai.com/v1/chat/completions",
+        "api_key_env": "OPENAI_API_KEY",
+        "request_model": "gpt-5.4-mini",
+        "token_param": "max_completion_tokens",
+        "flavor": "openai",
+    },
+    "gpt-4o-mini": {
+        "endpoint": "https://api.openai.com/v1/chat/completions",
+        "api_key_env": "OPENAI_API_KEY",
+        "request_model": "gpt-4o-mini",
+        "flavor": "openai",
+    },
+    "deepseek-reasoner": {
+        "endpoint": "https://api.deepseek.com/chat/completions",
+        "api_key_env": "DEEPSEEK_API_KEY",
+        "request_model": "deepseek-reasoner",
+        "flavor": "openai",
+    },
+}
+
+DEFAULT_JUDGE = "claude-sonnet-4-6"
 
 KB_ROOT = REPO_ROOT / "knowledge_base"
 TASK_BUNDLES_PATH = (
@@ -200,6 +242,25 @@ V3_AXIS_ANCHORS: Dict[str, Dict[int, str]] = {
 # ---------------------------------------------------------------------------
 # Key + I/O helpers (minor duplication with llm_smoke_eval.py — kept small)
 # ---------------------------------------------------------------------------
+
+
+def load_api_keys(path: Path) -> Dict[str, str]:
+    keys: Dict[str, str] = {}
+    if not path.exists():
+        return keys
+    for raw in path.read_text().splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.startswith("export "):
+            line = line[len("export ") :].strip()
+        if "=" not in line:
+            continue
+        name, _, value = line.partition("=")
+        keys[name.strip()] = value.strip().strip('"').strip("'")
+    return keys
+
+
 def load_task_bundles(path: Path) -> Dict[str, Any]:
     bundles: Dict[str, Any] = {}
     with path.open() as handle:
@@ -404,25 +465,71 @@ Respond with ONLY a single JSON object. No prose before or after. No markdown co
 
 
 def call_anthropic(prompt: str, *, provider: Mapping[str, Any], api_key: str, temperature: float, max_tokens: int, timeout: int = 300) -> Dict[str, Any]:
-    return shared_call_anthropic(
-        prompt,
-        provider=provider,
-        api_key=api_key,
-        temperature=temperature,
-        max_tokens=max_tokens,
-        timeout=timeout,
+    payload = {
+        "model": provider["request_model"],
+        "max_tokens": max_tokens,
+        "temperature": temperature,
+        "messages": [{"role": "user", "content": prompt}],
+    }
+    request = urllib.request.Request(
+        provider["endpoint"],
+        data=json.dumps(payload).encode("utf-8"),
+        headers={
+            "x-api-key": api_key,
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+        },
+        method="POST",
     )
+    with urllib.request.urlopen(request, timeout=timeout) as response:  # noqa: S310
+        body = response.read()
+    decoded = json.loads(body)
+    output_text = "".join(
+        part.get("text", "")
+        for part in decoded.get("content", [])
+        if isinstance(part, dict) and part.get("type") == "text"
+    )
+    usage = decoded.get("usage", {}) or {}
+    return {
+        "output_text": output_text,
+        "usage": {
+            "input_tokens": usage.get("input_tokens"),
+            "output_tokens": usage.get("output_tokens"),
+        },
+        "raw": decoded,
+    }
 
 
 def call_openai_compatible(prompt: str, *, provider: Mapping[str, Any], api_key: str, temperature: float, max_tokens: int, timeout: int = 300) -> Dict[str, Any]:
-    return shared_call_openai_compatible(
-        prompt,
-        provider=provider,
-        api_key=api_key,
-        temperature=temperature,
-        max_tokens=max_tokens,
-        timeout=timeout,
+    payload = {
+        "model": provider["request_model"],
+        "messages": [{"role": "user", "content": prompt}],
+    }
+    if not provider.get("omit_temperature"):
+        payload["temperature"] = temperature
+    payload[provider.get("token_param", "max_tokens")] = max_tokens
+    request = urllib.request.Request(
+        provider["endpoint"],
+        data=json.dumps(payload).encode("utf-8"),
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
     )
+    with urllib.request.urlopen(request, timeout=timeout) as response:  # noqa: S310
+        body = response.read()
+    decoded = json.loads(body)
+    output_text = decoded["choices"][0]["message"]["content"]
+    usage = decoded.get("usage", {}) or {}
+    return {
+        "output_text": output_text,
+        "usage": {
+            "input_tokens": usage.get("prompt_tokens"),
+            "output_tokens": usage.get("completion_tokens"),
+        },
+        "raw": decoded,
+    }
 
 
 def _error_message(exc: BaseException) -> str:
@@ -504,20 +611,6 @@ def _coerce_axis_score(raw: Any, config: RubricConfig) -> float | int:
     return round(score, 3)
 
 
-def _coerce_bool(raw: Any, *, default: bool = False) -> bool:
-    if raw is None:
-        return default
-    if isinstance(raw, bool):
-        return raw
-    if isinstance(raw, str):
-        normalized = raw.strip().lower()
-        if normalized in {"1", "true", "yes", "y", "on"}:
-            return True
-        if normalized in {"0", "false", "no", "n", "off", ""}:
-            return False
-    return bool(raw)
-
-
 def _passes_threshold_rule(axis_scores: Mapping[str, float | int], config: RubricConfig) -> bool:
     values = [float(axis_scores[axis]) for axis in config.axes]
     if not values:
@@ -551,7 +644,7 @@ def _score_record_shape(payload: Mapping[str, Any], config: RubricConfig) -> Dic
         axis_scores[axis] = _coerce_axis_score(raw, config)
         axis_rationales[axis] = str(axis_rationales_raw.get(axis, "")).strip()
     grounding_issues = [str(item) for item in (payload.get("grounding_issues") or [])]
-    overall_pass = _coerce_bool(payload.get("overall_pass"))
+    overall_pass = bool(payload.get("overall_pass"))
     mean_axis_score = round(
         sum(float(axis_scores[axis]) for axis in config.axes) / len(config.axes),
         3,
@@ -589,8 +682,7 @@ def _pass_rule_label(config: RubricConfig) -> str:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--judge", default=None)
-    parser.add_argument("--registry-path", default=str(DEFAULT_REGISTRY_PATH))
+    parser.add_argument("--judge", default=DEFAULT_JUDGE, choices=sorted(PROVIDERS))
     parser.add_argument("--rubric-version", default=DEFAULT_RUBRIC_VERSION, choices=("v2", "v3"))
     parser.add_argument("--keys-file", default=str(Path.home() / ".api_keys"))
     parser.add_argument("--submissions-path", default=str(DEFAULT_SUBMISSIONS_PATH))
@@ -602,23 +694,15 @@ def main() -> int:
     parser.add_argument("--pause-between-calls", type=float, default=0.3)
     args = parser.parse_args()
 
-    judge_label = args.judge or default_model_label_for_role(
-        "judge",
-        preferred_label="claude-sonnet-4-6",
-        registry_path=args.registry_path,
-    )
-    try:
-        provider = load_frontier_model(judge_label, registry_path=args.registry_path, role="judge")
-    except KeyError as exc:
-        print(str(exc), file=sys.stderr)
-        return 2
+    provider = PROVIDERS[args.judge]
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     default_config = rubric_config_for_task_family("methods_to_text", args.rubric_version)
 
     keys = load_api_keys(Path(args.keys_file).expanduser())
-    api_key = resolve_api_key(provider, keys)
-    if not args.dry_run and provider.get("api_key_env") and not api_key:
+    env_key = os.environ.get(provider["api_key_env"])
+    api_key = env_key or keys.get(provider["api_key_env"])
+    if not args.dry_run and not api_key:
         print(f"Missing {provider['api_key_env']} (checked env and {args.keys_file})", file=sys.stderr)
         return 2
 
@@ -698,7 +782,7 @@ def main() -> int:
                 "claim_mode": task_bundle.claim_mode.value,
                 "judge_flavor": provider["flavor"],
                 "judge_model": provider["request_model"],
-                "judge_name": judge_label,
+                "judge_name": args.judge,
                 "temperature": args.temperature,
                 "rubric_version": config.rubric_version,
                 "rubric_axes": list(config.axes),
@@ -793,9 +877,8 @@ def main() -> int:
     total_output_tokens = sum((row.get("output_tokens") or 0) for row in usage_rows)
 
     summary = {
-        "judge": judge_label,
+        "judge": args.judge,
         "judge_model": provider["request_model"],
-        "registry_path": str(Path(args.registry_path).expanduser()),
         "rubric_version": args.rubric_version,
         "pass_rule": default_config.pass_rule,
         "pass_rule_label": _pass_rule_label(default_config),
@@ -816,18 +899,12 @@ def main() -> int:
         "total_output_tokens": total_output_tokens,
         "usage": usage_rows,
     }
-    summary.update(
-        {
-            f"judge_{key}" if key != "request_model" else "judge_request_model": value
-            for key, value in registry_entry_provenance(provider).items()
-        }
-    )
     (output_dir / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
 
     md_lines = [
         "# LLM Judge Evaluation",
         "",
-        f"- judge: `{judge_label}` (request model: `{provider['request_model']}`)",
+        f"- judge: `{args.judge}` (request model: `{provider['request_model']}`)",
         f"- rubric version: `{args.rubric_version}`",
         f"- pass rule: `{summary['pass_rule_label']}`",
         f"- temperature: {args.temperature}",

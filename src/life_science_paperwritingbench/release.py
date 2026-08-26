@@ -3,7 +3,6 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-from collections import Counter
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -195,44 +194,6 @@ def _holdout_split_units(
     return tuple(reassigned)
 
 
-def _validate_release_inputs(
-    units: Sequence[BenchmarkUnit],
-    unit_decisions: Mapping[str, BenchmarkUnitDecisionRecord],
-) -> None:
-    unit_ids = [unit.benchmark_unit_id for unit in units]
-    duplicate_unit_ids = sorted(
-        unit_id
-        for unit_id, count in Counter(unit_ids).items()
-        if count > 1
-    )
-    if duplicate_unit_ids:
-        raise ValueError(
-            "release inputs contain duplicate benchmark_unit_id values: "
-            + ", ".join(duplicate_unit_ids)
-        )
-    unit_id_set = set(unit_ids)
-    decision_id_set = set(unit_decisions)
-    missing_decision_ids = sorted(unit_id_set - decision_id_set)
-    if missing_decision_ids:
-        raise KeyError("missing unit decision for " + ", ".join(missing_decision_ids))
-    extra_decision_ids = sorted(decision_id_set - unit_id_set)
-    if extra_decision_ids:
-        raise ValueError(
-            "unit decisions reference unknown benchmark units: "
-            + ", ".join(extra_decision_ids)
-        )
-    mismatched_decision_ids = sorted(
-        key
-        for key, decision in unit_decisions.items()
-        if decision.benchmark_unit_id != key
-    )
-    if mismatched_decision_ids:
-        raise ValueError(
-            "unit decision mapping keys do not match record benchmark_unit_id values: "
-            + ", ".join(mismatched_decision_ids)
-        )
-
-
 def build_release_index(
     units: Sequence[BenchmarkUnit],
     unit_decisions: Mapping[str, BenchmarkUnitDecisionRecord],
@@ -244,7 +205,9 @@ def build_release_index(
     split_policy: Optional[SplitSafetyPolicy] = None,
     enforce_split_safety: bool = True,
 ) -> Tuple[ReleaseIndexEntry, ...]:
-    _validate_release_inputs(units, unit_decisions)
+    for unit in units:
+        if unit.benchmark_unit_id not in unit_decisions:
+            raise KeyError(f"missing unit decision for {unit.benchmark_unit_id}")
 
     included_units = tuple(
         unit
@@ -524,7 +487,9 @@ def build_release_manifest_bundle(
     generated_at: Optional[str] = None,
     bundle_version: str = "release-bundle-v1",
 ) -> ReleaseManifestBundle:
-    _validate_release_inputs(units, unit_decisions)
+    for unit in units:
+        if unit.benchmark_unit_id not in unit_decisions:
+            raise KeyError(f"missing unit decision for {unit.benchmark_unit_id}")
 
     included_units = tuple(
         unit

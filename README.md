@@ -41,10 +41,6 @@ The current repo state is best thought of as a `v0.1 research preview`.
 
 Current evaluation anchors:
 
-- preview artifact index:
-  `docs/v0.1_research_preview_artifact_index.md`
-- current session handoff:
-  `docs/session_handoff_2026-04-26.md`
 - best judged agentic artifact:
   `calibration/llm_agentic_public_slice_v1_rerun5_judged_v3/`
 - best deterministic / citation-specificity artifact:
@@ -53,24 +49,6 @@ Current evaluation anchors:
   `calibration/llm_public_slice_matrix_v1/summary.md`
 - current canary probe report:
   `docs/canary_probe_report.md`
-- preview freeze checklist:
-  `docs/research_preview_freeze_checklist.md`
-- preview release notes:
-  `docs/v0.1_research_preview_release_notes.md`
-- Inspect/replay quickstart:
-  `docs/inspect_replay_quickstart.md`
-- open-weight / VLLM track policy:
-  `docs/open_weight_vllm_track.md`
-
-Current freeze stance:
-
-- human reviewer execution is on hold
-- the frozen publication-validation batch remains structurally ready, not
-  human-validated
-- preview work should prioritize reproducibility, claim clarity, Gemini
-  completion when credentials are available, Inspect/replay usability, and
-  open-weight track separation
-- final leaderboard and publication-grade benchmark claims remain blocked
 
 ## What Exists
 
@@ -114,15 +92,10 @@ Current freeze stance:
 - deterministic lean-baseline replay and submission scoring for released TaskBundles
 - deterministic v2 submission scoring and deterministic-vs-judge alignment audits
 - API-backed single-pass and agentic `writer -> critic -> reviser` evaluation scripts
-- shared frontier-model registry and backend runtime for submitters, judges, canary probes, and matrix summaries
-- shared single-pass writing prompt builder for external runner reuse
 - rubric `v3` LLM judging with a 4-point anchored ordinal scale
 - family-aware abstract judging that swaps `traceability` for `quantitative_specificity`
 - partial cross-model matrix aggregation and reporting
 - completion-style canary probe artifacts with redacted outputs only
-- Inspect-compatible task adapter plus artifact-backed submission / judge replay helpers
-- publication-validation slice builders and readiness-gate summaries
-- publication-validation study-class stratification auditing with per-family targets and deficits
 - program-progress summaries and maintenance-log scaffolding
 - local and Cayuga execution-profile scaffolding
 - knowledge-base directory initialization helpers
@@ -217,22 +190,14 @@ Auto-only review is intentionally stricter and lower-trust. `build-auto-paper-qu
 
 - This is still a `v0.1 research preview`, not a human-validated benchmark
   release.
-- The repo now has a populated, packet-complete publication-validation batch
-  from real benchmark bundles, but human reviewer execution is currently on
-  hold; `kappa`, `ICC`, and `alpha` are still pending.
-- The current cross-model matrix and canary probes are meaningful but
-  incomplete; Anthropic coverage is present in current artifacts, while Gemini
-  submitter/judge coverage is still missing from the release-facing gates.
+- The repo does not yet have a populated human-adjudicated validation slice for
+  judge calibration, so `kappa`, `ICC`, and `alpha` are still pending.
+- The current cross-model matrix is meaningful but incomplete; Anthropic and
+  Gemini coverage is still blocked by local provider-access issues.
 - `leaderboard_gate_passed` remains `false`, which is intentional.
 - The project is still effectively solo-authored at this stage; co-authored
   human validation is still the threshold between preview status and a
   defensible benchmark release.
-
-The current non-human freeze plan is tracked in
-`docs/research_preview_freeze_checklist.md`.
-
-Open-weight / VLLM runs are tracked separately from hosted-frontier results;
-see `docs/open_weight_vllm_track.md`.
 
 ## Quick Start
 
@@ -241,98 +206,6 @@ Run tests:
 ```bash
 PYTHONPATH=src python3 -m unittest discover -s tests -v
 ```
-
-Frontier registry helpers:
-
-```bash
-PYTHONPATH=src python3 - <<'PY'
-from life_science_paperwritingbench import load_frontier_registry, default_frontier_registry_path
-
-registry = load_frontier_registry(default_frontier_registry_path())
-print(sorted(registry))
-PY
-```
-
-Build a publication-validation slice and summarize the readiness gate:
-
-```bash
-PYTHONPATH=src python3 -m life_science_paperwritingbench.cli build-publication-validation-slice \
-  --task-bundles knowledge_base/released/collection_v1_2018_present/auto_review_shadow_v10/shadow_candidate_task_bundles_public.jsonl \
-  --output /tmp/publication_validation.jsonl \
-  --summary-output /tmp/publication_validation_summary.json
-
-PYTHONPATH=src python3 -m life_science_paperwritingbench.cli summarize-publication-readiness \
-  --matrix-summary calibration/llm_public_slice_matrix_v1/summary.json \
-  --canary-summary calibration/canary_probe_v1_live_hosted_working_set/summary.json \
-  --validation-summary /tmp/publication_validation_summary.json \
-  --agreement-metrics calibration/judge_v1/judge_agreement.json \
-  --output /tmp/publication_readiness.json
-```
-
-For human annotation work, prefer the batch helper so the selected bundles,
-judge units, reviewer forms, adjudication shells, reviewer-facing markdown
-packets, and annotation-hold QA summaries all land in one directory:
-
-```bash
-PYTHONPATH=src python3 -m life_science_paperwritingbench.cli build-publication-validation-batch \
-  --task-bundles knowledge_base/released/collection_v1_2018_present/auto_review_shadow_v10/shadow_candidate_task_bundles_public.jsonl \
-  --output-dir calibration/publication_validation_v1 \
-  --adjudicator adjudicator_1 \
-  --reviewers reviewer_a reviewer_b
-```
-
-This batch now also writes:
-
-- `review_packets/packet_manifest.jsonl`
-- `review_packets/reviewer_assignments/*.jsonl`
-- `review_packets/reviewer_indexes/*.md`
-- `review_packets/packets/<reviewer>/*.md`
-- `annotation_hold_audit.json`
-- `annotation_hold_audit.md`
-
-Rebuild packet artifacts or rerun the structural audit independently:
-
-```bash
-PYTHONPATH=src python3 -m life_science_paperwritingbench.cli build-publication-review-packets \
-  --batch-dir calibration/publication_validation_v1
-
-PYTHONPATH=src python3 -m life_science_paperwritingbench.cli audit-publication-annotation-hold \
-  --batch-dir calibration/publication_validation_v1 \
-  --output calibration/publication_validation_v1/annotation_hold_audit.json \
-  --markdown-output calibration/publication_validation_v1/annotation_hold_audit.md
-```
-
-`annotation_hold_audit.json` is intentionally separate from
-`publication_readiness_snapshot.json`: the hold audit answers whether the
-frozen batch is structurally ready and merely waiting on human review, while
-publication readiness stays red until agreement, matrix, and contamination
-gates are satisfied.
-
-Audit reviewer-return intake before merge:
-
-```bash
-PYTHONPATH=src python3 -m life_science_paperwritingbench.cli audit-publication-review-intake \
-  --batch-dir calibration/publication_validation_v1 \
-  --stage calibration
-
-PYTHONPATH=src python3 -m life_science_paperwritingbench.cli audit-publication-review-intake \
-  --batch-dir calibration/publication_validation_v1 \
-  --stage full
-```
-
-Inspect adapter usage:
-
-```bash
-PYTHONPATH=src python3 - <<'PY'
-from inspect_evals.life_science_paperwritingbench import build_inspect_records
-
-records = build_inspect_records(limit=3)
-print([record["id"] for record in records])
-PY
-```
-
-See `docs/inspect_replay_quickstart.md` for API-free deterministic score
-replay, judge replay, and dry-run provider submission examples.
 
 Validate the pilot calibration scaffold:
 
@@ -878,12 +751,6 @@ PYTHONPATH=src python3 -m life_science_paperwritingbench.cli summarize-judge-pro
   --adjudications calibration/judge_v1/judge_adjudications.jsonl \
   --reviewers reviewer_a reviewer_b \
   --output calibration/judge_v1/judge_progress.json
-
-PYTHONPATH=src python3 -m life_science_paperwritingbench.cli summarize-judge-agreement \
-  --judge-units calibration/judge_v1/judge_units.jsonl \
-  --forms calibration/judge_v1/judge_review_forms.jsonl \
-  --adjudications calibration/judge_v1/judge_adjudications.jsonl \
-  --output calibration/judge_v1/judge_agreement.json
 ```
 
 `build-judge-batch` now also writes:
@@ -891,11 +758,6 @@ PYTHONPATH=src python3 -m life_science_paperwritingbench.cli summarize-judge-agr
 - `selected_task_bundles.jsonl`
 - `task_bundle_inventory.json`
 - `judge_candidate_selection.json`
-
-`summarize-judge-agreement` writes publication-readiness-compatible
-top-level metrics including `pre_adjudication_kappa`,
-`post_adjudication_kappa`, and `jury_vs_adjudicator_icc`, plus ordinal
-alpha and ICC diagnostics.
 
 Inventory task bundles and select a deterministic candidate set for judge curation:
 

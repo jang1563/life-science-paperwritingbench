@@ -439,7 +439,7 @@ def build_auto_review_source_bundles(
     for paper in papers:
         metadata = paper.metadata
         enrichment = enrichment_by_paper.get(paper.paper_id)
-        abstract_text = _metadata_text(metadata, "abstract", "abstract_text")
+        abstract_text = _metadata_text(metadata, "abstract")
         methods_text = (
             _normalize_text(enrichment.methods_text)
             if enrichment and enrichment.methods_text

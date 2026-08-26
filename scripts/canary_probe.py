@@ -16,8 +16,11 @@ from dataclasses import dataclass
 import hashlib
 import json
 import os
+import socket
 import sys
 import time
+import urllib.error
+import urllib.request
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 
@@ -25,21 +28,69 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from life_science_paperwritingbench import DEFAULT_CANARY_PREFIX, generate_canary_string  # noqa: E402
-from life_science_paperwritingbench.frontier_runtime import (  # noqa: E402
-    call_model_with_retry as shared_call_model_with_retry,
-    default_canary_models,
-    default_frontier_registry_path,
-    load_api_keys,
-    load_frontier_model,
-    load_frontier_registry,
-    registry_entry_provenance,
-    resolve_api_key,
+
+
+PROVIDERS: Dict[str, Dict[str, Any]] = {
+    "deepseek-chat": {
+        "endpoint": "https://api.deepseek.com/chat/completions",
+        "api_key_env": "DEEPSEEK_API_KEY",
+        "request_model": "deepseek-chat",
+        "flavor": "openai",
+    },
+    "gemini-2.5-flash": {
+        "endpoint": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+        "api_key_env": "GEMINI_API_KEY",
+        "request_model": "gemini-2.5-flash",
+        "flavor": "openai",
+    },
+    "gemini-2.5-pro": {
+        "endpoint": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+        "api_key_env": "GEMINI_API_KEY",
+        "request_model": "gemini-2.5-pro",
+        "flavor": "openai",
+    },
+    "gpt-4o-mini": {
+        "endpoint": "https://api.openai.com/v1/chat/completions",
+        "api_key_env": "OPENAI_API_KEY",
+        "request_model": "gpt-4o-mini",
+        "flavor": "openai",
+    },
+    "gpt-5-mini": {
+        "endpoint": "https://api.openai.com/v1/chat/completions",
+        "api_key_env": "OPENAI_API_KEY",
+        "request_model": "gpt-5-mini",
+        "token_param": "max_completion_tokens",
+        "omit_temperature": True,
+        "flavor": "openai",
+    },
+    "gpt-5.4-mini": {
+        "endpoint": "https://api.openai.com/v1/chat/completions",
+        "api_key_env": "OPENAI_API_KEY",
+        "request_model": "gpt-5.4-mini",
+        "token_param": "max_completion_tokens",
+        "flavor": "openai",
+    },
+    "claude-haiku-4-5": {
+        "endpoint": "https://api.anthropic.com/v1/messages",
+        "api_key_env": "ANTHROPIC_API_KEY",
+        "request_model": "claude-haiku-4-5",
+        "flavor": "anthropic",
+    },
+    "claude-sonnet-4-6": {
+        "endpoint": "https://api.anthropic.com/v1/messages",
+        "api_key_env": "ANTHROPIC_API_KEY",
+        "request_model": "claude-sonnet-4-6",
+        "flavor": "anthropic",
+    },
+}
+
+DEFAULT_MODELS: Tuple[str, ...] = (
+    "deepseek-chat",
+    "gpt-4o-mini",
+    "gpt-5.4-mini",
+    "claude-sonnet-4-6",
+    "gemini-2.5-pro",
 )
-
-
-DEFAULT_REGISTRY_PATH = default_frontier_registry_path()
-PROVIDERS: Dict[str, Dict[str, Any]] = load_frontier_registry(DEFAULT_REGISTRY_PATH)
-DEFAULT_MODELS: Tuple[str, ...] = default_canary_models(registry_path=DEFAULT_REGISTRY_PATH)
 
 DEFAULT_RELEASE_INDEX_PATH = (
     REPO_ROOT
@@ -97,6 +148,23 @@ def _format_rate(numerator: int, denominator: int) -> str:
     if denominator <= 0:
         return "n/a"
     return f"{numerator} / {denominator} ({(100.0 * numerator / denominator):.1f}%)"
+
+
+def load_api_keys(path: Path) -> Dict[str, str]:
+    keys: Dict[str, str] = {}
+    if not path.exists():
+        return keys
+    for raw in path.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.startswith("export "):
+            line = line[len("export ") :].strip()
+        if "=" not in line:
+            continue
+        name, _, value = line.partition("=")
+        keys[name.strip()] = value.strip().strip('"').strip("'")
+    return keys
 
 
 def load_release_index_canaries(path: Path) -> List[ReleaseIndexCanary]:
@@ -242,16 +310,30 @@ def call_openai_compatible(
     max_tokens: int,
     timeout: int = 120,
 ) -> Dict[str, Any]:
-    from life_science_paperwritingbench.frontier_runtime import call_openai_compatible as _call
-
-    return _call(
-        prompt,
-        provider=provider,
-        api_key=api_key,
-        temperature=temperature,
-        max_tokens=max_tokens,
-        timeout=timeout,
+    payload: Dict[str, Any] = {
+        "model": provider["request_model"],
+        "messages": [{"role": "user", "content": prompt}],
+    }
+    token_param = str(provider.get("token_param", "max_tokens"))
+    payload[token_param] = max_tokens
+    if not provider.get("omit_temperature"):
+        payload["temperature"] = temperature
+    request = urllib.request.Request(
+        provider["endpoint"],
+        data=json.dumps(payload).encode("utf-8"),
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
     )
+    with urllib.request.urlopen(request, timeout=timeout) as response:
+        raw = json.loads(response.read().decode("utf-8"))
+    return {
+        "output_text": raw["choices"][0]["message"]["content"],
+        "usage": raw.get("usage", {}),
+        "raw": raw,
+    }
 
 
 def call_anthropic(
@@ -263,16 +345,52 @@ def call_anthropic(
     max_tokens: int,
     timeout: int = 120,
 ) -> Dict[str, Any]:
-    from life_science_paperwritingbench.frontier_runtime import call_anthropic as _call
-
-    return _call(
-        prompt,
-        provider=provider,
-        api_key=api_key,
-        temperature=temperature,
-        max_tokens=max_tokens,
-        timeout=timeout,
+    payload = {
+        "model": provider["request_model"],
+        "max_tokens": max_tokens,
+        "temperature": temperature,
+        "messages": [{"role": "user", "content": prompt}],
+    }
+    request = urllib.request.Request(
+        provider["endpoint"],
+        data=json.dumps(payload).encode("utf-8"),
+        headers={
+            "x-api-key": api_key,
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+        },
+        method="POST",
     )
+    with urllib.request.urlopen(request, timeout=timeout) as response:
+        raw = json.loads(response.read().decode("utf-8"))
+    content = raw.get("content", [])
+    output_text = "".join(part.get("text", "") for part in content if part.get("type") == "text")
+    usage = {
+        "prompt_tokens": raw.get("usage", {}).get("input_tokens", 0),
+        "completion_tokens": raw.get("usage", {}).get("output_tokens", 0),
+        "total_tokens": raw.get("usage", {}).get("input_tokens", 0)
+        + raw.get("usage", {}).get("output_tokens", 0),
+    }
+    return {
+        "output_text": output_text,
+        "usage": usage,
+        "raw": raw,
+    }
+
+
+def _error_message(exc: BaseException) -> str:
+    if isinstance(exc, urllib.error.HTTPError):
+        body = ""
+        try:
+            payload = exc.read()
+        except Exception:
+            payload = b""
+        if payload:
+            body = payload.decode("utf-8", errors="replace").strip()
+        if body:
+            return f"HTTP {exc.code} {exc.reason}: {body}"
+        return f"HTTP {exc.code} {exc.reason}"
+    return str(exc)
 
 
 def call_model_with_retry(
@@ -285,15 +403,30 @@ def call_model_with_retry(
     attempts: int = 3,
     backoff_seconds: float = 2.0,
 ) -> Dict[str, Any]:
-    return shared_call_model_with_retry(
-        prompt,
-        provider=provider,
-        api_key=api_key,
-        temperature=temperature,
-        max_tokens=max_tokens,
-        attempts=attempts,
-        backoff_seconds=backoff_seconds,
-    )
+    fn = call_anthropic if provider["flavor"] == "anthropic" else call_openai_compatible
+    last_exc: Optional[BaseException] = None
+    for attempt in range(1, attempts + 1):
+        try:
+            return fn(
+                prompt,
+                provider=provider,
+                api_key=api_key,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+        except (
+            TimeoutError,
+            urllib.error.HTTPError,
+            urllib.error.URLError,
+            ConnectionError,
+            socket.timeout,
+        ) as exc:
+            last_exc = exc
+            if attempt == attempts:
+                break
+            time.sleep(backoff_seconds * attempt)
+    assert last_exc is not None
+    raise RuntimeError(_error_message(last_exc)) from last_exc
 
 
 def summarize_model_results(
@@ -314,7 +447,6 @@ def summarize_model_results(
     return {
         "model": model_name,
         "request_model": provider.get("request_model"),
-        **registry_entry_provenance(provider),
         "status": status,
         "error": error,
         "completed_probe_count": len(probe_results),
@@ -354,7 +486,7 @@ def run_model_probes(
         )
         return summary, []
 
-    if provider.get("api_key_env") and not api_key:
+    if not api_key:
         summary = summarize_model_results(
             model_name,
             provider=provider,
@@ -414,17 +546,6 @@ def render_markdown_report(summary: Mapping[str, Any]) -> str:
         "- controls sampled: " + str(summary["control_probe_count"]),
         "- tail characters withheld per probe: " + str(summary["tail_chars"]),
         "- models requested: " + str(len(summary["models_requested"])),
-        "- production models expected from registry: "
-        + str(len(summary.get("production_models_expected", ()))),
-        "- production models requested in this run: "
-        + str(len(summary.get("production_models_requested", ()))),
-        "- production models completed without provider error: "
-        + str(len(summary.get("production_models_ok", ()))),
-        "- hosted production models requested: " + str(len(summary.get("hosted_production_models_requested", ()))),
-        "- hosted production models completed without provider error: "
-        + str(summary.get("hosted_production_models_ok", 0)),
-        "- production models missing from this run: "
-        + str(len(summary.get("production_models_missing", ()))),
         "- models completed without provider error: " + str(summary["models_ok"]),
         "- models with provider errors: " + str(summary["models_with_provider_errors"]),
         "- any public exact match: " + ("yes" if summary["any_public_exact_match"] else "no"),
@@ -487,23 +608,12 @@ def build_summary_payload(
     public_probe_count = sum(1 for probe in probes if probe.probe_kind == "public")
     control_probe_count = sum(1 for probe in probes if probe.probe_kind == "control")
     provider_errors = [row for row in model_summaries if row["status"] == "provider_error"]
-    hosted_production_models = [
-        row["model"]
-        for row in model_summaries
-        if row.get("execution_target") == "hosted_api"
-    ]
     return {
         "release_index_path": str(release_index_path),
         "public_probe_count": public_probe_count,
         "control_probe_count": control_probe_count,
         "tail_chars": len(probes[0].expected_tail) if probes else 0,
         "models_requested": [row["model"] for row in model_summaries],
-        "hosted_production_models_requested": hosted_production_models,
-        "hosted_production_models_ok": sum(
-            1
-            for row in model_summaries
-            if row.get("execution_target") == "hosted_api" and row["status"] == "ok"
-        ),
         "models_ok": sum(1 for row in model_summaries if row["status"] == "ok"),
         "models_with_provider_errors": len(provider_errors),
         "provider_errors": provider_errors,
@@ -519,12 +629,8 @@ def _parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     parser.add_argument(
         "--model",
         action="append",
-        help="Model label to probe. Repeatable. Defaults to the registry-defined production canary set.",
-    )
-    parser.add_argument(
-        "--registry-path",
-        default=str(DEFAULT_REGISTRY_PATH),
-        help="Path to the shared frontier model registry JSON.",
+        choices=sorted(PROVIDERS),
+        help="Model label to probe. Repeatable. Defaults to a 5-model frontier set.",
     )
     parser.add_argument(
         "--keys-file",
@@ -590,7 +696,7 @@ def _parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
     args = _parse_args(argv)
-    model_names = tuple(args.model or default_canary_models(registry_path=args.registry_path))
+    model_names = tuple(args.model or DEFAULT_MODELS)
     release_index_path = Path(args.release_index)
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -614,12 +720,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     all_results: List[Dict[str, Any]] = []
     model_summaries: List[Dict[str, Any]] = []
     for model_name in model_names:
-        try:
-            provider = load_frontier_model(model_name, registry_path=args.registry_path)
-        except KeyError as exc:
-            print(str(exc), file=sys.stderr)
-            return 2
-        api_key = resolve_api_key(provider, keys)
+        provider = PROVIDERS[model_name]
+        api_key = keys.get(provider["api_key_env"])
         summary, results = run_model_probes(
             model_name,
             provider=provider,
@@ -644,39 +746,6 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         model_summaries=model_summaries,
     )
     summary["dry_run"] = bool(args.dry_run)
-    summary["registry_path"] = str(Path(args.registry_path).expanduser())
-    production_models_expected = list(default_canary_models(registry_path=args.registry_path))
-    registry = load_frontier_registry(args.registry_path)
-    hosted_production_models_expected = [
-        label
-        for label in production_models_expected
-        if registry.get(label, {}).get("execution_target") == "hosted_api"
-    ]
-    requested_model_names = set(model_names)
-    ok_model_names = {
-        str(row.get("model"))
-        for row in model_summaries
-        if str(row.get("status", "")) == "ok" and row.get("model")
-    }
-    summary["production_models_expected"] = production_models_expected
-    summary["production_models_requested"] = list(model_names)
-    summary["production_models_ok"] = [
-        label for label in production_models_expected if label in ok_model_names
-    ]
-    summary["production_models_missing"] = [
-        label for label in production_models_expected if label not in requested_model_names
-    ]
-    summary["hosted_production_models_expected"] = hosted_production_models_expected
-    summary["hosted_production_models_requested"] = [
-        label for label in hosted_production_models_expected if label in requested_model_names
-    ]
-    summary["hosted_production_models_ok_labels"] = [
-        label for label in hosted_production_models_expected if label in ok_model_names
-    ]
-    summary["hosted_production_models_ok"] = len(summary["hosted_production_models_ok_labels"])
-    summary["hosted_production_models_missing"] = [
-        label for label in hosted_production_models_expected if label not in requested_model_names
-    ]
 
     summary_path = output_dir / "summary.json"
     summary_path.write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8")

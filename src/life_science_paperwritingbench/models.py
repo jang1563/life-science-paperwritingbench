@@ -1412,39 +1412,6 @@ class LLMJudgeAlignmentReport:
 
 
 @dataclass(frozen=True)
-class JudgeAgreementReport:
-    total_judge_units: int
-    merged_review_forms: int
-    finalized_adjudications: int
-    reviewer_ids: Tuple[str, ...] = ()
-    axis_labels: Tuple[str, ...] = ()
-    pass_threshold: float = 2.0
-    minimum_reviewers: int = 2
-    unexpected_form_validation_unit_ids: Tuple[str, ...] = ()
-    unexpected_adjudication_validation_unit_ids: Tuple[str, ...] = ()
-    comparable_pre_adjudication_units: int = 0
-    comparable_post_adjudication_units: int = 0
-    comparable_pre_adjudication_pairs: int = 0
-    comparable_ordinal_items_pre: int = 0
-    comparable_ordinal_items_post: int = 0
-    pre_adjudication_kappa: float = 0.0
-    post_adjudication_kappa: float = 0.0
-    pre_adjudication_ordinal_alpha: float = 0.0
-    post_adjudication_ordinal_alpha: float = 0.0
-    pre_adjudication_icc: float = 0.0
-    post_adjudication_icc: float = 0.0
-    jury_vs_adjudicator_icc: float = 0.0
-    reviewer_pairwise_kappa: Mapping[str, float] = field(default_factory=dict)
-    reviewer_pairwise_icc: Mapping[str, float] = field(default_factory=dict)
-    reviewer_vs_adjudicator_icc: Mapping[str, float] = field(default_factory=dict)
-    issues: Tuple[str, ...] = ()
-    ok: bool = False
-
-    def to_dict(self) -> Dict[str, Any]:
-        return _primitive(self)
-
-
-@dataclass(frozen=True)
 class JudgeReviewForm:
     validation_unit_id: str
     reviewer_id: str
@@ -1480,97 +1447,6 @@ class JudgeAdjudicationQueueEntry:
     disagreement_axes: Tuple[str, ...] = ()
     has_final_adjudication: bool = False
     notes: Tuple[str, ...] = ()
-
-    def to_dict(self) -> Dict[str, Any]:
-        return _primitive(self)
-
-
-@dataclass(frozen=True)
-class PublicationAnnotationPacket:
-    packet_id: str
-    reviewer_id: str
-    validation_unit_id: str
-    task_bundle_id: str
-    task_family: TaskFamily
-    study_class: StudyClass
-    claim_mode: ClaimMode
-    release_tier: ReleaseTier
-    paper_id: Optional[str] = None
-    holdout_bucket: Optional[str] = None
-    rubric_version: str = "judge-rubric-v1"
-    authoritative_form_present: bool = False
-    authoritative_form_path: str = ""
-    packet_markdown_path: str = ""
-    evidence_unit_ids: Tuple[str, ...] = ()
-    evidence_pointers: Tuple[str, ...] = ()
-    evidence_items: Tuple[str, ...] = ()
-    evidence_types: Tuple[str, ...] = ()
-    assertion_ids: Tuple[str, ...] = ()
-    authoring_constraints: Mapping[str, Any] = field(default_factory=dict)
-    scoring_profile: Mapping[str, Any] = field(default_factory=dict)
-    notes: Tuple[str, ...] = ()
-
-    def to_dict(self) -> Dict[str, Any]:
-        return _primitive(self)
-
-
-@dataclass(frozen=True)
-class PublicationAnnotationPacketSummary:
-    generated_at: str
-    total_packets: int
-    expected_packets: int
-    total_judge_units: int
-    reviewer_ids: Tuple[str, ...] = ()
-    reviewer_assignment_counts: Mapping[str, int] = field(default_factory=dict)
-    task_family_counts: Mapping[str, int] = field(default_factory=dict)
-    study_class_counts: Mapping[str, int] = field(default_factory=dict)
-    rubric_versions: Tuple[str, ...] = ()
-    packet_coverage_complete: bool = False
-    authoritative_form_coverage_complete: bool = False
-    duplicate_packet_ids: Tuple[str, ...] = ()
-    duplicate_packet_pairs: Tuple[str, ...] = ()
-    missing_packet_pairs: Tuple[str, ...] = ()
-    unexpected_packet_pairs: Tuple[str, ...] = ()
-    missing_authoritative_form_pairs: Tuple[str, ...] = ()
-    issues: Tuple[str, ...] = ()
-    ok: bool = False
-
-    def to_dict(self) -> Dict[str, Any]:
-        return _primitive(self)
-
-
-@dataclass(frozen=True)
-class PublicationAnnotationHoldAuditReport:
-    generated_at: str
-    batch_dir: str
-    total_judge_units: int
-    reviewer_ids: Tuple[str, ...] = ()
-    adjudicator_ids: Tuple[str, ...] = ()
-    rubric_versions: Tuple[str, ...] = ()
-    selection_locked: bool = False
-    rubric_locked: bool = False
-    reviewer_assignments_complete: bool = False
-    packet_coverage_complete: bool = False
-    authoritative_sidecars_present: bool = False
-    structurally_ready: bool = False
-    awaiting_human_review: bool = False
-    review_completion_rate: float = 0.0
-    finalized_adjudications: int = 0
-    queue_status_counts: Mapping[str, int] = field(default_factory=dict)
-    reviewer_assignment_counts: Mapping[str, int] = field(default_factory=dict)
-    duplicate_validation_unit_ids: Tuple[str, ...] = ()
-    duplicate_task_bundle_ids: Tuple[str, ...] = ()
-    duplicate_packet_ids: Tuple[str, ...] = ()
-    missing_selected_task_bundle_ids: Tuple[str, ...] = ()
-    unexpected_selected_task_bundle_ids: Tuple[str, ...] = ()
-    missing_form_pairs: Tuple[str, ...] = ()
-    unexpected_form_pairs: Tuple[str, ...] = ()
-    missing_packet_pairs: Tuple[str, ...] = ()
-    unexpected_packet_pairs: Tuple[str, ...] = ()
-    missing_adjudication_validation_unit_ids: Tuple[str, ...] = ()
-    unexpected_adjudication_validation_unit_ids: Tuple[str, ...] = ()
-    issues: Tuple[str, ...] = ()
-    ok: bool = False
 
     def to_dict(self) -> Dict[str, Any]:
         return _primitive(self)

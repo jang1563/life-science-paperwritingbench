@@ -26,6 +26,7 @@ scaling to the full 30-paper public slice or running judge validation.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -33,6 +34,7 @@ import socket
 import sys
 import time
 import urllib.error
+import urllib.request
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
@@ -48,32 +50,40 @@ from life_science_paperwritingbench.models import (  # noqa: E402
     SubmissionRecord,
     TaskFamily,
 )
-from life_science_paperwritingbench.frontier_runtime import (  # noqa: E402
-    call_anthropic as shared_call_anthropic,
-    call_openai_compatible as shared_call_openai_compatible,
-    default_model_label_for_role,
-    default_frontier_registry_path,
-    load_api_keys,
-    load_frontier_model,
-    load_frontier_registry,
-    registry_entry_provenance,
-    resolve_api_key,
-)
-from life_science_paperwritingbench.frontier_writing import (  # noqa: E402
-    FRONTIER_SINGLE_PASS_PROMPT_VERSION,
-    build_frontier_single_pass_prompt,
-    frontier_submission_fingerprint,
-    frontier_submission_id,
-)
 
 
-DEFAULT_REGISTRY_PATH = default_frontier_registry_path()
-PROVIDERS: Dict[str, Dict[str, Any]] = load_frontier_registry(DEFAULT_REGISTRY_PATH, role="submitter")
-DEFAULT_MODEL = default_model_label_for_role(
-    "submitter",
-    preferred_label="deepseek-chat",
-    registry_path=DEFAULT_REGISTRY_PATH,
-)
+# ---------------------------------------------------------------------------
+# Provider catalog
+# ---------------------------------------------------------------------------
+
+PROVIDERS: Dict[str, Dict[str, Any]] = {
+    "deepseek-chat": {
+        "endpoint": "https://api.deepseek.com/chat/completions",
+        "api_key_env": "DEEPSEEK_API_KEY",
+        "request_model": "deepseek-chat",
+        "flavor": "openai",
+    },
+    "gemini-2.5-flash": {
+        "endpoint": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+        "api_key_env": "GEMINI_API_KEY",
+        "request_model": "gemini-2.5-flash",
+        "flavor": "openai",
+    },
+    "gpt-4o-mini": {
+        "endpoint": "https://api.openai.com/v1/chat/completions",
+        "api_key_env": "OPENAI_API_KEY",
+        "request_model": "gpt-4o-mini",
+        "flavor": "openai",
+    },
+    "claude-haiku-4-5": {
+        "endpoint": "https://api.anthropic.com/v1/messages",
+        "api_key_env": "ANTHROPIC_API_KEY",
+        "request_model": "claude-haiku-4-5",
+        "flavor": "anthropic",
+    },
+}
+
+DEFAULT_MODEL = "deepseek-chat"
 
 # ---------------------------------------------------------------------------
 # Task selection
@@ -108,6 +118,28 @@ OUTPUT_DIR_SLICE = REPO_ROOT / "calibration/llm_public_slice_v1"
 
 
 # ---------------------------------------------------------------------------
+# API-key loading (supports `export FOO=bar` or `FOO=bar` per line)
+# ---------------------------------------------------------------------------
+
+
+def load_api_keys(path: Path) -> Dict[str, str]:
+    keys: Dict[str, str] = {}
+    if not path.exists():
+        return keys
+    for raw in path.read_text().splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.startswith("export "):
+            line = line[len("export ") :].strip()
+        if "=" not in line:
+            continue
+        name, _, value = line.partition("=")
+        keys[name.strip()] = value.strip().strip('"').strip("'")
+    return keys
+
+
+# ---------------------------------------------------------------------------
 # JSONL loaders
 # ---------------------------------------------------------------------------
 
@@ -134,8 +166,99 @@ def load_source_bundles(path: Path) -> Dict[str, Any]:
     return bundles
 
 
-PROMPT_VERSION = FRONTIER_SINGLE_PASS_PROMPT_VERSION
-build_prompt = build_frontier_single_pass_prompt
+# ---------------------------------------------------------------------------
+# Prompt construction
+# ---------------------------------------------------------------------------
+
+
+TASK_FAMILY_TO_TARGET: Dict[str, Tuple[str, Tuple[str, ...]]] = {
+    "methods_to_text": ("Methods", ("abstract_text", "results_text", "figure_captions", "table_snippets")),
+    "results_to_text": ("Results", ("abstract_text", "methods_text", "figure_captions", "table_snippets")),
+    "abstract_from_evidence": ("Abstract", ("methods_text", "results_text", "figure_captions", "table_snippets")),
+}
+
+
+def _clip(text: str, limit: int = 6000) -> str:
+    text = " ".join((text or "").split())
+    if len(text) <= limit:
+        return text
+    return text[: limit - 3] + "..."
+
+
+def _format_list(items: Sequence[str], limit_each: int = 800, max_items: int = 8) -> str:
+    if not items:
+        return "(none provided)"
+    lines = []
+    for idx, item in enumerate(items[:max_items], start=1):
+        lines.append(f"{idx}. {_clip(item, limit_each)}")
+    return "\n".join(lines)
+
+
+PROMPT_VERSION = "v2"
+
+
+def build_prompt(task_bundle, source_bundle, paper_title: str) -> str:
+    task_family_value = task_bundle.task_family.value
+    section_title, include_fields = TASK_FAMILY_TO_TARGET[task_family_value]
+
+    sections: List[Tuple[str, str]] = []
+    if "abstract_text" in include_fields and source_bundle.abstract_text:
+        sections.append(("Abstract", _clip(source_bundle.abstract_text)))
+    if "methods_text" in include_fields and source_bundle.methods_text:
+        sections.append(("Methods", _clip(source_bundle.methods_text)))
+    if "results_text" in include_fields and source_bundle.results_text:
+        sections.append(("Results", _clip(source_bundle.results_text)))
+    if "figure_captions" in include_fields and source_bundle.figure_captions:
+        sections.append(("Figure captions", _format_list(source_bundle.figure_captions)))
+    if "table_snippets" in include_fields and source_bundle.table_snippets:
+        sections.append(("Table snippets", _format_list(source_bundle.table_snippets)))
+
+    sections_block = "\n\n".join(f"## {title}\n{content}" for title, content in sections)
+
+    if task_family_value == "abstract_from_evidence":
+        length_guidance = "Use 150-300 words. Abstracts should be compact."
+        citation_guidance = (
+            "Abstracts do NOT cite figure or table numbers. Instead, name the specific entities, "
+            "sample sizes, p-values, effect sizes, and accession identifiers as they appear in the "
+            "evidence. Do not write 'as shown in Fig. 1' in an abstract."
+        )
+    else:
+        length_guidance = "Use 200-400 words."
+        citation_guidance = (
+            "Cite specific figures and tables from the evidence using the exact label as it appears "
+            "(e.g. 'Fig. 1', 'Figure 2B', 'Table 3'). Cite accession identifiers, trial-registry IDs, "
+            "or repository URLs when they appear in the evidence. Quote quantitative values exactly "
+            "as given (sample sizes, p-values, fold changes, time points, organism strains)."
+        )
+
+    prompt = f"""You are a biomedical scientific-writing assistant. Draft the "{section_title}" section of a research paper using ONLY the evidence provided below.
+
+Hard requirements:
+- Begin with a heading line that is exactly: {section_title}
+- {length_guidance}
+- Ground every substantive claim in a specific piece of the evidence.
+- {citation_guidance}
+- If a detail is not in the evidence, state that explicitly rather than inventing it. Do not speculate.
+- Do not copy sentences verbatim from the evidence; paraphrase while preserving specific values and entities.
+
+Forbidden patterns (these are automatic quality failures — do NOT do any of them):
+- Inventing numerical values, p-values, sample sizes, organism names, or citations that are not in the evidence.
+- Citing placeholder pointer labels like "methods_section", "abstract_section", "results_section", or "section_text". These are internal artifact names; they are not real scientific citations and must never appear in the output.
+- Self-referential meta-commentary such as "this abstract" or "the methods_section of this paper".
+
+Paper context:
+- Paper title: {paper_title}
+- Task family: {task_family_value}
+- Study class: {task_bundle.study_class.value}
+- Claim mode: {task_bundle.claim_mode.value}
+
+Evidence:
+
+{sections_block}
+
+Write the "{section_title}" section now, starting with the required heading line and satisfying all requirements."""
+
+    return prompt
 
 
 # ---------------------------------------------------------------------------
@@ -145,10 +268,7 @@ build_prompt = build_frontier_single_pass_prompt
 # ---------------------------------------------------------------------------
 
 
-_FIGURE_REF_RE = re.compile(
-    r"\b(?:Fig(?:ure)?s?\.?|FIG\.?)\s*\d+[A-Za-z]?(?:[-,\s]+\d+[A-Za-z]?)*\b",
-    re.IGNORECASE,
-)
+_FIGURE_REF_RE = re.compile(r"\b(?:Fig(?:ure)?s?\.?|FIG\.?)\s*\d+[A-Za-z]?(?:[-,\s]+\d+[A-Za-z]?)*\b")
 _TABLE_REF_RE = re.compile(r"\bTable[s]?\s*\d+[A-Za-z]?(?:[-,\s]+\d+[A-Za-z]?)*\b", re.IGNORECASE)
 _PVALUE_RE = re.compile(r"\b[pP]\s*[<>=]\s*0?\.\d+\b")
 _NUMERIC_MAGNITUDE_RE = re.compile(r"\b\d[\d,]*\.?\d*\s*(?:%|-fold|fold|mg|kg|nm|μm|µm|mm|cm|ml|kb|bp|nM|µM|mM|mg/kg|mg/mL|ml/kg)\b", re.IGNORECASE)
@@ -200,8 +320,7 @@ def citation_specificity(output_text: str) -> Dict[str, Any]:
     accessions = _uniq(_ACCESSION_RE)
     repo_urls = _uniq(_REPO_URL_RE)
 
-    lowercase_output = output_text.lower()
-    forbidden_hits = [token for token in _FORBIDDEN_POINTER_TOKENS if token in lowercase_output]
+    forbidden_hits = [token for token in _FORBIDDEN_POINTER_TOKENS if token in output_text]
 
     citation_count = (
         len(figure_refs) + len(table_refs) + len(pvalues)
@@ -236,25 +355,76 @@ def citation_specificity(output_text: str) -> Dict[str, Any]:
 
 
 def call_openai_compatible(prompt: str, *, provider: Mapping[str, Any], api_key: str, temperature: float = 0.2, max_tokens: int = 1200, timeout: int = 120) -> Dict[str, Any]:
-    return shared_call_openai_compatible(
-        prompt,
-        provider=provider,
-        api_key=api_key,
-        temperature=temperature,
-        max_tokens=max_tokens,
-        timeout=timeout,
+    payload = {
+        "model": provider["request_model"],
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": temperature,
+    }
+    payload[provider.get("token_param", "max_tokens")] = max_tokens
+    request = urllib.request.Request(
+        provider["endpoint"],
+        data=json.dumps(payload).encode("utf-8"),
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
     )
+    with urllib.request.urlopen(request, timeout=timeout) as response:  # noqa: S310
+        body = response.read()
+    decoded = json.loads(body)
+    usage = decoded.get("usage") or {}
+    return {
+        "output_text": str(decoded["choices"][0]["message"]["content"]).strip(),
+        "usage": {
+            "prompt_tokens": usage.get("prompt_tokens"),
+            "completion_tokens": usage.get("completion_tokens"),
+            "total_tokens": usage.get("total_tokens"),
+        },
+        "raw": decoded,
+    }
 
 
 def call_anthropic(prompt: str, *, provider: Mapping[str, Any], api_key: str, temperature: float = 0.2, max_tokens: int = 1200, timeout: int = 120) -> Dict[str, Any]:
-    return shared_call_anthropic(
-        prompt,
-        provider=provider,
-        api_key=api_key,
-        temperature=temperature,
-        max_tokens=max_tokens,
-        timeout=timeout,
+    payload = {
+        "model": provider["request_model"],
+        "max_tokens": max_tokens,
+        "temperature": temperature,
+        "messages": [{"role": "user", "content": prompt}],
+    }
+    request = urllib.request.Request(
+        provider["endpoint"],
+        data=json.dumps(payload).encode("utf-8"),
+        headers={
+            "x-api-key": api_key,
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+        },
+        method="POST",
     )
+    with urllib.request.urlopen(request, timeout=timeout) as response:  # noqa: S310
+        body = response.read()
+    decoded = json.loads(body)
+    output_text = "".join(
+        part.get("text", "")
+        for part in decoded.get("content", [])
+        if isinstance(part, dict) and part.get("type") == "text"
+    )
+    usage = decoded.get("usage") or {}
+    prompt_tokens = usage.get("input_tokens")
+    completion_tokens = usage.get("output_tokens")
+    total_tokens = None
+    if isinstance(prompt_tokens, int) and isinstance(completion_tokens, int):
+        total_tokens = prompt_tokens + completion_tokens
+    return {
+        "output_text": output_text.strip(),
+        "usage": {
+            "prompt_tokens": prompt_tokens,
+            "completion_tokens": completion_tokens,
+            "total_tokens": total_tokens,
+        },
+        "raw": decoded,
+    }
 
 
 def call_llm(prompt: str, *, provider: Mapping[str, Any], api_key: str, temperature: float = 0.2, max_tokens: int = 1200, timeout: int = 120) -> Dict[str, Any]:
@@ -315,11 +485,13 @@ def call_llm_with_retry(prompt: str, *, provider: Mapping[str, Any], api_key: st
 
 
 def _stable_submission_id(task_bundle_id: str, producer_id: str) -> str:
-    return frontier_submission_id(task_bundle_id, producer_id)
+    digest = hashlib.sha256(f"{task_bundle_id}|{producer_id}".encode("utf-8")).hexdigest()
+    return f"SUB:{digest[:12].upper()}"
 
 
 def _fingerprint(payload: Mapping[str, Any]) -> str:
-    return frontier_submission_fingerprint(payload)
+    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str)
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
 def _load_inspection_slice_bundle_ids(path: Path) -> List[str]:
@@ -337,8 +509,7 @@ def _load_inspection_slice_bundle_ids(path: Path) -> List[str]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--model", default=None)
-    parser.add_argument("--registry-path", default=str(DEFAULT_REGISTRY_PATH))
+    parser.add_argument("--model", default=DEFAULT_MODEL, choices=sorted(PROVIDERS))
     parser.add_argument("--keys-file", default=str(Path.home() / ".api_keys"))
     parser.add_argument("--output-dir", default=None, help="defaults depend on --task-source")
     parser.add_argument("--temperature", type=float, default=0.2)
@@ -353,16 +524,7 @@ def main() -> int:
     parser.add_argument("--pause-between-calls", type=float, default=0.3, help="seconds to sleep between calls to be polite to the API")
     args = parser.parse_args()
 
-    model_label = args.model or default_model_label_for_role(
-        "submitter",
-        preferred_label="deepseek-chat",
-        registry_path=args.registry_path,
-    )
-    try:
-        provider = load_frontier_model(model_label, registry_path=args.registry_path, role="submitter")
-    except KeyError as exc:
-        print(str(exc), file=sys.stderr)
-        return 2
+    provider = PROVIDERS[args.model]
     if args.output_dir:
         output_dir = Path(args.output_dir)
     elif args.task_source == "inspection-slice":
@@ -372,8 +534,9 @@ def main() -> int:
     output_dir.mkdir(parents=True, exist_ok=True)
 
     keys = load_api_keys(Path(args.keys_file).expanduser())
-    api_key = resolve_api_key(provider, keys)
-    if not args.dry_run and provider.get("api_key_env") and not api_key:
+    env_key = os.environ.get(provider["api_key_env"])
+    api_key = env_key or keys.get(provider["api_key_env"])
+    if not args.dry_run and not api_key:
         print(f"Missing {provider['api_key_env']} (checked env and {args.keys_file})", file=sys.stderr)
         return 2
 
@@ -400,7 +563,7 @@ def main() -> int:
         print("No task bundles selected; aborting.", file=sys.stderr)
         return 3
 
-    producer_id = f"llm:{model_label}@temp={args.temperature}"
+    producer_id = f"llm:{args.model}@temp={args.temperature}"
     submissions: List[SubmissionRecord] = []
     usage_rows: List[Dict[str, Any]] = []
 
@@ -416,7 +579,7 @@ def main() -> int:
             output_text = "(dry run placeholder)"
             usage = {"prompt_tokens": None, "completion_tokens": None, "total_tokens": None}
         else:
-            print(f"[{idx}/{len(picks)}] calling {model_label} on {bundle.task_bundle_id} ({bundle.task_family.value})")
+            print(f"[{idx}/{len(picks)}] calling {args.model} on {bundle.task_bundle_id} ({bundle.task_family.value})")
             started = time.time()
             response = call_llm_with_retry(
                 prompt,
@@ -436,7 +599,7 @@ def main() -> int:
         submission_id = _stable_submission_id(bundle.task_bundle_id, producer_id)
         fingerprint = _fingerprint(
             {
-                "model": model_label,
+                "model": args.model,
                 "request_model": provider["request_model"],
                 "temperature": args.temperature,
                 "task_bundle_id": bundle.task_bundle_id,
@@ -530,9 +693,8 @@ def main() -> int:
     )
 
     summary = {
-        "model": model_label,
+        "model": args.model,
         "request_model": provider["request_model"],
-        "registry_path": str(Path(args.registry_path).expanduser()),
         "producer_id": producer_id,
         "temperature": args.temperature,
         "max_tokens": args.max_tokens,
@@ -548,7 +710,6 @@ def main() -> int:
         "task_rows": rows,
         "usage": usage_rows,
     }
-    summary.update(registry_entry_provenance(provider))
     summary_path = output_dir / "summary.json"
     summary_path.write_text(json.dumps(summary, indent=2) + "\n")
 
@@ -556,7 +717,7 @@ def main() -> int:
     md_lines = [
         "# LLM Evaluation",
         "",
-        f"- model: `{model_label}` (request model: `{provider['request_model']}`)",
+        f"- model: `{args.model}` (request model: `{provider['request_model']}`)",
         f"- task source: `{args.task_source}`",
         f"- prompt version: `{PROMPT_VERSION}`",
         f"- temperature: {args.temperature}",
