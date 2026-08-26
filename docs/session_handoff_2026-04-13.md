@@ -14,6 +14,174 @@ It is written to make the next session efficient:
 
 ## Current project state
 
+### Current agentic baseline status (2026-04-20)
+
+The project now has a working API-backed ScholarPeer-inspired
+`writer -> critic -> reviser` lane in:
+
+- `scripts/llm_agentic_eval.py`
+
+Important implementation detail:
+
+- the live agentic lane now uses a conservative selection policy
+  `non_regressive_det_then_citation_v1`
+- the script writes the raw reviser output, but keeps the writer draft
+  as the final output whenever the revision would regress deterministic
+  pass or citation-specificity
+
+Current canonical agentic artifacts:
+
+- selected-output deterministic run:
+  `calibration/llm_agentic_public_slice_v1_rerun5/summary.md`
+- selected-output judged run:
+  `calibration/llm_agentic_public_slice_v1_rerun5_judged_v3/summary.md`
+
+Current agentic facts:
+
+- deterministic selected-output result:
+  - draft `26 / 30`
+  - raw reviser `23 / 30`
+  - final selected output `26 / 30`
+  - draft mean citation specificity `0.844`
+  - raw reviser mean citation specificity `0.767`
+  - final mean citation specificity `0.844`
+  - final deterministic regressions `0`
+  - final citation regressions `0`
+- judged selected-output result:
+  - threshold-rule pass `30 / 30`
+  - judge-reported overall pass `30 / 30`
+  - strict all-axes >= threshold `27 / 30`
+  - mean axis score `2.653`
+  - grounding issues `60`
+
+Interpretation:
+
+- `rerun5` is now the **best judged artifact so far**
+- it improves on the earlier best agentic judged run
+  `calibration/llm_agentic_public_slice_v1_rerun2_judged_v3/summary.md`
+  (`28 / 30` judge bool, mean axis `2.587`, grounding issues `64`)
+- it also improves on the single-pass judged baseline
+  `calibration/llm_public_slice_v2_judged_v3/summary.md`
+  (`29 / 30` judge bool, mean axis `2.527`, grounding issues `74`)
+- `rerun2` still remains the cleaner deterministic / citation-specificity
+  artifact (`26 / 30`, mean citation specificity `0.878`), so the repo
+  now has:
+  - best judged artifact: `rerun5`
+  - best deterministic-citation artifact: `rerun2`
+
+Main lesson from the latest pass:
+
+- prompt tightening alone did not make the reviser reliable
+- the big win came from keeping the reviser as a proposal generator
+  while selecting the non-regressive output at the end
+- the selector blocked the remaining raw regressions on:
+  - `TB:BU:EUAUTO:EFABE066E1CC`
+  - `TB:BU:EUAUTO:4EE60B35277A`
+  - `TB:BU:EUAUTO:23CD58731E80`
+  - `TB:BU:EUAUTO:203BF5F7D3BE`
+
+Recommended next step from here:
+
+- keep `rerun5` as the judged anchor and `rerun2` as the cleaner
+  deterministic / citation anchor
+- use the new matrix artifact below as the Session 3 checkpoint
+- next priority is provider recovery and matrix completion, not more
+  local prompt surgery
+
+### Current cross-model matrix status (2026-04-21)
+
+The repo now has a reproducible partial Session 3 matrix summary in:
+
+- `scripts/llm_matrix_summary.py`
+- `calibration/llm_public_slice_matrix_v1/summary.md`
+
+Current matrix coverage:
+
+- submitters present:
+  - `deepseek-chat-agentic-rerun5`
+  - `gpt-4o-mini-agentic-v1`
+- judges declared:
+  - `claude-sonnet-4-6`
+  - `gpt-5.4-mini`
+  - `gpt-5-mini`
+- completed cells: `5 / 6`
+- blocked cells: `1 / 6`
+- missing cells: `0 / 6`
+
+Current cross-model facts:
+
+- DeepSeek selected-output agentic submitter:
+  - deterministic `26 / 30`
+  - citation specificity `0.844`
+- `gpt-4o-mini` selected-output agentic submitter:
+  - deterministic `22 / 30`
+  - citation specificity `0.756`
+- common judges across both submitters:
+  - `gpt-5.4-mini`
+  - `gpt-5-mini`
+- common-judge mean overall-pass spread:
+  - `30.0` percentage points
+- strongest single same-judge spread so far:
+  - `gpt-5.4-mini` gives `25 / 30` for DeepSeek vs `14 / 30` for
+    `gpt-4o-mini` (`36.7` percentage points)
+
+Important interpretation:
+
+- the benchmark is now showing a real separation signal across
+  submitters even before the planned full `3 x 3` matrix is finished
+- `gpt-5.4-mini` is currently the cleanest OpenAI-side judge
+- `gpt-5-mini` is usable for exploration but is noisy:
+  - DeepSeek judged slice parse failures: `7`
+  - `gpt-4o-mini` judged slice parse failures: `8`
+- the only missing cell in the current `2 submitter x 3 judge` matrix is
+  `gpt-4o-mini-agentic-v1 x claude-sonnet-4-6`, blocked because the
+  Anthropic API key in local `~/.api_keys` is currently invalid
+- Gemini is still outside the matrix artifact for the same reason:
+  current local Google key is invalid, so the intended Gemini submitter /
+  judge breadth remains pending
+
+Recommended next step from here:
+
+- restore Anthropic and Gemini credentials
+- rerun the blocked Claude cell and add Gemini submitter / judge cells
+- once Gemini is live, decide whether `gpt-5-mini` stays in the official
+  judge set or remains a diagnostic-only judge because of parse failures
+
+### Current canary-probe status (2026-04-21)
+
+The repo now has a working completion-style canary probe in:
+
+- `scripts/canary_probe.py`
+
+Current canary artifacts:
+
+- dry run:
+  `calibration/canary_probe_v1_dry_run/summary.md`
+- live partial run:
+  `calibration/canary_probe_v1_live_openai_deepseek/summary.md`
+- human-readable report:
+  `docs/canary_probe_report.md`
+
+Current live mini-probe facts:
+
+- models covered:
+  - `deepseek-chat`
+  - `gpt-4o-mini`
+  - `gpt-5.4-mini`
+- exact public-canary matches:
+  - `0 / 3`
+- exact random-control matches:
+  - `0 / 3`
+
+Important interpretation:
+
+- this is a good early sign: no exact reproduction was observed in the
+  currently reachable models
+- this is still only a partial contamination check
+- Anthropic and Gemini coverage is still pending key recovery
+- the canary probe writes only redacted artifacts (hashes, lengths,
+  matches, distances), not raw canary strings or raw model outputs
+
 ### Stable operating baseline
 
 The project currently has a working `auto-review shadow-first` lane with deterministic provenance-tracked artifacts.
@@ -459,7 +627,9 @@ this section. Summary of the direction it sets:
      `src/life_science_paperwritingbench/scoring.py` module; add
      `evaluate_submission_v2` in `baselines.py` while preserving the
      v1 behavior as an alias for release-artifact reproducibility.
-     Gate A1: v2 deterministic pass rate ≥ v2 judge pass rate.
+     Gate A1: v2 deterministic pass rate ≥ v2 judge pass rate, and the
+     judge-pass task-bundle set is a subset of the deterministic pass
+     set (`judge_only_count = 0`).
   2. Judge rubric v3: switch `scripts/llm_judge_eval.py:RUBRIC_AXES`
      to 4-point anchored ordinal with behavioral anchors; family-aware
      abstract axis (swap `traceability` → `quantitative_specificity`).

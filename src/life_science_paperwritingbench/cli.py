@@ -25,6 +25,7 @@ from .io import (
     evidence_extraction_record_from_dict,
     evidence_record_from_dict,
     execution_profile_from_dict,
+    evaluation_record_from_dict,
     evaluation_extraction_audit_report_from_dict,
     load_jsonl,
     evidence_unit_from_dict,
@@ -138,7 +139,13 @@ from .paper_qualification_flow import (
     build_paper_qualification_batch_report,
     build_paper_qualification_records,
 )
-from .judge import audit_judge_validation_slice, build_judge_validation_slice, build_judge_validation_units
+from .judge import (
+    audit_judge_validation_slice,
+    audit_llm_judge_alignment,
+    build_judge_validation_slice,
+    build_judge_validation_units,
+    render_llm_judge_alignment_markdown,
+)
 from .judgeflow import (
     build_judge_adjudication_queue,
     build_judge_adjudication_shells,
@@ -2315,6 +2322,26 @@ def command_audit_judge_slice(args: argparse.Namespace) -> int:
     return 0 if report.ok else 1
 
 
+def command_audit_llm_eval_alignment(args: argparse.Namespace) -> int:
+    task_bundles = load_jsonl(args.task_bundles, loader=task_bundle_from_dict)
+    evaluations = load_jsonl(args.evaluations, loader=evaluation_record_from_dict)
+    judgments = load_jsonl(args.judgments)
+    report = audit_llm_judge_alignment(
+        task_bundles=task_bundles,
+        evaluations=evaluations,
+        judgments=judgments,
+    )
+    if args.output:
+        _write_json(args.output, report.to_dict())
+    if args.markdown_output:
+        Path(args.markdown_output).write_text(
+            render_llm_judge_alignment_markdown(report) + "\n",
+            encoding="utf-8",
+        )
+    _print_json(report.to_dict())
+    return 0 if report.ok else 1
+
+
 def command_summarize_program_progress(args: argparse.Namespace) -> int:
     papers = load_jsonl(args.papers, loader=source_paper_from_dict)
     paper_decisions = _load_program_progress_decisions(args.paper_decisions)
@@ -3133,6 +3160,17 @@ def build_parser() -> argparse.ArgumentParser:
     audit_judge_slice.add_argument("--minimum-total", type=int, default=30)
     audit_judge_slice.add_argument("--output")
     audit_judge_slice.set_defaults(func=command_audit_judge_slice)
+
+    audit_llm_eval_alignment = subparsers.add_parser(
+        "audit-llm-eval-alignment",
+        help="Audit bundle-level agreement between deterministic scoring and judge pass/fail outcomes.",
+    )
+    audit_llm_eval_alignment.add_argument("--task-bundles", required=True)
+    audit_llm_eval_alignment.add_argument("--evaluations", required=True)
+    audit_llm_eval_alignment.add_argument("--judgments", required=True)
+    audit_llm_eval_alignment.add_argument("--output")
+    audit_llm_eval_alignment.add_argument("--markdown-output")
+    audit_llm_eval_alignment.set_defaults(func=command_audit_llm_eval_alignment)
 
     build_judge_templates = subparsers.add_parser(
         "build-judge-review-templates",

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Dict, List, Mapping, Sequence, Tuple
 
-from .judge import DEFAULT_JUDGE_RUBRIC_AXES, _is_missing_rubric_value
+from .judge import DEFAULT_JUDGE_RUBRIC_AXES, _is_missing_rubric_value, _numeric_judge_rubric_score
 from .models import (
     JudgeAdjudicationQueueEntry,
     JudgeAdjudicationRecord,
@@ -16,6 +16,27 @@ def _rubric_template_from_unit(judge_unit: JudgeValidationUnit) -> Dict[str, obj
     if not labels:
         labels = {axis: None for axis in DEFAULT_JUDGE_RUBRIC_AXES}
     return labels
+
+
+def _required_rubric_axes(judge_unit: JudgeValidationUnit) -> Tuple[str, ...]:
+    axes = tuple(str(axis).strip() for axis in _rubric_template_from_unit(judge_unit) if str(axis).strip())
+    return axes or tuple(DEFAULT_JUDGE_RUBRIC_AXES)
+
+
+def _rubric_value_is_scored(value: object) -> bool:
+    return _numeric_judge_rubric_score(value) is not None
+
+
+def _missing_completed_form_axes(
+    form: JudgeReviewForm,
+    judge_unit: JudgeValidationUnit,
+) -> Tuple[str, ...]:
+    labels = dict(form.rubric_labels)
+    return tuple(
+        axis
+        for axis in _required_rubric_axes(judge_unit)
+        if axis not in labels or not _rubric_value_is_scored(labels[axis])
+    )
 
 
 def build_judge_review_forms(
@@ -66,10 +87,10 @@ def _distinct_axis_values(forms: Sequence[JudgeReviewForm], axis: str) -> Tuple[
     values = []
     seen = set()
     for form in forms:
-        value = form.rubric_labels.get(axis)
-        if _is_missing_rubric_value(value):
+        numeric_value = _numeric_judge_rubric_score(form.rubric_labels.get(axis))
+        if numeric_value is None:
             continue
-        normalized = repr(value)
+        normalized = repr(numeric_value)
         if normalized in seen:
             continue
         seen.add(normalized)
@@ -93,7 +114,16 @@ def build_judge_adjudication_queue(
     required_reviewer_count = len(tuple(reviewer_ids))
     for judge_unit in judge_units:
         unit_forms = forms_by_validation_unit.get(judge_unit.validation_unit_id, [])
-        completed_forms = [form for form in unit_forms if form.completed]
+        incomplete_completed_forms = {
+            form.reviewer_id: _missing_completed_form_axes(form, judge_unit)
+            for form in unit_forms
+            if form.completed and _missing_completed_form_axes(form, judge_unit)
+        }
+        completed_forms = [
+            form
+            for form in unit_forms
+            if form.completed and not _missing_completed_form_axes(form, judge_unit)
+        ]
         completed = tuple(sorted(form.reviewer_id for form in completed_forms))
         pending = tuple(reviewer_id for reviewer_id in reviewer_ids if reviewer_id not in completed)
         finalized = bool(
@@ -116,6 +146,12 @@ def build_judge_adjudication_queue(
         notes = []
         if not unit_forms:
             notes.append("no judge review forms submitted yet")
+        if incomplete_completed_forms:
+            details = ", ".join(
+                f"{reviewer_id}={';'.join(missing_axes)}"
+                for reviewer_id, missing_axes in sorted(incomplete_completed_forms.items())
+            )
+            notes.append("completed reviewer forms missing rubric axes: " + details)
         if disagreement_axes:
             notes.append("reviewer disagreement detected")
 
@@ -178,7 +214,7 @@ def summarize_judge_progress(
         reviewer_ids=reviewer_ids,
     )
     total_slots = len(judge_units) * len(tuple(reviewer_ids))
-    completed_slots = sum(1 for form in merged_forms if form.completed)
+    completed_slots = sum(len(entry.completed_reviewer_ids) for entry in queue)
     summary = {
         "total_judge_units": len(judge_units),
         "required_reviewer_count": len(tuple(reviewer_ids)),

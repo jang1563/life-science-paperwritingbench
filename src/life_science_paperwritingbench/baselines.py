@@ -226,16 +226,57 @@ def run_baseline(
 
 
 _STRUCTURE_MARKERS: Mapping[TaskFamily, Tuple[str, ...]] = {
-    TaskFamily.RESULTS_TO_TEXT: ("results", "evidence"),
-    TaskFamily.METHODS_TO_TEXT: ("methods", "evidence"),
-    TaskFamily.ABSTRACT_FROM_EVIDENCE: ("abstract", "evidence"),
-    TaskFamily.REVIEW_REVISION_RESPONSE: ("response", "evidence"),
     TaskFamily.LITERATURE_QA: ("answer", "question"),
     TaskFamily.TRIAL_QA: ("answer", "question"),
     TaskFamily.FIGURE_QA: ("answer", "question"),
     TaskFamily.TABLE_QA: ("answer", "question"),
     TaskFamily.SOURCE_QUALITY_QA: ("assessment", "question"),
 }
+
+_HEADING_STRUCTURE_FAMILIES = {
+    TaskFamily.RESULTS_TO_TEXT,
+    TaskFamily.METHODS_TO_TEXT,
+    TaskFamily.ABSTRACT_FROM_EVIDENCE,
+    TaskFamily.REVIEW_REVISION_RESPONSE,
+}
+
+
+def _first_non_empty_line(text: str) -> str:
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped:
+            return stripped
+    return ""
+
+
+def _matches_expected_heading(line: str, expected_title: str) -> bool:
+    if not line.strip():
+        return False
+    normalized_line = line.strip()
+    while normalized_line.startswith("#"):
+        normalized_line = normalized_line[1:].lstrip()
+    normalized_line = normalized_line.rstrip(":").strip().casefold()
+    return normalized_line == expected_title.casefold()
+
+
+def _structure_compliance_score(
+    task_bundle: TaskBundle,
+    output_text: str,
+    normalized_output: str,
+) -> Tuple[float, Optional[str]]:
+    section_marker = _section_title(task_bundle.task_family).lower()
+    if task_bundle.task_family in _HEADING_STRUCTURE_FAMILIES:
+        first_line = _first_non_empty_line(output_text)
+        expected_title = _section_title(task_bundle.task_family)
+        if _matches_expected_heading(first_line, expected_title):
+            return 1.0, None
+        return 0.0, f"missing expected section heading on first line: {section_marker}"
+
+    structure_markers = _STRUCTURE_MARKERS[task_bundle.task_family]
+    missing_markers = [marker for marker in structure_markers if marker not in normalized_output]
+    if not missing_markers:
+        return 1.0, None
+    return 0.0, "missing expected structure markers: " + ", ".join(missing_markers)
 
 
 def _answer_support_score(task_bundle: TaskBundle, normalized_output: str) -> float:
@@ -275,9 +316,11 @@ def evaluate_submission_v1(task_bundle: TaskBundle, submission: SubmissionRecord
         else 1.0
     )
 
-    section_marker = _section_title(task_bundle.task_family).lower()
-    structure_markers = _STRUCTURE_MARKERS[task_bundle.task_family]
-    structure_score = 1.0 if all(marker in normalized_output for marker in structure_markers) else 0.0
+    structure_score, structure_note = _structure_compliance_score(
+        task_bundle,
+        submission.output_text,
+        normalized_output,
+    )
     non_empty_score = 1.0 if submission.output_text.strip() else 0.0
     word_count = len(submission.output_text.split())
     length_floor_score = 1.0 if word_count >= 12 else 0.0
@@ -290,8 +333,8 @@ def evaluate_submission_v1(task_bundle: TaskBundle, submission: SubmissionRecord
         and answer_support_score == 1.0
     )
     notes: List[str] = []
-    if section_marker not in normalized_output:
-        notes.append(f"missing expected section marker: {section_marker}")
+    if structure_note:
+        notes.append(structure_note)
     if traceability_score < 0.5:
         notes.append("traceability coverage below threshold")
     if word_count < 12:
@@ -348,9 +391,11 @@ def evaluate_submission_v2(task_bundle: TaskBundle, submission: SubmissionRecord
     citation_report = citation_specificity(output_text)
     citation_score = float(citation_report["citation_specificity_score"])
 
-    section_marker = _section_title(task_bundle.task_family).lower()
-    structure_markers = _STRUCTURE_MARKERS[task_bundle.task_family]
-    structure_score = 1.0 if all(marker in normalized_output for marker in structure_markers) else 0.0
+    structure_score, structure_note = _structure_compliance_score(
+        task_bundle,
+        output_text,
+        normalized_output,
+    )
     non_empty_score = 1.0 if output_text.strip() else 0.0
     word_count = len(output_text.split())
     length_floor_score = 1.0 if word_count >= 12 else 0.0
@@ -364,8 +409,8 @@ def evaluate_submission_v2(task_bundle: TaskBundle, submission: SubmissionRecord
         and answer_support_score == 1.0
     )
     notes: List[str] = []
-    if section_marker not in normalized_output:
-        notes.append(f"missing expected section marker: {section_marker}")
+    if structure_note:
+        notes.append(structure_note)
     if citation_report["forbidden_pointer_hits"]:
         notes.append(
             "forbidden pointer tokens present: "

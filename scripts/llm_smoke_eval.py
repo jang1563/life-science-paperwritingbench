@@ -30,6 +30,7 @@ import hashlib
 import json
 import os
 import re
+import socket
 import sys
 import time
 import urllib.error
@@ -60,16 +61,25 @@ PROVIDERS: Dict[str, Dict[str, Any]] = {
         "endpoint": "https://api.deepseek.com/chat/completions",
         "api_key_env": "DEEPSEEK_API_KEY",
         "request_model": "deepseek-chat",
+        "flavor": "openai",
     },
     "gemini-2.5-flash": {
         "endpoint": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
         "api_key_env": "GEMINI_API_KEY",
         "request_model": "gemini-2.5-flash",
+        "flavor": "openai",
     },
     "gpt-4o-mini": {
         "endpoint": "https://api.openai.com/v1/chat/completions",
         "api_key_env": "OPENAI_API_KEY",
         "request_model": "gpt-4o-mini",
+        "flavor": "openai",
+    },
+    "claude-haiku-4-5": {
+        "endpoint": "https://api.anthropic.com/v1/messages",
+        "api_key_env": "ANTHROPIC_API_KEY",
+        "request_model": "claude-haiku-4-5",
+        "flavor": "anthropic",
     },
 }
 
@@ -340,17 +350,17 @@ def citation_specificity(output_text: str) -> Dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
-# LLM call (OpenAI-compatible)
+# LLM call
 # ---------------------------------------------------------------------------
 
 
-def call_llm(prompt: str, *, provider: Mapping[str, Any], api_key: str, temperature: float = 0.2, max_tokens: int = 1200, timeout: int = 120) -> Dict[str, Any]:
+def call_openai_compatible(prompt: str, *, provider: Mapping[str, Any], api_key: str, temperature: float = 0.2, max_tokens: int = 1200, timeout: int = 120) -> Dict[str, Any]:
     payload = {
         "model": provider["request_model"],
         "messages": [{"role": "user", "content": prompt}],
         "temperature": temperature,
-        "max_tokens": max_tokens,
     }
+    payload[provider.get("token_param", "max_tokens")] = max_tokens
     request = urllib.request.Request(
         provider["endpoint"],
         data=json.dumps(payload).encode("utf-8"),
@@ -363,7 +373,85 @@ def call_llm(prompt: str, *, provider: Mapping[str, Any], api_key: str, temperat
     with urllib.request.urlopen(request, timeout=timeout) as response:  # noqa: S310
         body = response.read()
     decoded = json.loads(body)
-    return decoded
+    usage = decoded.get("usage") or {}
+    return {
+        "output_text": str(decoded["choices"][0]["message"]["content"]).strip(),
+        "usage": {
+            "prompt_tokens": usage.get("prompt_tokens"),
+            "completion_tokens": usage.get("completion_tokens"),
+            "total_tokens": usage.get("total_tokens"),
+        },
+        "raw": decoded,
+    }
+
+
+def call_anthropic(prompt: str, *, provider: Mapping[str, Any], api_key: str, temperature: float = 0.2, max_tokens: int = 1200, timeout: int = 120) -> Dict[str, Any]:
+    payload = {
+        "model": provider["request_model"],
+        "max_tokens": max_tokens,
+        "temperature": temperature,
+        "messages": [{"role": "user", "content": prompt}],
+    }
+    request = urllib.request.Request(
+        provider["endpoint"],
+        data=json.dumps(payload).encode("utf-8"),
+        headers={
+            "x-api-key": api_key,
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+        },
+        method="POST",
+    )
+    with urllib.request.urlopen(request, timeout=timeout) as response:  # noqa: S310
+        body = response.read()
+    decoded = json.loads(body)
+    output_text = "".join(
+        part.get("text", "")
+        for part in decoded.get("content", [])
+        if isinstance(part, dict) and part.get("type") == "text"
+    )
+    usage = decoded.get("usage") or {}
+    prompt_tokens = usage.get("input_tokens")
+    completion_tokens = usage.get("output_tokens")
+    total_tokens = None
+    if isinstance(prompt_tokens, int) and isinstance(completion_tokens, int):
+        total_tokens = prompt_tokens + completion_tokens
+    return {
+        "output_text": output_text.strip(),
+        "usage": {
+            "prompt_tokens": prompt_tokens,
+            "completion_tokens": completion_tokens,
+            "total_tokens": total_tokens,
+        },
+        "raw": decoded,
+    }
+
+
+def call_llm(prompt: str, *, provider: Mapping[str, Any], api_key: str, temperature: float = 0.2, max_tokens: int = 1200, timeout: int = 120) -> Dict[str, Any]:
+    fn = call_anthropic if provider.get("flavor") == "anthropic" else call_openai_compatible
+    return fn(
+        prompt,
+        provider=provider,
+        api_key=api_key,
+        temperature=temperature,
+        max_tokens=max_tokens,
+        timeout=timeout,
+    )
+
+
+def _error_message(exc: BaseException) -> str:
+    if isinstance(exc, urllib.error.HTTPError):
+        body = ""
+        try:
+            body = exc.read().decode("utf-8", errors="replace").strip()
+        except Exception:
+            body = ""
+        body = re.sub(r"\s+", " ", body)
+        if body:
+            if len(body) > 500:
+                body = body[:500] + "..."
+            return f"{exc}; body={body}"
+    return str(exc)
 
 
 def call_llm_with_retry(prompt: str, *, provider: Mapping[str, Any], api_key: str, temperature: float, max_tokens: int, attempts: int = 3, backoff_seconds: float = 2.0) -> Dict[str, Any]:
@@ -377,15 +465,18 @@ def call_llm_with_retry(prompt: str, *, provider: Mapping[str, Any], api_key: st
                 temperature=temperature,
                 max_tokens=max_tokens,
             )
-        except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError) as exc:
+        except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, socket.timeout) as exc:
             last_exc = exc
             if attempt == attempts:
                 break
             sleep_for = backoff_seconds * (2 ** (attempt - 1))
-            print(f"    attempt {attempt} failed ({exc}); sleeping {sleep_for:.1f}s", file=sys.stderr)
+            print(
+                f"    attempt {attempt} failed ({_error_message(exc)}); sleeping {sleep_for:.1f}s",
+                file=sys.stderr,
+            )
             time.sleep(sleep_for)
     assert last_exc is not None
-    raise last_exc
+    raise RuntimeError(_error_message(last_exc)) from last_exc
 
 
 # ---------------------------------------------------------------------------
@@ -498,7 +589,7 @@ def main() -> int:
                 max_tokens=args.max_tokens,
             )
             elapsed = time.time() - started
-            output_text = response["choices"][0]["message"]["content"].strip()
+            output_text = response["output_text"]
             usage = dict(response.get("usage") or {})
             usage["elapsed_seconds"] = round(elapsed, 2)
             print(f"    done in {elapsed:.1f}s  prompt_tokens={usage.get('prompt_tokens')} completion_tokens={usage.get('completion_tokens')}")

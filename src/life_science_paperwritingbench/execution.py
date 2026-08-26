@@ -3,8 +3,9 @@ from __future__ import annotations
 import hashlib
 import shlex
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Sequence
 
+from .frontier_runtime import load_frontier_model
 from .models import ExecutionJobSpec, ExecutionProfile
 from .policy import BaselineKind
 
@@ -137,6 +138,122 @@ def build_baseline_replay_job_spec(
             "Scaffold-only execution job for deterministic baseline replay.",
             "Generated scripts should be reviewed before cluster submission.",
         ),
+    )
+
+
+def build_frontier_submitter_job_spec(
+    profile: ExecutionProfile,
+    *,
+    registry_path: str,
+    model_label: str,
+    runner_kind: str,
+    task_source: str,
+    output_dir: str,
+    keys_file: Optional[str] = None,
+    temperature: float = 0.2,
+    max_tokens: int = 1200,
+    pause_between_calls: float = 0.0,
+    dry_run: bool = False,
+    endpoint_url: Optional[str] = None,
+    served_model_name: Optional[str] = None,
+    tensor_parallel_size: Optional[int] = None,
+    gpu_count: Optional[int] = None,
+    dtype_note: Optional[str] = None,
+    scheduler_notes: Sequence[str] = (),
+    job_name: Optional[str] = None,
+) -> ExecutionJobSpec:
+    if runner_kind not in {"smoke", "agentic"}:
+        raise ValueError("runner_kind must be 'smoke' or 'agentic'")
+    if task_source not in {"smoke", "inspection-slice"}:
+        raise ValueError("task_source must be 'smoke' or 'inspection-slice'")
+
+    provider = load_frontier_model(model_label, registry_path=registry_path, role="submitter", env={})
+    if provider.get("backend_type") == "vllm_http":
+        if not endpoint_url:
+            raise ValueError("endpoint_url is required for vllm_http submitter jobs")
+        if not served_model_name:
+            raise ValueError("served_model_name is required for vllm_http submitter jobs")
+
+    output_path = Path(output_dir).expanduser()
+    script_name = "llm_agentic_eval.py" if runner_kind == "agentic" else "llm_smoke_eval.py"
+    resolved_job_name = job_name or f"lspwb-{runner_kind}-{model_label.replace('.', '-').replace('_', '-')}"
+    job_id = f"JOB:{_job_digest(profile.profile_id, runner_kind, model_label, task_source, str(output_path))}"
+    env_exports = dict(profile.environment_exports)
+    env_exports["LSPWB_FRONTIER_REGISTRY_PATH"] = str(Path(registry_path).expanduser())
+    if endpoint_url:
+        env_exports["LSPWB_VLLM_ENDPOINT_URL"] = endpoint_url
+    if served_model_name:
+        env_exports["LSPWB_VLLM_SERVED_MODEL_NAME"] = served_model_name
+    if dtype_note:
+        env_exports["LSPWB_VLLM_MODEL_VERSION_NOTE"] = dtype_note
+    if tensor_parallel_size is not None:
+        env_exports["LSPWB_VLLM_TENSOR_PARALLEL_SIZE"] = str(tensor_parallel_size)
+    if gpu_count is not None:
+        env_exports["LSPWB_VLLM_GPU_COUNT"] = str(gpu_count)
+
+    command = (
+        f"PYTHONPATH={_quote(str(Path(profile.repo_root) / 'src'))} "
+        f"{_quote(profile.python_bin)} {_quote(str(Path(profile.repo_root) / 'scripts' / script_name))} "
+        f"--model {_quote(model_label)} "
+        f"--registry-path {_quote(str(Path(registry_path).expanduser()))} "
+        f"--task-source {_quote(task_source)} "
+        f"--output-dir {_quote(str(output_path))} "
+        f"--temperature {_quote(str(temperature))} "
+        f"--max-tokens {_quote(str(max_tokens))} "
+        f"--pause-between-calls {_quote(str(pause_between_calls))}"
+    )
+    if keys_file:
+        command += f" --keys-file {_quote(keys_file)}"
+    if dry_run:
+        command += " --dry-run"
+
+    output_artifacts = {
+        "output_dir": str(output_path),
+        "summary": str(output_path / "summary.json"),
+        "submissions": str(output_path / "submissions.jsonl"),
+    }
+    if runner_kind == "smoke":
+        output_artifacts["evaluations"] = str(output_path / "evaluations.jsonl")
+    else:
+        output_artifacts["baseline_run_spec"] = str(output_path / "baseline_run_spec.jsonl")
+        output_artifacts["agentic_trace"] = str(output_path / "agentic_trace.jsonl")
+
+    notes = [
+        "Scaffold-only execution job for shared-registry frontier submitter evaluation.",
+        f"runner_kind={runner_kind}",
+        f"task_source={task_source}",
+        f"model_label={model_label}",
+        f"backend_type={provider.get('backend_type')}",
+        f"provider_name={provider.get('provider_name')}",
+        f"execution_target={provider.get('execution_target')}",
+    ]
+    if endpoint_url:
+        notes.append(f"vllm_endpoint={endpoint_url}")
+    if served_model_name:
+        notes.append(f"served_model_name={served_model_name}")
+    if tensor_parallel_size is not None:
+        notes.append(f"tensor_parallel_size={tensor_parallel_size}")
+    if gpu_count is not None:
+        notes.append(f"gpu_count={gpu_count}")
+    if dtype_note:
+        notes.append(f"dtype_note={dtype_note}")
+    notes.extend(str(item) for item in scheduler_notes)
+
+    return ExecutionJobSpec(
+        job_id=job_id,
+        job_name=resolved_job_name,
+        profile_id=profile.profile_id,
+        job_kind=f"frontier_submitter_{runner_kind}",
+        backend=profile.backend,
+        working_directory=profile.working_directory,
+        command_sequence=(
+            f"mkdir -p {_quote(str(output_path))}",
+            f"cd {_quote(profile.repo_root)}",
+            command,
+        ),
+        environment_exports=env_exports,
+        output_artifacts=output_artifacts,
+        notes=tuple(notes),
     )
 
 

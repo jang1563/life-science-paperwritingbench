@@ -4,7 +4,10 @@ import tempfile
 import unittest
 import json
 import hashlib
+import importlib.util
+import socket
 import urllib.error
+from unittest import mock
 from pathlib import Path
 
 
@@ -12,6 +15,56 @@ ROOT = os.path.dirname(os.path.dirname(__file__))
 SRC = os.path.join(ROOT, "src")
 if SRC not in sys.path:
     sys.path.insert(0, SRC)
+
+LLM_JUDGE_EVAL_PATH = Path(ROOT) / "scripts" / "llm_judge_eval.py"
+LLM_JUDGE_EVAL_SPEC = importlib.util.spec_from_file_location(
+    "life_science_paperwritingbench_llm_judge_eval",
+    LLM_JUDGE_EVAL_PATH,
+)
+assert LLM_JUDGE_EVAL_SPEC is not None and LLM_JUDGE_EVAL_SPEC.loader is not None
+llm_judge_eval = importlib.util.module_from_spec(LLM_JUDGE_EVAL_SPEC)
+sys.modules[LLM_JUDGE_EVAL_SPEC.name] = llm_judge_eval
+LLM_JUDGE_EVAL_SPEC.loader.exec_module(llm_judge_eval)
+
+LLM_AGENTIC_EVAL_PATH = Path(ROOT) / "scripts" / "llm_agentic_eval.py"
+LLM_AGENTIC_EVAL_SPEC = importlib.util.spec_from_file_location(
+    "life_science_paperwritingbench_llm_agentic_eval",
+    LLM_AGENTIC_EVAL_PATH,
+)
+assert LLM_AGENTIC_EVAL_SPEC is not None and LLM_AGENTIC_EVAL_SPEC.loader is not None
+llm_agentic_eval = importlib.util.module_from_spec(LLM_AGENTIC_EVAL_SPEC)
+sys.modules[LLM_AGENTIC_EVAL_SPEC.name] = llm_agentic_eval
+LLM_AGENTIC_EVAL_SPEC.loader.exec_module(llm_agentic_eval)
+
+LLM_SMOKE_EVAL_PATH = Path(ROOT) / "scripts" / "llm_smoke_eval.py"
+LLM_SMOKE_EVAL_SPEC = importlib.util.spec_from_file_location(
+    "life_science_paperwritingbench_llm_smoke_eval",
+    LLM_SMOKE_EVAL_PATH,
+)
+assert LLM_SMOKE_EVAL_SPEC is not None and LLM_SMOKE_EVAL_SPEC.loader is not None
+llm_smoke_eval = importlib.util.module_from_spec(LLM_SMOKE_EVAL_SPEC)
+sys.modules[LLM_SMOKE_EVAL_SPEC.name] = llm_smoke_eval
+LLM_SMOKE_EVAL_SPEC.loader.exec_module(llm_smoke_eval)
+
+LLM_MATRIX_SUMMARY_PATH = Path(ROOT) / "scripts" / "llm_matrix_summary.py"
+LLM_MATRIX_SUMMARY_SPEC = importlib.util.spec_from_file_location(
+    "life_science_paperwritingbench_llm_matrix_summary",
+    LLM_MATRIX_SUMMARY_PATH,
+)
+assert LLM_MATRIX_SUMMARY_SPEC is not None and LLM_MATRIX_SUMMARY_SPEC.loader is not None
+llm_matrix_summary = importlib.util.module_from_spec(LLM_MATRIX_SUMMARY_SPEC)
+sys.modules[LLM_MATRIX_SUMMARY_SPEC.name] = llm_matrix_summary
+LLM_MATRIX_SUMMARY_SPEC.loader.exec_module(llm_matrix_summary)
+
+CANARY_PROBE_PATH = Path(ROOT) / "scripts" / "canary_probe.py"
+CANARY_PROBE_SPEC = importlib.util.spec_from_file_location(
+    "life_science_paperwritingbench_canary_probe",
+    CANARY_PROBE_PATH,
+)
+assert CANARY_PROBE_SPEC is not None and CANARY_PROBE_SPEC.loader is not None
+canary_probe = importlib.util.module_from_spec(CANARY_PROBE_SPEC)
+sys.modules[CANARY_PROBE_SPEC.name] = canary_probe
+CANARY_PROBE_SPEC.loader.exec_module(canary_probe)
 
 
 from life_science_paperwritingbench import (  # noqa: E402
@@ -159,12 +212,14 @@ from life_science_paperwritingbench import (  # noqa: E402
     audit_ingestion_artifacts,
     audit_collection_batch,
     audit_calibration_drift,
+    audit_llm_judge_alignment,
     audit_judge_validation_slice,
     answer_record_from_dict,
     compute_agreement_against_adjudication,
     SubmissionRecord,
     citation_specificity,
     citation_specificity_score,
+    EvaluationRecord,
     evaluate_submission_v1,
     evaluate_submission_v2,
     evaluation_extraction_audit_report_from_dict,
@@ -217,6 +272,7 @@ from life_science_paperwritingbench import (  # noqa: E402
     qualify_unit,
     qualify_writing,
     rank_collection_candidates,
+    render_llm_judge_alignment_markdown,
     render_baseline_output,
     render_execution_job_script,
     render_shadow_inspection_markdown,
@@ -1420,6 +1476,120 @@ class QualificationTests(unittest.TestCase):
         evaluation_v1 = evaluate_submission_v1(task_bundle, pointer_only_submission)
         self.assertIn("citation_specificity_score", evaluation_v2.scores)
         self.assertIn("traceability_coverage", evaluation_v1.scores)
+
+    def test_evaluate_submission_section_heading_no_longer_requires_evidence_token(self):
+        paper = make_source_paper()
+        evidence_unit = make_evidence_unit(
+            paper,
+            unit_id="EU:heading-only",
+            unit_type=EvidenceUnitType.FIGURE_TABLE_RESULT,
+            evidence_pointers=("Fig 1", "Table 2"),
+        )
+        task_bundle = build_task_bundle(
+            benchmark_unit=BenchmarkUnit(
+                benchmark_unit_id="BU:heading-only",
+                paper_id=paper.paper_id,
+                evidence_unit_ids=("EU:heading-only",),
+                split="test",
+            ),
+            source_paper=paper,
+            evidence_units=(evidence_unit,),
+            truth_manifest=make_truth_manifest(paper),
+            release_tier=ReleaseTier.PUBLIC_GOLD,
+        )
+        submission = SubmissionRecord(
+            submission_id="SUB:heading-only",
+            task_bundle_id=task_bundle.task_bundle_id,
+            source="synthetic",
+            producer_id="test:heading-only",
+            output_text=(
+                "Results\n"
+                "Fig. 1 shows increased marker expression, while Table 2 reports matching "
+                "effect sizes and p < 0.05 across the supported comparisons."
+            ),
+            config_fingerprint_sha256="1" * 64,
+        )
+
+        evaluation_v1 = evaluate_submission_v1(task_bundle, submission)
+        evaluation_v2 = evaluate_submission_v2(task_bundle, submission)
+
+        self.assertEqual(evaluation_v1.scores["structure_compliance"], 1.0)
+        self.assertEqual(evaluation_v2.scores["structure_compliance"], 1.0)
+        self.assertNotIn(
+            "missing expected section heading on first line: results",
+            evaluation_v2.notes,
+        )
+
+    def test_evaluate_submission_section_heading_must_be_first_non_empty_line(self):
+        paper = make_source_paper()
+        evidence_unit = make_evidence_unit(
+            paper,
+            unit_id="EU:heading-missing",
+            unit_type=EvidenceUnitType.FIGURE_TABLE_RESULT,
+            evidence_pointers=("Fig 1", "Table 2"),
+        )
+        task_bundle = build_task_bundle(
+            benchmark_unit=BenchmarkUnit(
+                benchmark_unit_id="BU:heading-missing",
+                paper_id=paper.paper_id,
+                evidence_unit_ids=("EU:heading-missing",),
+                split="test",
+            ),
+            source_paper=paper,
+            evidence_units=(evidence_unit,),
+            truth_manifest=make_truth_manifest(paper),
+            release_tier=ReleaseTier.PUBLIC_GOLD,
+        )
+        submission = SubmissionRecord(
+            submission_id="SUB:heading-missing",
+            task_bundle_id=task_bundle.task_bundle_id,
+            source="synthetic",
+            producer_id="test:heading-missing",
+            output_text=(
+                "Grounded in Fig. 1 and Table 2, the results paragraph is well cited and long "
+                "enough to pass every other deterministic check, but it never starts with the "
+                "required heading line."
+            ),
+            config_fingerprint_sha256="2" * 64,
+        )
+
+        evaluation_v2 = evaluate_submission_v2(task_bundle, submission)
+
+        self.assertEqual(evaluation_v2.scores["structure_compliance"], 0.0)
+        self.assertIn(
+            "missing expected section heading on first line: results",
+            evaluation_v2.notes,
+        )
+
+    def test_evaluate_submission_v2_qa_structure_still_requires_question_marker(self):
+        task_bundle = make_task_bundle(
+            index=77,
+            task_family=TaskFamily.FIGURE_QA,
+            input_artifacts={
+                "question_prompt": "What does Fig. 1 show?",
+                "expected_answer_texts": ("cell growth increases",),
+            },
+        )
+        submission = SubmissionRecord(
+            submission_id="SUB:qa-structure",
+            task_bundle_id=task_bundle.task_bundle_id,
+            source="synthetic",
+            producer_id="test:qa-structure",
+            output_text=(
+                "Answer\n"
+                "Cell growth increases in the treated condition, matching the supported answer "
+                "text but omitting the prompt label entirely."
+            ),
+            config_fingerprint_sha256="3" * 64,
+        )
+
+        evaluation_v2 = evaluate_submission_v2(task_bundle, submission)
+
+        self.assertEqual(evaluation_v2.scores["structure_compliance"], 0.0)
+        self.assertIn(
+            "missing expected structure markers: question",
+            evaluation_v2.notes,
+        )
 
     def test_evaluate_submissions_respects_explicit_scoring_version(self):
         paper = make_source_paper()
@@ -2950,6 +3120,1030 @@ class QualificationTests(unittest.TestCase):
                 payload = json.load(handle)
             self.assertTrue(payload["ok"])
             self.assertEqual(payload["ready_units"], 30)
+
+    def test_audit_llm_judge_alignment_distinguishes_count_gate_from_subset_gate(self):
+        task_bundles = [
+            make_task_bundle(index=1, task_family=TaskFamily.ABSTRACT_FROM_EVIDENCE),
+            make_task_bundle(index=2, task_family=TaskFamily.METHODS_TO_TEXT),
+            make_task_bundle(index=3, task_family=TaskFamily.RESULTS_TO_TEXT),
+            make_task_bundle(index=4, task_family=TaskFamily.METHODS_TO_TEXT),
+        ]
+        evaluations = [
+            EvaluationRecord(
+                evaluation_id="EVAL:1",
+                submission_id="SUB:1",
+                task_bundle_id="TB:1",
+                evaluation_layers=(EvaluationLayer.DETERMINISTIC_CHECKS,),
+                deterministic_checks_passed=True,
+            ),
+            EvaluationRecord(
+                evaluation_id="EVAL:2",
+                submission_id="SUB:2",
+                task_bundle_id="TB:2",
+                evaluation_layers=(EvaluationLayer.DETERMINISTIC_CHECKS,),
+                deterministic_checks_passed=True,
+            ),
+            EvaluationRecord(
+                evaluation_id="EVAL:3",
+                submission_id="SUB:3",
+                task_bundle_id="TB:3",
+                evaluation_layers=(EvaluationLayer.DETERMINISTIC_CHECKS,),
+                deterministic_checks_passed=False,
+            ),
+            EvaluationRecord(
+                evaluation_id="EVAL:4",
+                submission_id="SUB:4",
+                task_bundle_id="TB:4",
+                evaluation_layers=(EvaluationLayer.DETERMINISTIC_CHECKS,),
+                deterministic_checks_passed=False,
+            ),
+        ]
+        judgments = [
+            {"task_bundle_id": "TB:1", "overall_pass": True},
+            {"task_bundle_id": "TB:2", "overall_pass": False},
+            {"task_bundle_id": "TB:3", "overall_pass": True},
+            {"task_bundle_id": "TB:4", "overall_pass": False},
+        ]
+
+        report = audit_llm_judge_alignment(task_bundles, evaluations, judgments)
+
+        self.assertEqual(report.total_task_bundles, 4)
+        self.assertEqual(report.comparable_bundles, 4)
+        self.assertEqual(report.deterministic_pass_count, 2)
+        self.assertEqual(report.judge_pass_count, 2)
+        self.assertEqual(report.overlap_pass_count, 1)
+        self.assertEqual(report.deterministic_only_count, 1)
+        self.assertEqual(report.judge_only_count, 1)
+        self.assertTrue(report.gate_a1_count_ok)
+        self.assertFalse(report.judge_pass_subset_ok)
+        self.assertFalse(report.exact_pass_set_match)
+        self.assertFalse(report.ok)
+        self.assertEqual(report.per_task_family["methods_to_text"]["deterministic_only"], 1)
+        self.assertEqual(report.per_task_family["results_to_text"]["judge_only"], 1)
+        self.assertIn(
+            "judge-pass set is not a subset of the deterministic-pass set",
+            report.issues,
+        )
+        markdown = render_llm_judge_alignment_markdown(report)
+        self.assertIn("Judge-Only Passes", markdown)
+        self.assertIn("`False`", markdown)
+
+    def test_audit_llm_judge_alignment_passes_when_judge_set_is_subset(self):
+        task_bundles = [
+            make_task_bundle(index=1, task_family=TaskFamily.RESULTS_TO_TEXT),
+            make_task_bundle(index=2, task_family=TaskFamily.METHODS_TO_TEXT),
+            make_task_bundle(index=3, task_family=TaskFamily.ABSTRACT_FROM_EVIDENCE),
+        ]
+        evaluations = [
+            EvaluationRecord(
+                evaluation_id="EVAL:1",
+                submission_id="SUB:1",
+                task_bundle_id="TB:1",
+                evaluation_layers=(EvaluationLayer.DETERMINISTIC_CHECKS,),
+                deterministic_checks_passed=True,
+            ),
+            EvaluationRecord(
+                evaluation_id="EVAL:2",
+                submission_id="SUB:2",
+                task_bundle_id="TB:2",
+                evaluation_layers=(EvaluationLayer.DETERMINISTIC_CHECKS,),
+                deterministic_checks_passed=True,
+            ),
+            EvaluationRecord(
+                evaluation_id="EVAL:3",
+                submission_id="SUB:3",
+                task_bundle_id="TB:3",
+                evaluation_layers=(EvaluationLayer.DETERMINISTIC_CHECKS,),
+                deterministic_checks_passed=False,
+            ),
+        ]
+        judgments = [
+            {"task_bundle_id": "TB:1", "overall_pass": True},
+            {"task_bundle_id": "TB:2", "overall_pass": False},
+            {"task_bundle_id": "TB:3", "overall_pass": False},
+        ]
+
+        report = audit_llm_judge_alignment(task_bundles, evaluations, judgments)
+
+        self.assertTrue(report.gate_a1_count_ok)
+        self.assertTrue(report.judge_pass_subset_ok)
+        self.assertFalse(report.exact_pass_set_match)
+        self.assertTrue(report.ok)
+        self.assertEqual(report.deterministic_only_count, 1)
+        self.assertEqual(report.judge_only_count, 0)
+
+    def test_cli_audit_llm_eval_alignment(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            task_bundles_path = os.path.join(tmpdir, "task_bundles.jsonl")
+            evaluations_path = os.path.join(tmpdir, "evaluations.jsonl")
+            judgments_path = os.path.join(tmpdir, "judgments.jsonl")
+            output_path = os.path.join(tmpdir, "alignment_audit.json")
+            markdown_path = os.path.join(tmpdir, "alignment_audit.md")
+
+            task_bundles = [
+                make_task_bundle(index=1, task_family=TaskFamily.RESULTS_TO_TEXT),
+                make_task_bundle(index=2, task_family=TaskFamily.METHODS_TO_TEXT),
+            ]
+            evaluations = [
+                EvaluationRecord(
+                    evaluation_id="EVAL:1",
+                    submission_id="SUB:1",
+                    task_bundle_id="TB:1",
+                    evaluation_layers=(EvaluationLayer.DETERMINISTIC_CHECKS,),
+                    deterministic_checks_passed=True,
+                ),
+                EvaluationRecord(
+                    evaluation_id="EVAL:2",
+                    submission_id="SUB:2",
+                    task_bundle_id="TB:2",
+                    evaluation_layers=(EvaluationLayer.DETERMINISTIC_CHECKS,),
+                    deterministic_checks_passed=False,
+                ),
+            ]
+            judgments = [
+                {"task_bundle_id": "TB:1", "overall_pass": False},
+                {"task_bundle_id": "TB:2", "overall_pass": True},
+            ]
+
+            write_jsonl(task_bundles_path, task_bundles)
+            write_jsonl(evaluations_path, evaluations)
+            with open(judgments_path, "w", encoding="utf-8") as handle:
+                for row in judgments:
+                    handle.write(json.dumps(row) + "\n")
+
+            exit_code = cli_main(
+                [
+                    "audit-llm-eval-alignment",
+                    "--task-bundles",
+                    task_bundles_path,
+                    "--evaluations",
+                    evaluations_path,
+                    "--judgments",
+                    judgments_path,
+                    "--output",
+                    output_path,
+                    "--markdown-output",
+                    markdown_path,
+                ]
+            )
+            self.assertEqual(exit_code, 1)
+            with open(output_path, "r", encoding="utf-8") as handle:
+                payload = json.load(handle)
+            self.assertTrue(payload["gate_a1_count_ok"])
+            self.assertFalse(payload["judge_pass_subset_ok"])
+            self.assertEqual(payload["judge_only_count"], 1)
+            markdown = Path(markdown_path).read_text(encoding="utf-8")
+            self.assertIn("Judge-pass subset check", markdown)
+
+    def test_llm_judge_v3_abstract_prompt_swaps_in_quantitative_specificity(self):
+        task_bundle = make_task_bundle(index=1, task_family=TaskFamily.ABSTRACT_FROM_EVIDENCE)
+        source_bundle = AutoReviewSourceBundle(
+            paper_id=task_bundle.paper_id,
+            bundle_completeness=AutoReviewBundleCompleteness.REVIEW_READY,
+            methods_text="Methods text with sample sizes and assay details.",
+            results_text="Results text with effect sizes and p-values.",
+            figure_captions=("Figure 1 shows the primary effect.",),
+            table_snippets=("Table 1 reports cohort characteristics.",),
+        )
+
+        config = llm_judge_eval.rubric_config_for_task_family(
+            task_bundle.task_family.value,
+            "v3",
+        )
+        prompt = llm_judge_eval.build_judge_prompt(
+            task_bundle,
+            source_bundle,
+            "## Abstract\nA concise abstract.",
+            rubric_version="v3",
+        )
+
+        self.assertEqual(
+            config.axes,
+            (
+                "writing_structure_compliance",
+                "evidence_grounding",
+                "factual_fidelity",
+                "quantitative_specificity",
+                "hallucination_absence",
+            ),
+        )
+        self.assertIn('"quantitative_specificity": <integer 0-3>', prompt)
+        self.assertIn("Do not require figure or table citations for abstracts.", prompt)
+        self.assertNotIn('"traceability": <integer 0-3>', prompt)
+
+    def test_llm_judge_v3_methods_prompt_keeps_traceability(self):
+        task_bundle = make_task_bundle(index=1, task_family=TaskFamily.METHODS_TO_TEXT)
+        source_bundle = AutoReviewSourceBundle(
+            paper_id=task_bundle.paper_id,
+            bundle_completeness=AutoReviewBundleCompleteness.REVIEW_READY,
+            abstract_text="Abstract overview.",
+            results_text="Results text with figure references.",
+            figure_captions=("Figure 2 describes the protocol.",),
+            table_snippets=("Table 2 lists reagents.",),
+        )
+
+        config = llm_judge_eval.rubric_config_for_task_family(
+            task_bundle.task_family.value,
+            "v3",
+        )
+        prompt = llm_judge_eval.build_judge_prompt(
+            task_bundle,
+            source_bundle,
+            "## Methods\nDetailed methods.",
+            rubric_version="v3",
+        )
+
+        self.assertEqual(config.axes, llm_judge_eval.LEGACY_RUBRIC_AXES)
+        self.assertIn('"traceability": <integer 0-3>', prompt)
+        self.assertNotIn('"quantitative_specificity": <integer 0-3>', prompt)
+
+    def test_llm_judge_v3_threshold_rule_uses_mean_axis_score(self):
+        config = llm_judge_eval.rubric_config_for_task_family("abstract_from_evidence", "v3")
+
+        shape = llm_judge_eval._score_record_shape(
+            {
+                "axis_scores": {
+                    "writing_structure_compliance": 2,
+                    "evidence_grounding": 2,
+                    "factual_fidelity": 2,
+                    "quantitative_specificity": 1,
+                    "hallucination_absence": 3,
+                },
+                "axis_rationales": {
+                    axis: "Rationale."
+                    for axis in config.axes
+                },
+                "grounding_issues": [],
+                "overall_pass": True,
+            },
+            config,
+        )
+
+        self.assertEqual(shape["axis_scores"]["quantitative_specificity"], 1)
+        self.assertEqual(shape["mean_axis_score"], 2.0)
+        self.assertTrue(shape["passes_threshold_rule"])
+        self.assertFalse(shape["all_axes_above_threshold"])
+        self.assertTrue(shape["judge_reported_pass_matches_rule"])
+
+    def test_llm_judge_v2_threshold_rule_remains_all_axes(self):
+        config = llm_judge_eval.rubric_config_for_task_family("methods_to_text", "v2")
+
+        shape = llm_judge_eval._score_record_shape(
+            {
+                "axis_scores": {
+                    "writing_structure_compliance": 1.0,
+                    "evidence_grounding": 1.0,
+                    "factual_fidelity": 1.0,
+                    "traceability": 0.59,
+                    "hallucination_absence": 1.0,
+                },
+                "axis_rationales": {
+                    axis: "Rationale."
+                    for axis in config.axes
+                },
+                "grounding_issues": [],
+                "overall_pass": False,
+            },
+            config,
+        )
+
+        self.assertAlmostEqual(shape["mean_axis_score"], 0.918)
+        self.assertFalse(shape["passes_threshold_rule"])
+        self.assertFalse(shape["all_axes_above_threshold"])
+        self.assertTrue(shape["judge_reported_pass_matches_rule"])
+
+    def test_llm_judge_retry_catches_socket_timeout(self):
+        responses = [
+            socket.timeout("timed out"),
+            {
+                "output_text": "{}",
+                "usage": {"input_tokens": 1, "output_tokens": 1},
+                "raw": {},
+            },
+        ]
+
+        def flaky_call(*args, **kwargs):
+            result = responses.pop(0)
+            if isinstance(result, BaseException):
+                raise result
+            return result
+
+        with mock.patch.object(llm_judge_eval, "call_anthropic", side_effect=flaky_call):
+            response = llm_judge_eval.call_judge_with_retry(
+                "prompt",
+                provider={"flavor": "anthropic", "request_model": "test-model"},
+                api_key="key",
+                temperature=0.0,
+                max_tokens=100,
+                attempts=2,
+                backoff_seconds=0.0,
+            )
+
+        self.assertEqual(response["output_text"], "{}")
+
+    def test_llm_judge_providers_include_openai_mini_options(self):
+        self.assertIn("gpt-5-mini", llm_judge_eval.PROVIDERS)
+        self.assertIn("gpt-5.4-mini", llm_judge_eval.PROVIDERS)
+        self.assertEqual(llm_judge_eval.PROVIDERS["gpt-5-mini"]["flavor"], "openai")
+        self.assertEqual(llm_judge_eval.PROVIDERS["gpt-5.4-mini"]["flavor"], "openai")
+        self.assertEqual(
+            llm_judge_eval.PROVIDERS["gpt-5-mini"]["token_param"],
+            "max_completion_tokens",
+        )
+        self.assertEqual(
+            llm_judge_eval.PROVIDERS["gpt-5.4-mini"]["token_param"],
+            "max_completion_tokens",
+        )
+        self.assertTrue(llm_judge_eval.PROVIDERS["gpt-5-mini"]["omit_temperature"])
+
+    def test_llm_submitter_providers_include_claude_haiku(self):
+        self.assertIn("claude-haiku-4-5", llm_smoke_eval.PROVIDERS)
+        self.assertIn("claude-haiku-4-5", llm_agentic_eval.PROVIDERS)
+        self.assertEqual(
+            llm_smoke_eval.PROVIDERS["claude-haiku-4-5"]["flavor"],
+            "anthropic",
+        )
+        self.assertEqual(
+            llm_agentic_eval.PROVIDERS["claude-haiku-4-5"]["flavor"],
+            "anthropic",
+        )
+
+    def test_llm_agentic_response_helpers_support_normalized_anthropic_shape(self):
+        response = {
+            "output_text": "Methods\n\nA revised section.",
+            "usage": {
+                "prompt_tokens": 12,
+                "completion_tokens": 34,
+                "total_tokens": 46,
+            },
+        }
+
+        self.assertEqual(
+            llm_agentic_eval._response_text(response),
+            "Methods\n\nA revised section.",
+        )
+        self.assertEqual(
+            llm_agentic_eval._stage_usage(response, 1.25),
+            {
+                "prompt_tokens": 12,
+                "completion_tokens": 34,
+                "total_tokens": 46,
+                "elapsed_seconds": 1.25,
+            },
+        )
+
+    def test_llm_smoke_call_llm_dispatches_to_anthropic(self):
+        with mock.patch.object(
+            llm_smoke_eval,
+            "call_anthropic",
+            return_value={"output_text": "ok", "usage": {}, "raw": {}},
+        ) as anthropic_mock:
+            response = llm_smoke_eval.call_llm(
+                "prompt",
+                provider={
+                    "flavor": "anthropic",
+                    "request_model": "claude-haiku-4-5-20251001",
+                    "endpoint": "https://api.anthropic.com/v1/messages",
+                },
+                api_key="key",
+            )
+
+        anthropic_mock.assert_called_once()
+        self.assertEqual(response["output_text"], "ok")
+
+    def test_llm_agentic_critic_prompt_for_abstract_avoids_figure_table_citations(self):
+        task_bundle = make_task_bundle(index=1, task_family=TaskFamily.ABSTRACT_FROM_EVIDENCE)
+        source_bundle = AutoReviewSourceBundle(
+            paper_id=task_bundle.paper_id,
+            bundle_completeness=AutoReviewBundleCompleteness.REVIEW_READY,
+            methods_text="Methods include 24 mice and sequencing of 16S amplicons.",
+            results_text="Results report p < 0.05 and effect sizes across groups.",
+            figure_captions=("Figure 1 shows the group-level trend.",),
+            table_snippets=("Table 1 reports cohort sizes.",),
+        )
+
+        prompt = llm_agentic_eval.build_critic_prompt(
+            task_bundle,
+            source_bundle,
+            "Test Paper",
+            "Abstract\nA concise abstract draft.",
+        )
+
+        self.assertIn("quantitative specificity", prompt)
+        self.assertIn("Never ask for figure or table citations in the abstract.", prompt)
+        self.assertIn("Reject exact medians, cutoffs, calipers, matching ratios", prompt)
+        self.assertIn("If an exact detail is not explicitly visible in the evidence", prompt)
+        self.assertIn("Preserve supported quantitative anchors", prompt)
+        self.assertIn("Return at most 3 short items per list", prompt)
+        self.assertNotIn("exact figure/table labels", prompt)
+
+    def test_llm_agentic_critic_prompt_for_methods_requests_citation_specificity(self):
+        task_bundle = make_task_bundle(index=1, task_family=TaskFamily.METHODS_TO_TEXT)
+        source_bundle = AutoReviewSourceBundle(
+            paper_id=task_bundle.paper_id,
+            bundle_completeness=AutoReviewBundleCompleteness.REVIEW_READY,
+            abstract_text="Abstract overview.",
+            results_text="Results mention Figure 2 and accession GSE12345.",
+            figure_captions=("Figure 2 shows assay flow.",),
+            table_snippets=("Table 3 lists cohort metadata.",),
+        )
+
+        prompt = llm_agentic_eval.build_critic_prompt(
+            task_bundle,
+            source_bundle,
+            "Test Paper",
+            "Methods\nA methods draft.",
+        )
+
+        self.assertIn("citation specificity", prompt)
+        self.assertIn("exact figure/table labels", prompt)
+        self.assertIn("accession identifiers", prompt)
+        self.assertIn("Reject results leakage", prompt)
+        self.assertIn("Reject invented procedural embellishments", prompt)
+        self.assertIn("Preserve grounded figure/table labels", prompt)
+        self.assertIn("Prefer reframing grounded citations into procedural sentences", prompt)
+        self.assertNotIn("Never ask for figure or table citations in the abstract.", prompt)
+
+    def test_llm_agentic_writer_and_reviser_prompts_forbid_evidence_basis_preamble(self):
+        task_bundle = make_task_bundle(index=1, task_family=TaskFamily.RESULTS_TO_TEXT)
+        source_bundle = AutoReviewSourceBundle(
+            paper_id=task_bundle.paper_id,
+            bundle_completeness=AutoReviewBundleCompleteness.REVIEW_READY,
+            abstract_text="Abstract overview.",
+            methods_text="Methods evidence.",
+            figure_captions=("Figure 2 shows assay flow.",),
+            table_snippets=("Table 3 lists cohort metadata.",),
+        )
+
+        writer_prompt = llm_agentic_eval.build_writer_prompt(
+            task_bundle,
+            source_bundle,
+            "Test Paper",
+        )
+        reviser_prompt = llm_agentic_eval.build_reviser_prompt(
+            task_bundle,
+            source_bundle,
+            "Test Paper",
+            "Results\nA draft.",
+            llm_agentic_eval.blank_critique_payload("placeholder"),
+        )
+
+        self.assertIn("Do not add labels or preambles such as `Evidence basis:`", writer_prompt)
+        self.assertIn("Remove any preamble or meta-commentary such as `Evidence basis:`", reviser_prompt)
+        self.assertIn("Do not use process-language phrases such as `evidence-supported findings`", writer_prompt)
+        self.assertIn("Remove process-language phrases such as `evidence-supported findings`", reviser_prompt)
+        self.assertIn("If an exact detail is only implied by a cited table, figure, or caption", writer_prompt)
+        self.assertIn("never swap in a different unsupported exact detail", reviser_prompt)
+        self.assertIn("Preserve grounded traceability anchors", writer_prompt)
+
+    def test_llm_agentic_writer_prompt_for_methods_forbids_result_leakage(self):
+        task_bundle = make_task_bundle(index=1, task_family=TaskFamily.METHODS_TO_TEXT)
+        source_bundle = AutoReviewSourceBundle(
+            paper_id=task_bundle.paper_id,
+            bundle_completeness=AutoReviewBundleCompleteness.REVIEW_READY,
+            abstract_text="Abstract overview.",
+            results_text="Results with p-values and odds ratios.",
+            figure_captions=("Figure 2 shows assay flow.",),
+            table_snippets=("Table 3 lists cohort metadata.",),
+        )
+
+        writer_prompt = llm_agentic_eval.build_writer_prompt(
+            task_bundle,
+            source_bundle,
+            "Test Paper",
+        )
+
+        self.assertIn("Write a true Methods section", writer_prompt)
+        self.assertIn("Do NOT include observed outcomes, comparative findings, response rates", writer_prompt)
+        self.assertIn("odds ratios, hazard ratios, effect sizes", writer_prompt)
+        self.assertIn("Preserve grounded traceability anchors", writer_prompt)
+
+    def test_llm_agentic_reviser_prompt_for_methods_salvages_grounded_citations(self):
+        task_bundle = make_task_bundle(index=1, task_family=TaskFamily.METHODS_TO_TEXT)
+        source_bundle = AutoReviewSourceBundle(
+            paper_id=task_bundle.paper_id,
+            bundle_completeness=AutoReviewBundleCompleteness.REVIEW_READY,
+            abstract_text="Abstract overview.",
+            results_text="Results with Figure 2 and Table 3.",
+            figure_captions=("Figure 2 shows assay flow.",),
+            table_snippets=("Table 3 lists cohort metadata.",),
+        )
+
+        reviser_prompt = llm_agentic_eval.build_reviser_prompt(
+            task_bundle,
+            source_bundle,
+            "Test Paper",
+            "Methods\nA methods draft.",
+            llm_agentic_eval.blank_critique_payload("placeholder"),
+        )
+
+        self.assertIn("salvage the supported label", reviser_prompt)
+        self.assertIn("procedural sentence", reviser_prompt)
+
+    def test_llm_agentic_normalize_section_output_strips_preamble_and_process_language(self):
+        normalized = llm_agentic_eval.normalize_section_output(
+            "abstract_from_evidence",
+            (
+                "Abstract\n"
+                "Evidence basis: This abstract is based on evidence from a randomized trial.\n\n"
+                "These evidence-supported findings demonstrate improved outcomes."
+            ),
+        )
+
+        self.assertTrue(normalized.startswith("Abstract\n\n"))
+        self.assertNotIn("Evidence basis:", normalized)
+        self.assertIn("These findings demonstrate", normalized)
+        self.assertNotIn("evidence-supported", normalized)
+
+    def test_llm_agentic_normalize_methods_output_removes_process_language(self):
+        normalized = llm_agentic_eval.normalize_section_output(
+            "methods_to_text",
+            "Methods\nIn this evidence-guided workflow, a randomized trial was conducted with Fig. 1 and Table 1 support.",
+        )
+
+        self.assertEqual(
+            normalized,
+            "Methods\n\nA randomized trial was conducted with Fig. 1 and Table 1 support.",
+        )
+
+    def test_llm_agentic_parse_critique_output_fails_closed_on_invalid_shape(self):
+        critique_payload, error = llm_agentic_eval.parse_critique_output(
+            '{"structure_issues":"not-a-list"}'
+        )
+
+        self.assertIsNotNone(error)
+        self.assertEqual(set(critique_payload.keys()), set(llm_agentic_eval.CRITIQUE_KEYS))
+        self.assertTrue(all(isinstance(value, list) for value in critique_payload.values()))
+        self.assertTrue(critique_payload["revision_instructions"])
+
+    def test_llm_agentic_select_output_stage_blocks_deterministic_regression(self):
+        selected_text, selected_stage, selected_reason = llm_agentic_eval.select_output_stage(
+            "Methods\n\nDraft text with Fig. 1.",
+            "Methods\n\nRevised text without citations.",
+            draft_passed=True,
+            reviser_passed=False,
+            draft_citation_score=1.0,
+            reviser_citation_score=0.0,
+        )
+
+        self.assertEqual(selected_text, "Methods\n\nDraft text with Fig. 1.")
+        self.assertEqual(selected_stage, "draft")
+        self.assertEqual(selected_reason, "deterministic_regression_blocked")
+
+    def test_llm_agentic_select_output_stage_allows_pass_improvement(self):
+        selected_text, selected_stage, selected_reason = llm_agentic_eval.select_output_stage(
+            "Methods\n\nDraft text.",
+            "Methods\n\nRevised text with Table 1.",
+            draft_passed=False,
+            reviser_passed=True,
+            draft_citation_score=0.0,
+            reviser_citation_score=0.333,
+        )
+
+        self.assertEqual(selected_text, "Methods\n\nRevised text with Table 1.")
+        self.assertEqual(selected_stage, "reviser")
+        self.assertEqual(selected_reason, "deterministic_pass_improved")
+
+    def test_llm_agentic_final_submissions_round_trip_through_score_submissions(self):
+        paper = make_source_paper()
+        evidence_unit = make_evidence_unit(
+            paper,
+            unit_id="EU:agentic",
+            unit_type=EvidenceUnitType.FIGURE_TABLE_RESULT,
+            evidence_pointers=("Fig1", "Table1"),
+        )
+        benchmark_unit = BenchmarkUnit(
+            benchmark_unit_id="BU:agentic",
+            paper_id=paper.paper_id,
+            evidence_unit_ids=("EU:agentic",),
+            split="test",
+        )
+        task_bundle = build_task_bundle(
+            benchmark_unit=benchmark_unit,
+            source_paper=paper,
+            evidence_units=(evidence_unit,),
+            truth_manifest=make_truth_manifest(paper),
+            release_tier=ReleaseTier.PUBLIC_GOLD,
+        )
+
+        submission = llm_agentic_eval.build_submission_record(
+            task_bundle_id=task_bundle.task_bundle_id,
+            producer_id="llm-agentic:test",
+            output_text=(
+                "Results\n\nThese results preserve concrete values from Fig1 and Table1 with p < 0.05."
+            ),
+            config_fingerprint_sha256="fp-agentic",
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            task_bundles_path = os.path.join(tmpdir, "task_bundles.jsonl")
+            submissions_path = os.path.join(tmpdir, "submissions.jsonl")
+            evaluations_path = os.path.join(tmpdir, "evaluations.jsonl")
+
+            write_jsonl(task_bundles_path, [task_bundle])
+            write_jsonl(submissions_path, [submission])
+
+            exit_code = cli_main(
+                [
+                    "score-submissions",
+                    "--task-bundles",
+                    task_bundles_path,
+                    "--submissions",
+                    submissions_path,
+                    "--output",
+                    evaluations_path,
+                    "--scoring-version",
+                    "v2",
+                ]
+            )
+            self.assertEqual(exit_code, 0)
+            payload = load_jsonl(evaluations_path)
+            self.assertEqual(len(payload), 1)
+            self.assertTrue(payload[0]["deterministic_checks_passed"])
+
+    def test_llm_agentic_build_baseline_run_spec_uses_multi_agent_orchestration(self):
+        run_spec = llm_agentic_eval.build_baseline_run_spec(
+            task_bundle_ids=("TB:1", "TB:2"),
+            producer_id="llm-agentic:test",
+            model="deepseek-chat",
+            request_model="deepseek-chat",
+            temperature=0.2,
+            task_source="smoke",
+            replay_verified=False,
+        )
+
+        self.assertEqual(run_spec.baseline_kind, BaselineKind.MULTI_AGENT_ORCHESTRATION)
+        self.assertFalse(run_spec.replay_verified)
+        self.assertIn("api-backed multi-agent orchestration run", run_spec.notes)
+        self.assertIn(
+            f"selection_policy={llm_agentic_eval.SELECTION_POLICY_VERSION}",
+            run_spec.notes,
+        )
+
+    def test_llm_agentic_mark_replay_verified_only_toggles_run_spec_flag(self):
+        run_spec_false = llm_agentic_eval.build_baseline_run_spec(
+            task_bundle_ids=("TB:1",),
+            producer_id="llm-agentic:test",
+            model="deepseek-chat",
+            request_model="deepseek-chat",
+            temperature=0.2,
+            task_source="smoke",
+            replay_verified=False,
+        )
+        run_spec_true = llm_agentic_eval.build_baseline_run_spec(
+            task_bundle_ids=("TB:1",),
+            producer_id="llm-agentic:test",
+            model="deepseek-chat",
+            request_model="deepseek-chat",
+            temperature=0.2,
+            task_source="smoke",
+            replay_verified=True,
+        )
+        submission = llm_agentic_eval.build_submission_record(
+            task_bundle_id="TB:1",
+            producer_id="llm-agentic:test",
+            output_text="Results\n\nThese results cite Fig1 and Table1 with p < 0.05.",
+            config_fingerprint_sha256="fp-agentic",
+        )
+
+        self.assertEqual(run_spec_false.baseline_id, run_spec_true.baseline_id)
+        self.assertEqual(
+            run_spec_false.config_fingerprint_sha256,
+            run_spec_true.config_fingerprint_sha256,
+        )
+        self.assertFalse(run_spec_false.replay_verified)
+        self.assertTrue(run_spec_true.replay_verified)
+        self.assertEqual(
+            set(submission.to_dict().keys()),
+            {
+                "submission_id",
+                "task_bundle_id",
+                "source",
+                "producer_id",
+                "output_text",
+                "config_fingerprint_sha256",
+            },
+        )
+
+    def test_llm_matrix_summary_builds_partial_report_with_spread_and_blocked_cell(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            deepseek_dir = root / "deepseek_run"
+            gpt4omini_dir = root / "gpt4omini_run"
+            deepseek_dir.mkdir()
+            gpt4omini_dir.mkdir()
+
+            (deepseek_dir / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "model": "deepseek-chat",
+                        "request_model": "deepseek-chat",
+                        "num_tasks": 30,
+                        "final_pass_count": 26,
+                        "final_mean_citation_specificity_score": 0.844,
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            (gpt4omini_dir / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "model": "gpt-4o-mini",
+                        "request_model": "gpt-4o-mini",
+                        "num_tasks": 30,
+                        "final_pass_count": 22,
+                        "final_mean_citation_specificity_score": 0.756,
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            def write_judge_summary(path: Path, judge: str, pass_count: int, mean_axis: float) -> None:
+                path.mkdir()
+                (path / "summary.json").write_text(
+                    json.dumps(
+                        {
+                            "judge": judge,
+                            "judge_model": judge,
+                            "rubric_version": "v3",
+                            "total_submissions_judged": 30,
+                            "judge_overall_pass": pass_count,
+                            "passes_threshold_rule": pass_count + 1,
+                            "mean_axis_score": mean_axis,
+                            "all_axes_above_threshold": pass_count - 2,
+                            "total_grounding_issues": 40,
+                            "parse_failures": 0,
+                            "per_axis_mean": {
+                                "writing_structure_compliance": 3.0,
+                                "evidence_grounding": 2.4,
+                                "factual_fidelity": 2.2,
+                                "traceability": 2.0,
+                                "quantitative_specificity": 2.3,
+                                "hallucination_absence": 2.1,
+                            },
+                        }
+                    )
+                    + "\n",
+                    encoding="utf-8",
+                )
+
+            deepseek_gpt54_dir = root / "deepseek_gpt54"
+            deepseek_gpt5_dir = root / "deepseek_gpt5"
+            gpt4omini_gpt54_dir = root / "gpt4omini_gpt54"
+            write_judge_summary(deepseek_gpt54_dir, "gpt-5.4-mini", 25, 2.420)
+            write_judge_summary(deepseek_gpt5_dir, "gpt-5-mini", 22, 2.120)
+            write_judge_summary(gpt4omini_gpt54_dir, "gpt-5.4-mini", 14, 2.093)
+
+            report = llm_matrix_summary.build_matrix_report(
+                submitter_runs={
+                    "deepseek-chat-agentic-rerun5": llm_matrix_summary.load_submitter_run(
+                        "deepseek-chat-agentic-rerun5",
+                        deepseek_dir,
+                    ),
+                    "gpt-4o-mini-agentic-v1": llm_matrix_summary.load_submitter_run(
+                        "gpt-4o-mini-agentic-v1",
+                        gpt4omini_dir,
+                    ),
+                },
+                judge_labels=("claude-sonnet-4-6", "gpt-5.4-mini", "gpt-5-mini"),
+                judge_cells=(
+                    llm_matrix_summary.load_judge_cell(
+                        "deepseek-chat-agentic-rerun5",
+                        "gpt-5.4-mini",
+                        deepseek_gpt54_dir,
+                    ),
+                    llm_matrix_summary.load_judge_cell(
+                        "deepseek-chat-agentic-rerun5",
+                        "gpt-5-mini",
+                        deepseek_gpt5_dir,
+                    ),
+                    llm_matrix_summary.load_judge_cell(
+                        "gpt-4o-mini-agentic-v1",
+                        "gpt-5.4-mini",
+                        gpt4omini_gpt54_dir,
+                    ),
+                ),
+                blocked_cells={
+                    (
+                        "deepseek-chat-agentic-rerun5",
+                        "claude-sonnet-4-6",
+                    ): "Anthropic API key invalid",
+                },
+            )
+
+            self.assertEqual(report["coverage"]["expected_cells"], 6)
+            self.assertEqual(report["coverage"]["completed_cells"], 3)
+            self.assertEqual(report["coverage"]["blocked_cells"], 1)
+            self.assertEqual(report["coverage"]["missing_cells"], 2)
+            self.assertEqual(report["common_judges"], ["gpt-5.4-mini"])
+            self.assertTrue(report["common_submitter_spread_gate_30pp"])
+            self.assertAlmostEqual(report["common_submitter_spread_pp"], 36.666, places=3)
+
+            deepseek_row = next(
+                row
+                for row in report["aggregated_submitters"]
+                if row["submitter_label"] == "deepseek-chat-agentic-rerun5"
+            )
+            self.assertEqual(deepseek_row["num_completed_judges"], 2)
+            self.assertAlmostEqual(deepseek_row["mean_judge_overall_pass_rate_pct"], 78.333)
+            self.assertAlmostEqual(deepseek_row["common_judge_overall_pass_rate_pct"], 83.333, places=3)
+
+            gpt54_spread = next(
+                row for row in report["judge_spread"] if row["judge_label"] == "gpt-5.4-mini"
+            )
+            self.assertAlmostEqual(gpt54_spread["spread_pp"], 36.666, places=3)
+
+    def test_llm_matrix_summary_main_writes_summary_files(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            submitter_dir = root / "submitter"
+            judge_dir = root / "judge"
+            output_dir = root / "output"
+            submitter_dir.mkdir()
+            judge_dir.mkdir()
+
+            (submitter_dir / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "model": "deepseek-chat",
+                        "request_model": "deepseek-chat",
+                        "num_tasks": 30,
+                        "final_pass_count": 26,
+                        "final_mean_citation_specificity_score": 0.844,
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            (judge_dir / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "judge": "gpt-5.4-mini",
+                        "judge_model": "gpt-5.4-mini",
+                        "rubric_version": "v3",
+                        "total_submissions_judged": 30,
+                        "judge_overall_pass": 25,
+                        "passes_threshold_rule": 26,
+                        "mean_axis_score": 2.420,
+                        "all_axes_above_threshold": 20,
+                        "total_grounding_issues": 48,
+                        "parse_failures": 0,
+                        "per_axis_mean": {
+                            "writing_structure_compliance": 3.0,
+                            "evidence_grounding": 2.467,
+                            "factual_fidelity": 2.267,
+                            "traceability": 2.111,
+                            "quantitative_specificity": 2.333,
+                            "hallucination_absence": 2.167,
+                        },
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            exit_code = llm_matrix_summary.main(
+                [
+                    "--submitter-run",
+                    f"deepseek-chat-agentic-rerun5={submitter_dir}",
+                    "--judge-label",
+                    "gpt-5.4-mini",
+                    "--judge-label",
+                    "claude-sonnet-4-6",
+                    "--judge-cell",
+                    f"deepseek-chat-agentic-rerun5:gpt-5.4-mini={judge_dir}",
+                    "--blocked-cell",
+                    "deepseek-chat-agentic-rerun5:claude-sonnet-4-6=Anthropic API key invalid",
+                    "--output-dir",
+                    str(output_dir),
+                ]
+            )
+
+            self.assertEqual(exit_code, 0)
+            summary = json.loads((output_dir / "summary.json").read_text(encoding="utf-8"))
+            markdown = (output_dir / "summary.md").read_text(encoding="utf-8")
+
+            self.assertEqual(summary["coverage"]["completed_cells"], 1)
+            self.assertEqual(summary["coverage"]["blocked_cells"], 1)
+            self.assertIn("Pending Cells", markdown)
+            self.assertIn("Anthropic API key invalid", markdown)
+
+    def test_canary_probe_builds_public_and_control_specs_without_leaking_raw_output(self):
+        public_canary = generate_canary_string("BU:EUAUTO:ABC123", salt="public-salt")
+        control_canary = generate_canary_string("BU:EUAUTO:ABC123", salt="control-salt")
+        rows = [
+            canary_probe.ReleaseIndexCanary(
+                benchmark_unit_id="BU:EUAUTO:ABC123",
+                holdout_bucket="public",
+                canary_string=public_canary,
+            ),
+            canary_probe.ReleaseIndexCanary(
+                benchmark_unit_id="BU:EUAUTO:PRIVATE1",
+                holdout_bucket="private",
+                canary_string=generate_canary_string("BU:EUAUTO:PRIVATE1", salt="public-salt"),
+            ),
+        ]
+
+        specs = canary_probe.build_canary_probe_specs(
+            rows,
+            public_limit=1,
+            tail_chars=8,
+            control_salt="control-salt",
+        )
+
+        self.assertEqual(len(specs), 2)
+        public_spec = specs[0]
+        control_spec = specs[1]
+        self.assertEqual(public_spec.probe_kind, "public")
+        self.assertEqual(control_spec.probe_kind, "control")
+        self.assertEqual(public_spec.benchmark_unit_id, "BU:EUAUTO:ABC123")
+        self.assertEqual(len(public_spec.expected_tail), 8)
+        self.assertEqual(len(control_spec.expected_tail), 8)
+        self.assertEqual(public_spec.expected_full_string, public_canary)
+        self.assertEqual(control_spec.expected_full_string, control_canary)
+        redacted = public_spec.to_redacted_dict()
+        self.assertNotIn("expected_full_string", redacted)
+        self.assertNotIn(public_canary, json.dumps(redacted))
+
+    def test_canary_probe_evaluate_response_detects_exact_match_and_distance(self):
+        expected = generate_canary_string("BU:EUAUTO:XYZ789", salt="public-salt")
+        prompt_stem, expected_tail = canary_probe.split_canary(expected, tail_chars=8)
+        spec = canary_probe.CanaryProbeSpec(
+            probe_id="public-01-BU_EUAUTO_XYZ789",
+            probe_kind="public",
+            benchmark_unit_id="BU:EUAUTO:XYZ789",
+            expected_full_string=expected,
+            prompt_stem=prompt_stem,
+            expected_tail=expected_tail,
+            public_reference_canary=expected,
+        )
+
+        exact = canary_probe.evaluate_probe_response(spec, f'"{expected}"\n')
+        mismatch = canary_probe.evaluate_probe_response(spec, expected[:-1] + "Z")
+
+        self.assertTrue(exact["exact_match"])
+        self.assertEqual(exact["levenshtein_distance"], 0)
+        self.assertFalse(mismatch["exact_match"])
+        self.assertGreater(mismatch["levenshtein_distance"], 0)
+        self.assertTrue(exact["starts_with_prompt_stem"])
+
+    def test_canary_probe_main_dry_run_writes_redacted_summary(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            release_index_path = root / "release_index.jsonl"
+            output_dir = root / "canary_probe"
+
+            write_jsonl(
+                str(release_index_path),
+                [
+                    {
+                        "benchmark_unit_id": "BU:EUAUTO:AAA111",
+                        "paper_id": "P:1",
+                        "release_tier": "shadow_gold",
+                        "holdout_bucket": "public",
+                        "canary_string": generate_canary_string("BU:EUAUTO:AAA111", salt="public-salt"),
+                        "benchmark_split": "test",
+                    },
+                    {
+                        "benchmark_unit_id": "BU:EUAUTO:BBB222",
+                        "paper_id": "P:2",
+                        "release_tier": "shadow_gold",
+                        "holdout_bucket": "private",
+                        "canary_string": generate_canary_string("BU:EUAUTO:BBB222", salt="public-salt"),
+                        "benchmark_split": "test",
+                    },
+                ],
+            )
+
+            exit_code = canary_probe.main(
+                [
+                    "--model",
+                    "deepseek-chat",
+                    "--release-index",
+                    str(release_index_path),
+                    "--output-dir",
+                    str(output_dir),
+                    "--public-limit",
+                    "1",
+                    "--dry-run",
+                ]
+            )
+
+            self.assertEqual(exit_code, 0)
+            summary = json.loads((output_dir / "summary.json").read_text(encoding="utf-8"))
+            markdown = (output_dir / "summary.md").read_text(encoding="utf-8")
+            specs_lines = (output_dir / "probe_specs.jsonl").read_text(encoding="utf-8").splitlines()
+
+            self.assertTrue(summary["dry_run"])
+            self.assertEqual(summary["public_probe_count"], 1)
+            self.assertEqual(summary["control_probe_count"], 1)
+            self.assertEqual(summary["models_requested"], ["deepseek-chat"])
+            self.assertIn("probe mode: dry-run", markdown)
+            self.assertIn("deepseek-chat", markdown)
+            self.assertEqual(len(specs_lines), 2)
+            self.assertNotIn("LS-PWB-CANARY", "\n".join(specs_lines))
 
     def test_judge_review_workflow_build_merge_queue_and_finalize(self):
         judge_units = build_judge_validation_slice(

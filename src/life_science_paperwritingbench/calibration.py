@@ -6,6 +6,20 @@ from typing import Dict, List, Sequence, Tuple
 from .policy import CandidateTier, ClaimMode, ModalityOverlay, StudyClass
 
 
+def _bool(value: object, *, default: bool = False) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"1", "true", "yes", "y", "on"}:
+            return True
+        if normalized in {"0", "false", "no", "n", "off", ""}:
+            return False
+    return bool(value)
+
+
 @dataclass(frozen=True)
 class PilotCalibrationSpec:
     calibration_id: str
@@ -43,9 +57,9 @@ def pilot_calibration_spec_from_dict(data: Dict[str, object]) -> PilotCalibratio
         target_candidate_tier=CandidateTier(
             str(data.get("target_candidate_tier", CandidateTier.PUBLIC_GOLD_CANDIDATE.value))
         ),
-        expects_quarantine_case=bool(data.get("expects_quarantine_case", False)),
-        controlled_access_example=bool(data.get("controlled_access_example", False)),
-        preprint_shadow_only=bool(data.get("preprint_shadow_only", False)),
+        expects_quarantine_case=_bool(data.get("expects_quarantine_case", False)),
+        controlled_access_example=_bool(data.get("controlled_access_example", False)),
+        preprint_shadow_only=_bool(data.get("preprint_shadow_only", False)),
         notes=tuple(str(item) for item in data.get("notes", [])),
     )
 

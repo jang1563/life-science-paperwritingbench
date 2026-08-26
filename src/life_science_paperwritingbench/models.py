@@ -1378,6 +1378,40 @@ class JudgeSliceAuditReport:
 
 
 @dataclass(frozen=True)
+class LLMJudgeAlignmentReport:
+    generated_at: str
+    total_task_bundles: int
+    evaluated_bundles: int
+    judged_bundles: int
+    comparable_bundles: int
+    deterministic_pass_count: int
+    judge_pass_count: int
+    overlap_pass_count: int
+    deterministic_only_count: int
+    judge_only_count: int
+    agreement_count: int
+    disagreement_count: int
+    agreement_rate: float
+    gate_a1_count_ok: bool = False
+    judge_pass_subset_ok: bool = False
+    exact_pass_set_match: bool = False
+    duplicate_evaluation_task_bundle_ids: Tuple[str, ...] = ()
+    duplicate_judgment_task_bundle_ids: Tuple[str, ...] = ()
+    missing_evaluation_task_bundle_ids: Tuple[str, ...] = ()
+    missing_judgment_task_bundle_ids: Tuple[str, ...] = ()
+    extra_evaluation_task_bundle_ids: Tuple[str, ...] = ()
+    extra_judgment_task_bundle_ids: Tuple[str, ...] = ()
+    deterministic_only_task_bundle_ids: Tuple[str, ...] = ()
+    judge_only_task_bundle_ids: Tuple[str, ...] = ()
+    per_task_family: Mapping[str, Mapping[str, int]] = field(default_factory=dict)
+    issues: Tuple[str, ...] = ()
+    ok: bool = False
+
+    def to_dict(self) -> Dict[str, Any]:
+        return _primitive(self)
+
+
+@dataclass(frozen=True)
 class JudgeReviewForm:
     validation_unit_id: str
     reviewer_id: str

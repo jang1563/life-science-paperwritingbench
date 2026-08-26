@@ -47,6 +47,7 @@ from .models import (
     JudgeAdjudicationRecord,
     JudgeReviewForm,
     JudgeSliceAuditReport,
+    LLMJudgeAlignmentReport,
     JudgeValidationUnit,
     LineageInfo,
     MaintenanceLogEntry,
@@ -1577,6 +1578,55 @@ def judge_slice_audit_report_from_dict(data: Dict[str, Any]) -> JudgeSliceAuditR
     )
 
 
+def llm_judge_alignment_report_from_dict(data: Dict[str, Any]) -> LLMJudgeAlignmentReport:
+    return LLMJudgeAlignmentReport(
+        generated_at=str(data["generated_at"]),
+        total_task_bundles=int(data["total_task_bundles"]),
+        evaluated_bundles=int(data["evaluated_bundles"]),
+        judged_bundles=int(data["judged_bundles"]),
+        comparable_bundles=int(data["comparable_bundles"]),
+        deterministic_pass_count=int(data["deterministic_pass_count"]),
+        judge_pass_count=int(data["judge_pass_count"]),
+        overlap_pass_count=int(data["overlap_pass_count"]),
+        deterministic_only_count=int(data["deterministic_only_count"]),
+        judge_only_count=int(data["judge_only_count"]),
+        agreement_count=int(data["agreement_count"]),
+        disagreement_count=int(data["disagreement_count"]),
+        agreement_rate=float(data["agreement_rate"]),
+        gate_a1_count_ok=bool(data.get("gate_a1_count_ok", False)),
+        judge_pass_subset_ok=bool(data.get("judge_pass_subset_ok", False)),
+        exact_pass_set_match=bool(data.get("exact_pass_set_match", False)),
+        duplicate_evaluation_task_bundle_ids=tuple(
+            str(item) for item in data.get("duplicate_evaluation_task_bundle_ids", [])
+        ),
+        duplicate_judgment_task_bundle_ids=tuple(
+            str(item) for item in data.get("duplicate_judgment_task_bundle_ids", [])
+        ),
+        missing_evaluation_task_bundle_ids=tuple(
+            str(item) for item in data.get("missing_evaluation_task_bundle_ids", [])
+        ),
+        missing_judgment_task_bundle_ids=tuple(
+            str(item) for item in data.get("missing_judgment_task_bundle_ids", [])
+        ),
+        extra_evaluation_task_bundle_ids=tuple(
+            str(item) for item in data.get("extra_evaluation_task_bundle_ids", [])
+        ),
+        extra_judgment_task_bundle_ids=tuple(
+            str(item) for item in data.get("extra_judgment_task_bundle_ids", [])
+        ),
+        deterministic_only_task_bundle_ids=tuple(
+            str(item) for item in data.get("deterministic_only_task_bundle_ids", [])
+        ),
+        judge_only_task_bundle_ids=tuple(str(item) for item in data.get("judge_only_task_bundle_ids", [])),
+        per_task_family={
+            str(family): {str(key): int(value) for key, value in metrics.items()}
+            for family, metrics in data.get("per_task_family", {}).items()
+        },
+        issues=tuple(str(item) for item in data.get("issues", [])),
+        ok=bool(data.get("ok", False)),
+    )
+
+
 def judge_review_form_from_dict(data: Dict[str, Any]) -> JudgeReviewForm:
     return JudgeReviewForm(
         validation_unit_id=str(data["validation_unit_id"]),
@@ -1808,6 +1858,7 @@ MODEL_LOADERS: Dict[str, Callable[[Dict[str, Any]], Any]] = {
     "ingestion_verification_report": ingestion_verification_report_from_dict,
     "judge_candidate_selection_report": judge_candidate_selection_report_from_dict,
     "judge_slice_audit_report": judge_slice_audit_report_from_dict,
+    "llm_judge_alignment_report": llm_judge_alignment_report_from_dict,
     "judge_review_form": judge_review_form_from_dict,
     "judge_adjudication_record": judge_adjudication_record_from_dict,
     "judge_adjudication_queue_entry": judge_adjudication_queue_entry_from_dict,

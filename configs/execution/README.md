@@ -34,3 +34,26 @@ PYTHONPATH=src python3 -m life_science_paperwritingbench.cli write-baseline-repl
   --script-output /tmp/cayuga_baseline_replay/run_baseline_replay.sh \
   --spec-output /tmp/cayuga_baseline_replay/baseline_replay_spec.json
 ```
+
+For shared-registry frontier submitter runs, including Cayuga-hosted vLLM
+submitters, write a scaffold job with:
+
+```bash
+PYTHONPATH=src python3 -m life_science_paperwritingbench.cli write-frontier-submitter-job \
+  --execution-profile configs/execution/cayuga_profile.json \
+  --registry-path configs/models/frontier_registry_v1.json \
+  --model-label openweight-vllm-submitter \
+  --runner-kind agentic \
+  --task-source inspection-slice \
+  --output-dir /tmp/cayuga_frontier_agentic \
+  --job-spec-output /tmp/cayuga_frontier_agentic/job_spec.json \
+  --script-output /tmp/cayuga_frontier_agentic/run_frontier_agentic.sh \
+  --endpoint-url http://<HOST>:8000/v1/chat/completions \
+  --served-model-name <SERVED_MODEL_NAME> \
+  --tensor-parallel-size 4 \
+  --gpu-count 4
+```
+
+Treat `openweight-vllm-submitter` outputs as a separate open-weight track, not
+as hosted-frontier matrix cells. See `docs/open_weight_vllm_track.md` before
+registering or comparing those artifacts.
